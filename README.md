@@ -6,16 +6,16 @@ TradeSentinel is a Python-powered dashboard for **real-time portfolio monitoring
 Designed for trading operations and risk management teams, it helps detect limit breaches early and supports informed decision-making.  
 
 ## 🚀 Features  
-- **Live Market Data:** Fetches intraday prices from APIs (e.g., Yahoo Finance, Alpha Vantage).  
+- **Live Market Data:** Fetches intraday prices from APIs (Yahoo Finance).  
 - **PnL Tracking:** Calculates mark-to-market PnL by instrument, sector, or portfolio.  
 - **Risk Metrics:** Computes Value-at-Risk (VaR), exposure by asset class, and limit breaches.  
-- **Interactive Dashboard:** Built with `Dash` or `Streamlit` for intuitive visualization.  
+- **Interactive Dashboard:** Built with `Streamlit` for intuitive visualization.  
 - **Alerts:** Email or Slack notifications when thresholds are exceeded.  
 
 ## 🛠 Tech Stack  
-- **Python:** `pandas`, `numpy`, `plotly`, `dash` or `streamlit`  
-- **Data APIs:** Yahoo Finance, Alpha Vantage, or similar  
-- **Deployment:** Docker, Heroku, AWS, or Azure  
+- **Python:** `pandas`, `numpy`, `plotly`, `streamlit`  
+- **Data APIs:** Yahoo Finance 
+- **Deployment:** Docker, Heroku, AWS, or Azure  # to be decided
 
 ## 📂 Project structure  
 - **TradeSentinel/:** Project root directory  
