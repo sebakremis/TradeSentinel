@@ -1,2 +1,33 @@
-# Ignore Jupyter notebook checkpoints
+# --- Python cache / build ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# --- Virtual environments ---
+.env
+.venv
+env/
+venv/
+ENV/
+
+# --- Jupyter Notebook ---
 .ipynb_checkpoints/
+*.ipynb
+
+# --- OS-specific ---
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log
+
+# --- IDE / Editor settings ---
+.vscode/
+.idea/
+*.swp
