@@ -1,6 +1,7 @@
 # src/dashboard.py
 import streamlit as st
 import pandas as pd
+import altair as alt
 from ensure_data import ensure_prices
 
 # --- Sidebar controls ---
@@ -72,23 +73,53 @@ if pnl_data:
     # --- Optional Chart ---
     st.subheader("📈 Weighted PnL by Ticker")
     st.bar_chart(df_pnl.set_index("Ticker")["PnL ($)"])
+
+    # --- Additional Charts ---
+    st.subheader("📉 Portfolio PnL Over Time")
+    # Build a combined DataFrame for all tickers
+    pnl_time_data = []
+    for ticker, df in st.session_state.data.items():
+        if df is not None and not df.empty:
+            df = df.copy()
+            df["PnL"] = (df["Close"] - df["Close"].iloc[0]) * quantities.get(ticker.strip(), 0)
+            df["Ticker"] = ticker
+            df["Time"] = df.index
+            pnl_time_data.append(df[["Time", "PnL", "Ticker"]])
+
+    if pnl_time_data:
+        combined_df = pd.concat(pnl_time_data)
+
+        chart = alt.Chart(combined_df).mark_line().encode(
+            x=alt.X("Time:T", title="Time"),
+            y=alt.Y("PnL:Q", title="PnL ($)"),
+            color=alt.Color("Ticker:N", title="Ticker")
+        ).properties(
+            width=700,
+            height=400,
+            title="Portfolio PnL Over Time by Ticker"
+        )
+
+        st.altair_chart(chart, use_container_width=True)
+    
 else:
     st.info("No valid data to display. Try refreshing or adjusting tickers/period.")
 
 
 # Shutdown button
 import os
-import sys
+import signal
+import streamlit as st
 
 st.divider()
 st.subheader("🛑 Exit Dashboard")
-
+st.write("Click the button below then close the tab. If running locally, this will also stop the server in your terminal.")
 if st.button("Exit"):
-    st.warning("Shutting down...")
+    st.warning("✅ Dashboard shutdown initiated. Closing server...")
 
-    # Gracefully stop the Streamlit server
-    st.stop()  # Stops execution of the script
+    # Get the current process ID
+    pid = os.getpid()
 
-    # Optional: force kill the process (works locally)
-    os._exit(0)  # Immediately exits the Python process
+    # Send SIGTERM to the current process
+    os.kill(pid, signal.SIGTERM)
+
 
