@@ -1,69 +1,62 @@
 # src/run_pnl.py
 import argparse
-import pandas as pd
-from ensure_data import ensure_prices, as_close_panel
+from ensure_data import ensure_prices
 from pnl_calculator import calculate_pnl
-from log_utils import info, warn, error, set_verbose
+from log_utils import set_verbose, info, error
+
+DEFAULT_TICKERS = ["AAPL", "MSFT", "TSLA"]
+
+# Allowed Yahoo Finance values
+VALID_PERIODS = ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"]
+VALID_INTERVALS = ["1m", "2m", "5m", "15m", "30m", "60m", "90m",
+                   "1h", "1d", "5d", "1wk", "1mo", "3mo"]
+
+def validate_choice(value, valid_list, arg_name):
+    """Raise argparse error if value not in valid_list."""
+    if value not in valid_list:
+        raise argparse.ArgumentTypeError(
+            f"Invalid {arg_name}: '{value}'. "
+            f"Allowed values are: {', '.join(valid_list)}"
+        )
+    return value
 
 def main():
-    parser = argparse.ArgumentParser(description="Run PnL calculation for given tickers.")
+    parser = argparse.ArgumentParser(description="Run PnL calculations for given tickers")
     parser.add_argument(
-        "-v", "--verbose",
+        "--tickers",
+        nargs="+",
+        help="List of tickers to process (e.g., AAPL MSFT TSLA)"
+    )
+    parser.add_argument(
+        "--period",
+        type=lambda v: validate_choice(v, VALID_PERIODS, "period"),
+        default="5d",
+        help=f"Data period to fetch. Allowed: {', '.join(VALID_PERIODS)}. Default: 5d"
+    )
+    parser.add_argument(
+        "--interval",
+        type=lambda v: validate_choice(v, VALID_INTERVALS, "interval"),
+        default="1d",
+        help=f"Data interval. Allowed: {', '.join(VALID_INTERVALS)}. Default: 1d"
+    )
+    parser.add_argument(
+        "--verbose",
         action="store_true",
-        help="Enable detailed logging output"
+        help="Enable verbose logging"
     )
     args = parser.parse_args()
 
-    # Set global verbosity
     set_verbose(args.verbose)
-
-    tickers = ["AAPL", "MSFT", "FAKE"]
-    positions = pd.DataFrame({
-        "Ticker": ["AAPL", "MSFT", "FAKE"],
-        "Quantity": [50, 30, 10],
-        "EntryPrice": [150.0, 280.0, 100.0]
-    })
-
-    price_map = ensure_prices(tickers, interval="1m", lookback_days=5)
-
-    valid_tickers = []
-    for ticker, df in price_map.items():
-        if df.empty:
-            error(f"No data available for {ticker} — skipping this ticker.")
-            continue
-
-        freq = pd.infer_freq(df.index)
-        if freq is None and len(df) > 1:
-            avg_delta = (df.index[1] - df.index[0]).total_seconds()
-            if avg_delta <= 60:
-                freq = "1min"
-            elif avg_delta >= 86400:
-                freq = "1d"
-            else:
-                freq = "unknown"
-
-        info(f"{ticker} data frequency: {freq} ({'daily fallback' if freq == '1d' else 'intraday'})")
-        valid_tickers.append(ticker)
-
-    positions = positions[positions["Ticker"].isin(valid_tickers)]
-    if positions.empty:
-        error("No valid tickers left to calculate PnL.")
-        return
-
-    closes = as_close_panel({t: price_map[t] for t in valid_tickers})
+    tickers = args.tickers if args.tickers else DEFAULT_TICKERS
+    info(f"Running PnL for: {', '.join(tickers)}")
 
     try:
-        pnl_df = calculate_pnl(positions, closes)
-        if args.verbose:
-            print("\nPnL Results:")
-            print(pnl_df)
-        else:
-            print("\nPnL Summary:")
-            for _, row in pnl_df.iterrows():
-                print(f"{row['Ticker']}: PnL = {row['PnL']:.2f}")
-        print(f"\nTotal PnL: {pnl_df['PnL'].sum():.2f}")
-    except ValueError as e:
-        error(str(e))
+        close_prices = ensure_prices(tickers, period=args.period, interval=args.interval)
+        calculate_pnl(tickers, close_prices)
+    except Exception as e:
+        error(f"An error occurred: {e}")
 
 if __name__ == "__main__":
     main()
+
+
