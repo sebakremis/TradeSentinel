@@ -35,18 +35,21 @@ Designed for trading operations and risk management teams, it helps detect limit
 - **Limit Alerts:** Notifications trigger when VaR exceeds limits or PnL breaches thresholds.  
 - **Post-Trade Review:** Historical data supports trend analysis and daily reviews.  
 
-## 📜 License  
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.  
-
 ## 🚀 Launch the Dashboard Locally
-Bash
+
+To launch the dashboard locally:
+
+```bash
 git clone https://github.com/sebakremis/TradeSentinel.git
 cd TradeSentinel/src
 pip install -r ../requirements.txt
 streamlit run dashboard.py
-
+```
 ## 🌐 Live Demo (Coming Soon)
 A hosted version of the dashboard will be available shortly. Stay tuned for a public link to explore TradeSentinel in action.
+
+## 📜 License  
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details. 
 
 ---
 **Author:** Sebastian Kremis 
