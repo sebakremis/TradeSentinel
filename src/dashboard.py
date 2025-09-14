@@ -1,10 +1,10 @@
 # src/dashboard.py
 """
-TradeSentinel Dashboard
-=======================
+dashboard.py
+============
 
-A Streamlit-based interactive dashboard for monitoring intraday profit & loss (PnL)
-and portfolio risk across multiple tickers.
+Streamlit dashboard for monitoring intraday and historical Profit & Loss (PnL)
+and portfolio risk metrics for multiple tickers.
 
 Features
 --------
@@ -15,19 +15,29 @@ Features
   - Refresh data on demand.
 
 - **Data Fetching**:
-  - Retrieves market price data for the selected tickers using `ensure_prices`
-    from `ensure_data.py`.
+  - Retrieves market price data for the selected tickers using
+    `ensure_prices` from `ensure_data.py`.
   - Caches data in `st.session_state` to avoid redundant fetches.
 
-- **PnL Calculation**:
+- **PnL & Position Metrics**:
   - Computes per-ticker PnL in absolute ($) and percentage terms.
   - Calculates position values based on latest prices and quantities.
+  - Adds Quantity, Price, and Position Value ($) columns to all outputs.
   - Handles missing or invalid data gracefully.
 
-- **Visualization & Output**:
-  - Displays a styled DataFrame with per-ticker PnL, highlighting gains in green
-    and losses in red.
-  - Provides a quick overview of portfolio performance.
+- **Portfolio Summary**:
+  - Displays total PnL, total position value, and total % change.
+  - Shows a dynamic Portfolio Allocation pie chart by position value.
+
+- **Visualization**:
+  - Styled per-ticker PnL DataFrame with green/red highlighting for gains/losses.
+  - Portfolio PnL Over Time line chart by ticker.
+  - Portfolio Allocation pie chart (Altair) with tooltips.
+
+- **Interactive PnL Table with CSV Export**:
+  - Filter by ticker(s) and date range.
+  - Shows filtered summary metrics (total/average PnL, position value, price).
+  - Download filtered data as CSV with dynamic filename.
 
 Usage
 -----
@@ -56,8 +66,16 @@ from ensure_data import ensure_prices
 # --- Sidebar controls ---
 st.sidebar.title("TradeSentinel Dashboard")
 tickers = st.sidebar.text_input("Tickers (comma-separated)", "AAPL,MSFT,TSLA").split(",")
-period = st.sidebar.selectbox("Period", ["1d", "5d", "1mo", "3mo", "6mo", "1y", "ytd", "max"], index=1)
-interval = st.sidebar.selectbox("Interval", ["1m", "5m", "15m", "30m", "1h", "1d", "1wk", "1mo"], index=5)
+period = st.sidebar.selectbox(
+    "Period",
+    ["1d", "5d", "1mo", "3mo", "6mo", "1y", "ytd", "max"],
+    index=1
+)
+interval = st.sidebar.selectbox(
+    "Interval",
+    ["1m", "5m", "15m", "30m", "1h", "1d", "1wk", "1mo"],
+    index=5
+)
 qty_input = st.sidebar.text_input("Quantities (comma-separated)", "10,5,2")
 refresh = st.sidebar.button("Refresh Data")
 
@@ -88,7 +106,6 @@ for ticker, df in st.session_state.data.items():
             weighted_pnl = (end - start) * qty
             position_value = end * qty
             pct = ((end - start) / start) * 100
-
             pnl_data.append({
                 "Ticker": ticker,
                 "Quantity": qty,
@@ -105,111 +122,129 @@ for ticker, df in st.session_state.data.items():
 if pnl_data:
     df_pnl = pd.DataFrame(pnl_data)
     st.subheader("📋 Per-Ticker PnL")
-    st.dataframe(df_pnl.style.applymap(
-        lambda v: "color: green" if isinstance(v, float) and v > 0 else "color: red",
-        subset=["PnL ($)", "Change (%)"]
-    ))
+    st.dataframe(
+        df_pnl.style.applymap(
+            lambda v: "color: green" if isinstance(v, float) and v > 0 else "color: red",
+            subset=["PnL ($)", "Change (%)"]
+        )
+    )
 
     # --- Portfolio Summary ---
     total_pnl = df_pnl["PnL ($)"].sum()
     total_value = df_pnl["Position Value ($)"].sum()
     total_pct = (total_pnl / total_value) * 100 if total_value else 0
-    st.subheader("📊 Portfolio Summary")
-    st.metric("Total PnL ($)", f"{total_pnl:.2f}")
-    st.metric("Total Position Value ($)", f"{total_value:.2f}")
-    st.metric("Total Change (%)", f"{total_pct:.2f}%")
 
-    # --- Charts ---
+    st.subheader("📊 Portfolio Summary")
+    col1, col2 = st.columns([1, 1])
+
+    with col1:
+        st.metric("Total PnL ($)", f"${total_pnl:,.2f}")
+        st.metric("Total Position Value ($)", f"${total_value:,.2f}")
+        st.metric("Total Change (%)", f"{total_pct:.2f}%")
+
+    with col2:
+        # Pie chart based on current portfolio values
+        pie_df = df_pnl[["Ticker", "Position Value ($)"]]
+        if not pie_df.empty:
+            pie_chart = (
+                alt.Chart(pie_df)
+                .mark_arc()
+                .encode(
+                    theta=alt.Theta(field="Position Value ($)", type="quantitative"),
+                    color=alt.Color(field="Ticker", type="nominal"),
+                    tooltip=[
+                        alt.Tooltip("Ticker", title="Ticker"),
+                        alt.Tooltip("Position Value ($)", title="Position Value ($)", format="$.2f")
+                    ]
+                )
+                .properties(width=250, height=250, title="Portfolio Allocation")
+            )
+            st.altair_chart(pie_chart, use_container_width=True)
+        else:
+            st.info("No data available for pie chart.")
+
+    # --- Portfolio PnL Over Time ---
     st.subheader("📉 Portfolio PnL Over Time")
-    # Build a combined DataFrame for all tickers
     pnl_time_data = []
     for ticker, df in st.session_state.data.items():
         if df is not None and not df.empty:
             df = df.copy()
-            df["PnL"] = (df["Close"] - df["Close"].iloc[0]) * quantities.get(ticker.strip(), 0)
+            qty = quantities.get(ticker.strip(), 0)
+            df["Quantity"] = qty
+            df["Price"] = df["Close"]
+            df["Position Value ($)"] = df["Price"] * df["Quantity"]
+            df["PnL"] = (df["Price"] - df["Price"].iloc[0]) * df["Quantity"]
             df["Ticker"] = ticker
             df["Time"] = df.index
-            pnl_time_data.append(df[["Time", "PnL", "Ticker"]])
+            pnl_time_data.append(
+                df[["Time", "Ticker", "Quantity", "Price", "Position Value ($)", "PnL"]]
+            )
 
     if pnl_time_data:
         combined_df = pd.concat(pnl_time_data)
+        chart = (
+            alt.Chart(combined_df)
+            .mark_line()
+            .encode(
+                x=alt.X("Time:T", title="Time"),
+                y=alt.Y("PnL:Q", title="PnL ($)"),
+                color=alt.Color("Ticker:N", title="Ticker"),
+            )
+            .properties(width=700, height=400, title="Portfolio PnL Over Time by Ticker")
+        )
+        st.altair_chart(chart, use_container_width=True)
 
-        chart = alt.Chart(combined_df).mark_line().encode(
-            x=alt.X("Time:T", title="Time"),
-            y=alt.Y("PnL:Q", title="PnL ($)"),
-            color=alt.Color("Ticker:N", title="Ticker")
-        ).properties(
-            width=700,
-            height=400,
-            title="Portfolio PnL Over Time by Ticker"
+        # --- Interactive PnL Table with CSV Export ---
+        st.subheader("🔍 Explore & Export PnL Data")
+        tickers_selected = st.multiselect(
+            "Select Ticker(s)",
+            options=combined_df["Ticker"].unique(),
+            default=list(combined_df["Ticker"].unique()),
+        )
+        date_min = combined_df["Time"].min().date()
+        date_max = combined_df["Time"].max().date()
+        date_range = st.date_input(
+            "Select Date Range",
+            value=(date_min, date_max),
+            min_value=date_min,
+            max_value=date_max,
         )
 
-        st.altair_chart(chart, use_container_width=True)
-    
+        filtered_df = combined_df[
+            combined_df["Ticker"].isin(tickers_selected)
+            & (combined_df["Time"].dt.date >= date_range[0])
+            & (combined_df["Time"].dt.date <= date_range[1])
+        ]
+
+        total_pnl_filtered = filtered_df["PnL"].sum()
+        avg_pnl_filtered = filtered_df["PnL"].mean()
+        total_value_filtered = filtered_df["Position Value ($)"].sum()
+        avg_price_filtered = filtered_df["Price"].mean()
+
+        st.metric("Total PnL (Filtered)", f"${total_pnl_filtered:,.2f}")
+        st.metric("Average PnL (Filtered)", f"${avg_pnl_filtered:,.2f}")
+        st.metric("Total Position Value (Filtered)", f"${total_value_filtered:,.2f}")
+        st.metric("Average Price (Filtered)", f"${avg_price_filtered:,.2f}")
+
+        st.dataframe(
+            filtered_df.sort_values("Time").drop(columns=["Time"]),
+            use_container_width=True,
+        )
+
+        # CSV export
+        tickers_str = "_".join(tickers_selected) if tickers_selected else "All"
+        filename = f"pnl_data_{tickers_str}_{date_range[0]}_{date_range[1]}.csv"
+        csv_data = filtered_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="💾 Download filtered data as CSV",
+            data=csv_data,
+            file_name=filename,
+            mime="text/csv"
+        )
+    else:
+        st.info("No valid data to display. Try refreshing or adjusting tickers/period.")
 else:
-    st.info("No valid data to display. Try refreshing or adjusting tickers/period.")
-
-
-# --- Interactive PnL Table with CSV Export ---
-# --- Interactive PnL Table with CSV Export ---
-st.subheader("🔍 Explore & Export PnL Data")
-
-if pnl_time_data:
-    combined_df = pd.concat(pnl_time_data)
-
-    # Filter controls
-    tickers_selected = st.multiselect(
-        "Select Ticker(s)",
-        options=combined_df["Ticker"].unique(),
-        default=list(combined_df["Ticker"].unique())
-    )
-
-    date_min = combined_df["Time"].min().date()
-    date_max = combined_df["Time"].max().date()
-    date_range = st.date_input(
-        "Select Date Range",
-        value=(date_min, date_max),
-        min_value=date_min,
-        max_value=date_max
-    )
-
-    # Apply filters
-    filtered_df = combined_df[
-        combined_df["Ticker"].isin(tickers_selected) &
-        (combined_df["Time"].dt.date >= date_range[0]) &
-        (combined_df["Time"].dt.date <= date_range[1])
-    ]
-
-    # Summary metrics
-    total_pnl_filtered = filtered_df["PnL"].sum()
-    avg_pnl_filtered = filtered_df["PnL"].mean()
-
-    st.metric("Total PnL (Filtered)", f"${total_pnl_filtered:,.2f}")
-    st.metric("Average PnL (Filtered)", f"${avg_pnl_filtered:,.2f}")
-
-    # Interactive table
-    st.dataframe(
-        filtered_df.sort_values("Time").drop(columns=["Time"]),
-        use_container_width=True
-    )
-
-
-    # --- Dynamic CSV filename ---
-    tickers_str = "_".join(tickers_selected) if tickers_selected else "All"
-    date_str = f"{date_range[0]}_to_{date_range[1]}"
-    filename = f"PnL_{tickers_str}_{date_str}.csv"
-
-    # CSV export
-    csv_data = filtered_df.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label="💾 Download filtered data as CSV",
-        data=csv_data,
-        file_name=filename,
-        mime="text/csv"
-    )
-else:
-    st.info("No PnL data available for interactive table.")
-
+    st.info("No PnL data available. Please refresh to fetch data.")
 
 
 
