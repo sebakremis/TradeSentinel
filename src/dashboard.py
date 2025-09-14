@@ -338,7 +338,7 @@ server_addr = os.environ.get("STREAMLIT_SERVER_ADDRESS", "localhost")
 if server_addr in ("localhost", "127.0.0.1"):
     st.divider()
     st.subheader("🛑 End Local Dashboard Session")
-    st.write("To exit: click the button below, then close this browser tab.")
+    st.write("If running locally: click the 'exit' button below, then close this browser tab.")
     if st.button("Exit"):
         st.warning("Dashboard shutdown initiated. Closing server...")
         pid = os.getpid()
