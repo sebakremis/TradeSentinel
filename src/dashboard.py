@@ -70,8 +70,6 @@ if pnl_data:
     st.metric("Total Position Value ($)", f"{total_value:.2f}")
     st.metric("Total Change (%)", f"{total_pct:.2f}%")
 
-    
-
     # --- Charts ---
     st.subheader("📉 Portfolio PnL Over Time")
     # Build a combined DataFrame for all tickers
@@ -103,17 +101,74 @@ else:
     st.info("No valid data to display. Try refreshing or adjusting tickers/period.")
 
 
+# --- Interactive PnL Table with CSV Export ---
+# --- Interactive PnL Table with CSV Export ---
+st.subheader("🔍 Explore & Export PnL Data")
+
+if pnl_time_data:
+    combined_df = pd.concat(pnl_time_data)
+
+    # Filter controls
+    tickers_selected = st.multiselect(
+        "Select Ticker(s)",
+        options=combined_df["Ticker"].unique(),
+        default=list(combined_df["Ticker"].unique())
+    )
+
+    date_min = combined_df["Time"].min().date()
+    date_max = combined_df["Time"].max().date()
+    date_range = st.date_input(
+        "Select Date Range",
+        value=(date_min, date_max),
+        min_value=date_min,
+        max_value=date_max
+    )
+
+    # Apply filters
+    filtered_df = combined_df[
+        combined_df["Ticker"].isin(tickers_selected) &
+        (combined_df["Time"].dt.date >= date_range[0]) &
+        (combined_df["Time"].dt.date <= date_range[1])
+    ]
+
+    # Summary metrics
+    total_pnl_filtered = filtered_df["PnL"].sum()
+    avg_pnl_filtered = filtered_df["PnL"].mean()
+
+    st.metric("Total PnL (Filtered)", f"${total_pnl_filtered:,.2f}")
+    st.metric("Average PnL (Filtered)", f"${avg_pnl_filtered:,.2f}")
+
+    # Interactive table
+    st.dataframe(
+        filtered_df.sort_values("Time").drop(columns=["Time"]),
+        use_container_width=True
+    )
+
+
+    # --- Dynamic CSV filename ---
+    tickers_str = "_".join(tickers_selected) if tickers_selected else "All"
+    date_str = f"{date_range[0]}_to_{date_range[1]}"
+    filename = f"PnL_{tickers_str}_{date_str}.csv"
+
+    # CSV export
+    csv_data = filtered_df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="💾 Download filtered data as CSV",
+        data=csv_data,
+        file_name=filename,
+        mime="text/csv"
+    )
+else:
+    st.info("No PnL data available for interactive table.")
+
+
+
+
 # --- Conditional Shutdown Section ---
 import os
 import signal
 import socket
 
-# Detect if running locally
-import os
-import signal
-import streamlit as st
-
-# --- Conditional Shutdown Section ---
 # Detect if running locally by checking Streamlit's server address
 server_addr = os.environ.get("STREAMLIT_SERVER_ADDRESS", "localhost")
 
