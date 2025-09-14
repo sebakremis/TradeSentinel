@@ -62,6 +62,8 @@ import streamlit as st
 import pandas as pd
 import altair as alt
 from ensure_data import ensure_prices
+import os
+import signal
 
 # --- Sidebar controls ---
 st.sidebar.title("TradeSentinel Dashboard")
@@ -104,13 +106,18 @@ pnl_data = []
 for ticker, df in st.session_state.data.items():
     if df is not None and not df.empty:
         try:
-            # Use first and last Close for PnL snapshot
-            start = float(df["Close"].iloc[0])
-            end = float(df["Close"].iloc[-1])
+            start = df["Close"].iloc[0]
+            if hasattr(start, "item"):
+                start = start.item()
+            end = df["Close"].iloc[-1]
+            if hasattr(end, "item"):
+                end = end.item()
+
             qty = quantities.get(ticker, 0)
             weighted_pnl = (end - start) * qty
             position_value = end * qty
-            pct = ((end - start) / start) * 100 if start else 0.0
+            pct = ((end - start) / start) * 100 if start != 0 else 0.0
+
             pnl_data.append({
                 "Ticker": ticker,
                 "Quantity": qty,
@@ -128,16 +135,17 @@ if pnl_data:
     df_pnl = pd.DataFrame(pnl_data)
     st.subheader("📋 Per-Ticker PnL")
     st.dataframe(
-        df_pnl.style.applymap(
-            lambda v: "color: green" if isinstance(v, (int, float)) and v > 0 else ("color: red" if isinstance(v, (int, float)) and v < 0 else ""),
+        df_pnl.style.map(
+            lambda v: "color: green" if isinstance(v, (int, float)) and v > 0
+                      else ("color: red" if isinstance(v, (int, float)) and v < 0 else ""),
             subset=["PnL ($)", "Change (%)"]
         ),
-        use_container_width=True
+        width="stretch"
     )
 
     # --- Portfolio Summary + Pie Chart ---
-    total_pnl = float(df_pnl["PnL ($)"].sum())
-    total_value = float(df_pnl["Position Value ($)"].sum())
+    total_pnl = df_pnl["PnL ($)"].sum()
+    total_value = df_pnl["Position Value ($)"].sum()
     total_pct = (total_pnl / total_value) * 100 if total_value else 0.0
 
     st.subheader("📊 Portfolio Summary")
@@ -179,7 +187,7 @@ if pnl_data:
                 tmp["Quantity"] = qty
                 tmp["Price"] = tmp["Close"]
                 tmp["Position Value ($)"] = tmp["Price"] * tmp["Quantity"]
-                tmp["PnL"] = (tmp["Price"] - float(tmp["Price"].iloc[0])) * tmp["Quantity"]
+                tmp["PnL"] = (tmp["Price"] - tmp["Price"].iloc[0]) * tmp["Quantity"]
                 tmp["Ticker"] = ticker
                 tmp["Time"] = tmp.index
                 pnl_time_data.append(
@@ -224,10 +232,10 @@ if pnl_data:
             & (combined_df["Time"].dt.date <= date_range[1])
         ].copy()
 
-        total_pnl_filtered = float(filtered_df["PnL"].sum()) if not filtered_df.empty else 0.0
-        avg_pnl_filtered = float(filtered_df["PnL"].mean()) if not filtered_df.empty else 0.0
-        total_value_filtered = float(filtered_df["Position Value ($)"].sum()) if not filtered_df.empty else 0.0
-        avg_price_filtered = float(filtered_df["Price"].mean()) if not filtered_df.empty else 0.0
+        total_pnl_filtered = filtered_df["PnL"].sum() if not filtered_df.empty else 0.0
+        avg_pnl_filtered = filtered_df["PnL"].mean() if not filtered_df.empty else 0.0
+        total_value_filtered = filtered_df["Position Value ($)"].sum() if not filtered_df.empty else 0.0
+        avg_price_filtered = filtered_df["Price"].mean() if not filtered_df.empty else 0.0
 
         m1, m2, m3, m4 = st.columns(4)
         with m1:
@@ -240,8 +248,10 @@ if pnl_data:
             st.metric("Average Price (Filtered)", f"${avg_price_filtered:,.2f}")
 
         st.dataframe(
-            filtered_df.sort_values("Time").drop(columns=["Time"]),
-            use_container_width=True,
+            filtered_df.reset_index(drop=True)
+                       .sort_values("Time")
+                       .drop(columns=["Time"]),
+            width="stretch"
         )
 
         # CSV export
@@ -260,20 +270,18 @@ else:
     st.info("No PnL data available. Please refresh to fetch data.")
 
 # --- Conditional Shutdown Section ---
-import os
-import signal
-import socket
-
-# Detect if running locally by checking Streamlit's server address
 server_addr = os.environ.get("STREAMLIT_SERVER_ADDRESS", "localhost")
 if server_addr in ("localhost", "127.0.0.1"):
     st.divider()
     st.subheader("🛑 End Local Dashboard Session")
-    st.write("✅ To exit: click the button below, then close this browser tab.")
+    st.write("To exit: click the button below, then close this browser tab.")
     if st.button("Exit"):
-        st.warning("✅ Dashboard shutdown initiated. Closing server...")
+        st.warning("Dashboard shutdown initiated. Closing server...")
         pid = os.getpid()
         os.kill(pid, signal.SIGTERM)
+
+
+
 
 
 
