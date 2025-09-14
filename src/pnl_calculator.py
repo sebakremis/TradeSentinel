@@ -1,4 +1,70 @@
 # src/pnl_calculator.py
+"""
+pnl_calculator.py
+=================
+
+Utility for calculating and displaying Profit & Loss (PnL) metrics for one or
+more stock tickers based on historical closing price data.
+
+This module provides a single function, `calculate_pnl`, which:
+1. Iterates over a list of tickers.
+2. Retrieves their corresponding price DataFrames from a provided dictionary.
+3. Calculates absolute and percentage PnL between the first and last available
+   closing prices.
+4. Logs warnings for missing or empty data, and errors for missing columns or
+   calculation issues.
+5. Prints per‑ticker PnL results and an overall portfolio summary, regardless
+   of verbosity settings.
+
+Features
+--------
+- **Per‑Ticker PnL**:
+  - Absolute change in price.
+  - Percentage change relative to the starting price.
+
+- **Portfolio Summary**:
+  - Aggregated total PnL across all tickers.
+  - Overall percentage change relative to the combined starting value.
+
+- **Robust Error Handling**:
+  - Skips tickers with no data or missing 'Close' column.
+  - Catches and logs unexpected exceptions without halting execution.
+
+Functions
+---------
+- `calculate_pnl(tickers: list[str], close_prices_dict: dict[str, pandas.DataFrame]) -> None`  
+  Compute and print PnL for each ticker and the overall portfolio.
+
+Parameters
+----------
+tickers : list[str]
+    List of ticker symbols to process.
+close_prices_dict : dict[str, pandas.DataFrame]
+    Mapping of ticker symbols to DataFrames containing at least a 'Close' column.
+
+Dependencies
+------------
+- pandas (for DataFrame operations)
+- log_utils (for logging warnings and errors)
+
+Usage Example
+-------------
+    from pnl_calculator import calculate_pnl
+
+    tickers = ["AAPL", "MSFT"]
+    prices = {
+        "AAPL": aapl_df,  # DataFrame with 'Close' column
+        "MSFT": msft_df
+    }
+
+    calculate_pnl(tickers, prices)
+
+Notes
+-----
+- The DataFrame for each ticker must contain a 'Close' column with numeric values.
+- Results are printed directly to stdout; there is no return value.
+"""
+
 from log_utils import info, warn, error
 
 def calculate_pnl(tickers, close_prices_dict):

@@ -1,4 +1,53 @@
 # src/dashboard.py
+"""
+TradeSentinel Dashboard
+=======================
+
+A Streamlit-based interactive dashboard for monitoring intraday profit & loss (PnL)
+and portfolio risk across multiple tickers.
+
+Features
+--------
+- **Sidebar Controls**:
+  - Input tickers (comma-separated).
+  - Select historical data period and price interval.
+  - Specify quantities per ticker.
+  - Refresh data on demand.
+
+- **Data Fetching**:
+  - Retrieves market price data for the selected tickers using `ensure_prices`
+    from `ensure_data.py`.
+  - Caches data in `st.session_state` to avoid redundant fetches.
+
+- **PnL Calculation**:
+  - Computes per-ticker PnL in absolute ($) and percentage terms.
+  - Calculates position values based on latest prices and quantities.
+  - Handles missing or invalid data gracefully.
+
+- **Visualization & Output**:
+  - Displays a styled DataFrame with per-ticker PnL, highlighting gains in green
+    and losses in red.
+  - Provides a quick overview of portfolio performance.
+
+Usage
+-----
+Run the dashboard with Streamlit:
+
+    streamlit run src/dashboard.py
+
+Dependencies
+------------
+- streamlit
+- pandas
+- altair
+- ensure_data.ensure_prices
+
+Notes
+-----
+Ensure that `ensure_data.py` is available and properly configured to fetch
+market data before running this dashboard.
+"""
+
 import streamlit as st
 import pandas as pd
 import altair as alt

@@ -1,4 +1,83 @@
 # src/data_fetch.py
+"""
+data_fetch.py
+=============
+
+Utility for retrieving intraday or historical market data for one or more
+tickers from Yahoo Finance using the `yfinance` library, with clean logging
+and suppression of raw HTTP error output.
+
+This module provides a single function, `get_market_data`, which:
+1. Downloads price data for the specified tickers and time range.
+2. Suppresses verbose Yahoo Finance stderr messages, replacing them with
+   concise, user‑friendly log entries.
+3. Logs warnings when no data is returned or when Yahoo Finance sends a
+   non‑fatal message.
+4. Returns a pandas DataFrame containing the requested data.
+
+Features
+--------
+- **Flexible Parameters**:
+  - Supports `interval` (e.g., '1m', '5m', '1d', '1wk', '1mo').
+  - Supports `period` (e.g., '1d', '5d', '1mo', '1y', 'max') or explicit
+    `start`/`end` dates.
+  - Automatically disables `period` when `start` is provided.
+
+- **Clean Logging**:
+  - INFO, WARN, and ERROR messages routed through `log_utils`.
+  - Suppresses raw Yahoo Finance stderr output for cleaner console logs.
+
+- **Data Normalization**:
+  - Removes timezone information from datetime index for consistency.
+  - Returns empty DataFrame if no data is available.
+
+Functions
+---------
+- `get_market_data(tickers: list[str], interval: str = "1m", period: Optional[str] = "1d", start: Optional[str] = None, end: Optional[str] = None) -> pandas.DataFrame`  
+  Fetch market data for given tickers from Yahoo Finance.
+
+Parameters
+----------
+tickers : list[str]
+    List of ticker symbols to fetch.
+interval : str, optional
+    Data interval (default: '1m').
+period : str, optional
+    Data period (default: '1d'). Ignored if `start` is provided.
+start : str, optional
+    Start date in 'YYYY-MM-DD' format.
+end : str, optional
+    End date in 'YYYY-MM-DD' format.
+
+Returns
+-------
+pandas.DataFrame
+    Market data for the requested tickers and time range. Empty if no data
+    is available.
+
+Dependencies
+------------
+- yfinance
+- pandas
+- log_utils (for logging)
+- contextlib, io (standard library)
+
+Usage Example
+-------------
+    from data_fetch import get_market_data
+
+    df = get_market_data(["AAPL", "MSFT"], interval="5m", period="1d")
+    if not df.empty:
+        print(df.tail())
+
+Notes
+-----
+- Yahoo Finance may impose rate limits; excessive requests can result in
+  temporary blocking.
+- The returned DataFrame may be multi‑indexed if multiple tickers are
+  requested.
+"""
+
 import yfinance as yf
 import pandas as pd
 from typing import List, Optional

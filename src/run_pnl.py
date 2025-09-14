@@ -1,4 +1,67 @@
 # src/run_pnl.py
+"""
+run_pnl.py
+==========
+
+Command-line utility for running Profit & Loss (PnL) calculations on one or more
+stock tickers using historical market data from Yahoo Finance.
+
+This script:
+1. Parses command-line arguments for tickers, data period, interval, and verbosity.
+2. Validates user-supplied period and interval against allowed Yahoo Finance values.
+3. Fetches historical closing prices via `ensure_prices`.
+4. Calculates and displays PnL results using `calculate_pnl`.
+5. Logs progress, warnings, and errors with optional verbose output.
+
+Features
+--------
+- **Ticker Selection**:
+  - Specify tickers via `--tickers` (space-separated).
+  - Defaults to: AAPL, MSFT, TSLA.
+
+- **Data Parameters**:
+  - `--period`: Historical data period (default: 5d).
+  - `--interval`: Data interval (default: 1d).
+  - Both validated against predefined allowed values.
+
+- **Verbose Logging**:
+  - `--verbose` flag enables INFO-level logging.
+
+- **Error Handling**:
+  - Catches and logs exceptions without crashing.
+
+Functions
+---------
+- `validate_choice(value: str, valid_list: list[str], arg_name: str) -> str`  
+  Validate that a CLI argument value is in the allowed list; raise `ArgumentTypeError` if not.
+
+- `main() -> None`  
+  Parse arguments, run data retrieval, and execute PnL calculation.
+
+Dependencies
+------------
+- argparse (standard library)
+- ensure_data.ensure_prices
+- pnl_calculator.calculate_pnl
+- log_utils (for logging)
+- yfinance (indirectly, via ensure_data)
+- pandas (indirectly, via ensure_data and pnl_calculator)
+
+Usage Example
+-------------
+    python src/run_pnl.py --tickers AAPL MSFT TSLA --period 1mo --interval 1d --verbose
+
+Example Output
+--------------
+    [2025-09-14 17:05:02] INFO: Running PnL for: AAPL, MSFT, TSLA
+    ...PnL results table...
+
+Notes
+-----
+- This script is intended for terminal use; for an interactive UI, use `dashboard.py`.
+- Yahoo Finance rate limits may apply when fetching data.
+"""
+
 import argparse
 from ensure_data import ensure_prices
 from pnl_calculator import calculate_pnl
