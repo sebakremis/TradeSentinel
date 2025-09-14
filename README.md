@@ -24,11 +24,12 @@ TradeSentinel is a Python-powered dashboard for real-time portfolio monitoring, 
 - **src/** — Core Python scripts  
   - **ensure_data.py** — Market data ingestion  
   - **dashboard.py** — App UI and visualization  
-  - …  
+  - *(other supporting modules)*  
 - **tests/** — Unit tests  
 - **requirements.txt** — Python dependencies  
 - **README.md** — Project documentation  
 - **LICENSE** — License file  
+
 
 ## 📈 Example use case
 - **Real-time monitoring:** A trading desk tracks intraday PnL and risk exposure.  
@@ -45,7 +46,7 @@ TradeSentinel is a Python-powered dashboard for real-time portfolio monitoring, 
 </a>  
 No installation required — runs directly in your browser.
 
-### Run locally
+### or Run locally:
 ```bash
 # Clone the repository
 git clone https://github.com/sebakremis/TradeSentinel.git
