@@ -1,6 +1,8 @@
 # TradeSentinel — Intraday Risk & PnL Monitoring Dashboard
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://tradesentinel-rsnsu2pdi68sqey8ny7wzl.streamlit.app/)
+<a href="https://tradesentinel-rsnsu2pdi68sqey8ny7wzl.streamlit.app/" target="_blank">
+  <img src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg" alt="Open in Streamlit">
+</a>
 
 ## 📌 Overview
 TradeSentinel is a Python-powered dashboard for real-time portfolio monitoring, providing instant insights into PnL, exposure, and risk metrics throughout the trading day. Designed for trading operations and risk management teams, it helps detect limit breaches early and supports informed decision-making.
@@ -15,32 +17,32 @@ TradeSentinel is a Python-powered dashboard for real-time portfolio monitoring, 
 ## 🛠 Tech stack
 - **Python:** pandas, numpy, altair, streamlit
 - **Data APIs:** Yahoo Finance
-- **Deployment:** Streamlit Community Cloud (public), Docker, Heroku, AWS, or Azure
+- **Deployment:** Streamlit Community Cloud (public)
 
 ## 📂 Project structure
-- **data/** — Sample datasets
-- **src/** — Core Python scripts
-  - **ensure_data.py** — Market data ingestion
-  - **dashboard.py** — App UI and visualization
-  - …
-- **tests/** — Unit tests
-- **requirements.txt** — Python dependencies
-- **README.md** — Project documentation
-- **LICENSE** — License file
+- **data/** — Sample datasets  
+- **src/** — Core Python scripts  
+  - **ensure_data.py** — Market data ingestion  
+  - **dashboard.py** — App UI and visualization  
+  - …  
+- **tests/** — Unit tests  
+- **requirements.txt** — Python dependencies  
+- **README.md** — Project documentation  
+- **LICENSE** — License file  
 
 ## 📈 Example use case
-- **Real-time monitoring:** A trading desk tracks intraday PnL and risk exposure.
-- **Limit alerts:** Notifications trigger when VaR exceeds limits or PnL breaches thresholds.
-- **Post-trade review:** Historical data supports trend analysis and daily reviews.
+- **Real-time monitoring:** A trading desk tracks intraday PnL and risk exposure.  
+- **Limit alerts:** Notifications trigger when VaR exceeds limits or PnL breaches thresholds.  
+- **Post-trade review:** Historical data supports trend analysis and daily reviews.  
 
 ---
 
 ## 🚀 Launch the dashboard
 
 ### Live demo
-🌐 Click link to launch TradeSentinel on Streamlit Community Cloud:  
-[(https://tradesentinel-rsnsu2pdi68sqey8ny7wzl.streamlit.app/)](https://tradesentinel-rsnsu2pdi68sqey8ny7wzl.streamlit.app/)
-
+<a href="https://tradesentinel-rsnsu2pdi68sqey8ny7wzl.streamlit.app/" target="_blank">
+  🌐 Click here to launch TradeSentinel on Streamlit Community Cloud
+</a>  
 No installation required — runs directly in your browser.
 
 ### Run locally
@@ -54,7 +56,7 @@ pip install -r ../requirements.txt
 
 # Run the dashboard
 streamlit run dashboard.py
-
+```
 
 ## 📜 License  
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details. 
