@@ -1,5 +1,5 @@
 # TradeSentinel  
-**Intraday Risk & PnL Monitoring Dashboard**  
+**Intraday Risk & PnL Monitoring Dashboard**.[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://tradesentinel-rsnsu2pdi68sqey8ny7wzl.streamlit.app/)
 
 ## 📌 Overview  
 TradeSentinel is a Python-powered dashboard for **real-time portfolio monitoring**, providing instant insights into PnL, exposure, and risk metrics throughout the trading day.  
@@ -45,8 +45,13 @@ cd TradeSentinel/src
 pip install -r ../requirements.txt
 streamlit run dashboard.py
 ```
-## 🌐 Live Demo (Coming Soon)
-A hosted version of the dashboard will be available shortly. Stay tuned for a public link to explore TradeSentinel in action.
+🌐 **Live Demo**
+
+[Click here to launch the TradeSentinel Dashboard](https://tradesentinel-rsnsu2pdi68sqey8ny7wzl.streamlit.app/)
+
+No installation required — runs directly in your browser via Streamlit Community Cloud.
+
+
 
 ## 📜 License  
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details. 
