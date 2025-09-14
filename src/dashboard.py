@@ -70,11 +70,9 @@ if pnl_data:
     st.metric("Total Position Value ($)", f"{total_value:.2f}")
     st.metric("Total Change (%)", f"{total_pct:.2f}%")
 
-    # --- Optional Chart ---
-    st.subheader("📈 Weighted PnL by Ticker")
-    st.bar_chart(df_pnl.set_index("Ticker")["PnL ($)"])
+    
 
-    # --- Additional Charts ---
+    # --- Charts ---
     st.subheader("📉 Portfolio PnL Over Time")
     # Build a combined DataFrame for all tickers
     pnl_time_data = []
@@ -105,21 +103,30 @@ else:
     st.info("No valid data to display. Try refreshing or adjusting tickers/period.")
 
 
-# Shutdown button
+# --- Conditional Shutdown Section ---
+import os
+import signal
+import socket
+
+# Detect if running locally
 import os
 import signal
 import streamlit as st
 
-st.divider()
-st.subheader("🛑 Exit Dashboard")
-st.write("Click the button below then close the tab. If running locally, this will also stop the server in your terminal.")
-if st.button("Exit"):
-    st.warning("✅ Dashboard shutdown initiated. Closing server...")
+# --- Conditional Shutdown Section ---
+# Detect if running locally by checking Streamlit's server address
+server_addr = os.environ.get("STREAMLIT_SERVER_ADDRESS", "localhost")
 
-    # Get the current process ID
-    pid = os.getpid()
+if server_addr in ("localhost", "127.0.0.1"):
+    st.divider()
+    st.subheader("🛑 End Local Dashboard Session")
+    st.write("✅ To exit: click the button below, then close this browser tab.")
 
-    # Send SIGTERM to the current process
-    os.kill(pid, signal.SIGTERM)
+    if st.button("Exit"):
+        st.warning("✅ Dashboard shutdown initiated. Closing server...")
+        pid = os.getpid()
+        os.kill(pid, signal.SIGTERM)
+
+
 
 
