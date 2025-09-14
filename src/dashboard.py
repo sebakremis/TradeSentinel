@@ -27,7 +27,8 @@ Features
 
 - **Portfolio Summary**:
   - Displays total PnL, total position value, and total % change.
-  - Shows a dynamic Portfolio Allocation pie chart by position value.
+  - Shows a dynamic Portfolio Allocation pie chart by position value,
+    which updates automatically based on current filters.
 
 - **Visualization**:
   - Styled per-ticker PnL DataFrame with green/red highlighting for gains/losses.
@@ -37,7 +38,7 @@ Features
 - **Interactive PnL Table with CSV Export**:
   - Filter by ticker(s) and date range.
   - Shows filtered summary metrics (total/average PnL, position value, price).
-  - Download filtered data as CSV with dynamic filename.
+  - Download filtered data as CSV (includes Quantity, Price, Position Value ($), and PnL) with dynamic filename.
 
 Usage
 -----
@@ -57,7 +58,6 @@ Notes
 Ensure that `ensure_data.py` is available and properly configured to fetch
 market data before running this dashboard.
 """
-
 import streamlit as st
 import pandas as pd
 import altair as alt
@@ -66,6 +66,7 @@ from ensure_data import ensure_prices
 # --- Sidebar controls ---
 st.sidebar.title("TradeSentinel Dashboard")
 tickers = st.sidebar.text_input("Tickers (comma-separated)", "AAPL,MSFT,TSLA").split(",")
+tickers = [t.strip() for t in tickers if t.strip()]
 period = st.sidebar.selectbox(
     "Period",
     ["1d", "5d", "1mo", "3mo", "6mo", "1y", "ytd", "max"],
@@ -81,9 +82,12 @@ refresh = st.sidebar.button("Refresh Data")
 
 # --- Parse quantities ---
 try:
-    quantities = dict(zip([t.strip() for t in tickers], map(int, qty_input.split(","))))
-except ValueError:
-    st.error("Please enter valid integer quantities matching the number of tickers.")
+    qty_list = [int(q.strip()) for q in qty_input.split(",") if q.strip()]
+    if len(qty_list) != len(tickers):
+        raise ValueError("Quantities count must match tickers count.")
+    quantities = dict(zip(tickers, qty_list))
+except Exception as e:
+    st.error(f"Please enter valid integer quantities matching the number of tickers. Details: {e}")
     st.stop()
 
 # --- Title ---
@@ -95,17 +99,18 @@ if refresh or "data" not in st.session_state:
         prices = ensure_prices(tickers, period=period, interval=interval)
         st.session_state.data = prices
 
-# --- PnL Calculation ---
+# --- PnL Calculation (per ticker snapshot) ---
 pnl_data = []
 for ticker, df in st.session_state.data.items():
     if df is not None and not df.empty:
         try:
-            start = df["Close"].iloc[0].item()
-            end = df["Close"].iloc[-1].item()
-            qty = quantities.get(ticker.strip(), 0)
+            # Use first and last Close for PnL snapshot
+            start = float(df["Close"].iloc[0])
+            end = float(df["Close"].iloc[-1])
+            qty = quantities.get(ticker, 0)
             weighted_pnl = (end - start) * qty
             position_value = end * qty
-            pct = ((end - start) / start) * 100
+            pct = ((end - start) / start) * 100 if start else 0.0
             pnl_data.append({
                 "Ticker": ticker,
                 "Quantity": qty,
@@ -118,21 +123,22 @@ for ticker, df in st.session_state.data.items():
         except Exception as e:
             st.warning(f"{ticker}: Error calculating PnL — {e}")
 
-# --- Display Table ---
+# --- Display Per-Ticker Table ---
 if pnl_data:
     df_pnl = pd.DataFrame(pnl_data)
     st.subheader("📋 Per-Ticker PnL")
     st.dataframe(
         df_pnl.style.applymap(
-            lambda v: "color: green" if isinstance(v, float) and v > 0 else "color: red",
+            lambda v: "color: green" if isinstance(v, (int, float)) and v > 0 else ("color: red" if isinstance(v, (int, float)) and v < 0 else ""),
             subset=["PnL ($)", "Change (%)"]
-        )
+        ),
+        use_container_width=True
     )
 
-    # --- Portfolio Summary ---
-    total_pnl = df_pnl["PnL ($)"].sum()
-    total_value = df_pnl["Position Value ($)"].sum()
-    total_pct = (total_pnl / total_value) * 100 if total_value else 0
+    # --- Portfolio Summary + Pie Chart ---
+    total_pnl = float(df_pnl["PnL ($)"].sum())
+    total_value = float(df_pnl["Position Value ($)"].sum())
+    total_pct = (total_pnl / total_value) * 100 if total_value else 0.0
 
     st.subheader("📊 Portfolio Summary")
     col1, col2 = st.columns([1, 1])
@@ -143,21 +149,20 @@ if pnl_data:
         st.metric("Total Change (%)", f"{total_pct:.2f}%")
 
     with col2:
-        # Pie chart based on current portfolio values
         pie_df = df_pnl[["Ticker", "Position Value ($)"]]
-        if not pie_df.empty:
+        if not pie_df.empty and pie_df["Position Value ($)"].sum() > 0:
             pie_chart = (
                 alt.Chart(pie_df)
                 .mark_arc()
                 .encode(
-                    theta=alt.Theta(field="Position Value ($)", type="quantitative"),
-                    color=alt.Color(field="Ticker", type="nominal"),
+                    theta=alt.Theta(field="Position Value ($)", type="quantitative", stack=True),
+                    color=alt.Color(field="Ticker", type="nominal", legend=alt.Legend(title="Ticker")),
                     tooltip=[
-                        alt.Tooltip("Ticker", title="Ticker"),
-                        alt.Tooltip("Position Value ($)", title="Position Value ($)", format="$.2f")
+                        alt.Tooltip("Ticker:N", title="Ticker"),
+                        alt.Tooltip("Position Value ($):Q", title="Position Value ($)", format="$.2f")
                     ]
                 )
-                .properties(width=250, height=250, title="Portfolio Allocation")
+                .properties(width=280, height=280, title="Portfolio Allocation")
             )
             st.altair_chart(pie_chart, use_container_width=True)
         else:
@@ -168,20 +173,23 @@ if pnl_data:
     pnl_time_data = []
     for ticker, df in st.session_state.data.items():
         if df is not None and not df.empty:
-            df = df.copy()
-            qty = quantities.get(ticker.strip(), 0)
-            df["Quantity"] = qty
-            df["Price"] = df["Close"]
-            df["Position Value ($)"] = df["Price"] * df["Quantity"]
-            df["PnL"] = (df["Price"] - df["Price"].iloc[0]) * df["Quantity"]
-            df["Ticker"] = ticker
-            df["Time"] = df.index
-            pnl_time_data.append(
-                df[["Time", "Ticker", "Quantity", "Price", "Position Value ($)", "PnL"]]
-            )
+            try:
+                tmp = df.copy()
+                qty = quantities.get(ticker, 0)
+                tmp["Quantity"] = qty
+                tmp["Price"] = tmp["Close"]
+                tmp["Position Value ($)"] = tmp["Price"] * tmp["Quantity"]
+                tmp["PnL"] = (tmp["Price"] - float(tmp["Price"].iloc[0])) * tmp["Quantity"]
+                tmp["Ticker"] = ticker
+                tmp["Time"] = tmp.index
+                pnl_time_data.append(
+                    tmp[["Time", "Ticker", "Quantity", "Price", "Position Value ($)", "PnL"]]
+                )
+            except Exception as e:
+                st.warning(f"{ticker}: Error building time series — {e}")
 
     if pnl_time_data:
-        combined_df = pd.concat(pnl_time_data)
+        combined_df = pd.concat(pnl_time_data, ignore_index=True)
         chart = (
             alt.Chart(combined_df)
             .mark_line()
@@ -198,8 +206,8 @@ if pnl_data:
         st.subheader("🔍 Explore & Export PnL Data")
         tickers_selected = st.multiselect(
             "Select Ticker(s)",
-            options=combined_df["Ticker"].unique(),
-            default=list(combined_df["Ticker"].unique()),
+            options=sorted(combined_df["Ticker"].unique().tolist()),
+            default=sorted(combined_df["Ticker"].unique().tolist()),
         )
         date_min = combined_df["Time"].min().date()
         date_max = combined_df["Time"].max().date()
@@ -214,17 +222,22 @@ if pnl_data:
             combined_df["Ticker"].isin(tickers_selected)
             & (combined_df["Time"].dt.date >= date_range[0])
             & (combined_df["Time"].dt.date <= date_range[1])
-        ]
+        ].copy()
 
-        total_pnl_filtered = filtered_df["PnL"].sum()
-        avg_pnl_filtered = filtered_df["PnL"].mean()
-        total_value_filtered = filtered_df["Position Value ($)"].sum()
-        avg_price_filtered = filtered_df["Price"].mean()
+        total_pnl_filtered = float(filtered_df["PnL"].sum()) if not filtered_df.empty else 0.0
+        avg_pnl_filtered = float(filtered_df["PnL"].mean()) if not filtered_df.empty else 0.0
+        total_value_filtered = float(filtered_df["Position Value ($)"].sum()) if not filtered_df.empty else 0.0
+        avg_price_filtered = float(filtered_df["Price"].mean()) if not filtered_df.empty else 0.0
 
-        st.metric("Total PnL (Filtered)", f"${total_pnl_filtered:,.2f}")
-        st.metric("Average PnL (Filtered)", f"${avg_pnl_filtered:,.2f}")
-        st.metric("Total Position Value (Filtered)", f"${total_value_filtered:,.2f}")
-        st.metric("Average Price (Filtered)", f"${avg_price_filtered:,.2f}")
+        m1, m2, m3, m4 = st.columns(4)
+        with m1:
+            st.metric("Total PnL (Filtered)", f"${total_pnl_filtered:,.2f}")
+        with m2:
+            st.metric("Average PnL (Filtered)", f"${avg_pnl_filtered:,.2f}")
+        with m3:
+            st.metric("Total Position Value (Filtered)", f"${total_value_filtered:,.2f}")
+        with m4:
+            st.metric("Average Price (Filtered)", f"${avg_price_filtered:,.2f}")
 
         st.dataframe(
             filtered_df.sort_values("Time").drop(columns=["Time"]),
@@ -246,8 +259,6 @@ if pnl_data:
 else:
     st.info("No PnL data available. Please refresh to fetch data.")
 
-
-
 # --- Conditional Shutdown Section ---
 import os
 import signal
@@ -255,16 +266,15 @@ import socket
 
 # Detect if running locally by checking Streamlit's server address
 server_addr = os.environ.get("STREAMLIT_SERVER_ADDRESS", "localhost")
-
 if server_addr in ("localhost", "127.0.0.1"):
     st.divider()
     st.subheader("🛑 End Local Dashboard Session")
     st.write("✅ To exit: click the button below, then close this browser tab.")
-
     if st.button("Exit"):
         st.warning("✅ Dashboard shutdown initiated. Closing server...")
         pid = os.getpid()
         os.kill(pid, signal.SIGTERM)
+
 
 
 
