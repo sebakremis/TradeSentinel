@@ -251,15 +251,14 @@ if pnl_data:
         st.write(f"**Loss Rate:** {win_loss['loss_rate']:.2%}")
         st.write(f"**Profit Factor:** {win_loss['profit_factor']:.2f}")
 
-        # Correlation matrix heatmap
         # --- Asset Correlation Matrix (Styled Table) ---
         st.subheader("📈 Asset Correlation Matrix")
 
         # Pivot to get one column per asset
         price_wide = combined_df.pivot(index="Time", columns="Ticker", values="Price")
 
-        # Compute correlation matrix and round to 2 decimals
-        corr_df = correlation_matrix(price_wide).round(2)
+        # Compute correlation matrix and round to 6 decimals
+        corr_df = correlation_matrix(price_wide).round(6)
 
         # Display with conditional formatting
         st.dataframe(
