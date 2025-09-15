@@ -9,6 +9,8 @@ TradeSentinel is a Python-powered dashboard for real-time portfolio monitoring, 
 
 ## 🚀 Features
 - **Live market data:** Fetches intraday prices from APIs (Yahoo Finance).
+   * Supported intraday periods: `1m`, `5m`, `15m`, `30m`, `1h`.
+   * If `1d` is selected, the last price corresponds to the daily close.
 - **PnL tracking:** Calculates mark-to-market PnL by instrument, sector, or portfolio.
 - **Risk metrics:** Computes Value-at-Risk (VaR), exposure by asset class, and limit breaches.
 - **Interactive dashboard:** Built with Streamlit for intuitive visualization.
