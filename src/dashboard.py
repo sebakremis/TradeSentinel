@@ -68,8 +68,30 @@ import plotly.express as px
 
 # --- Sidebar controls ---
 st.sidebar.title("TradeSentinel Dashboard")
-tickers = st.sidebar.text_input("Tickers (comma-separated)", "AAPL,MSFT,TSLA").split(",")
-tickers = [t.strip() for t in tickers if t.strip()]
+
+# Default portfolio data
+default_data = pd.DataFrame({
+    "Ticker": ["AAPL", "MSFT", "TSLA"],
+    "Quantity": [10, 5, 2]
+})
+
+# Editable table for tickers and quantities
+portfolio_df = st.sidebar.data_editor(
+    default_data,
+    num_rows="dynamic",  # allow adding/removing rows
+    use_container_width=True
+)
+
+# Extract tickers and quantities from the edited table
+tickers = portfolio_df["Ticker"].dropna().astype(str).str.strip().tolist()
+quantities = dict(
+    zip(
+        tickers,
+        portfolio_df["Quantity"].fillna(0).astype(int)
+    )
+)
+
+# Other sidebar controls
 period = st.sidebar.selectbox(
     "Period",
     ["1d", "5d", "1mo", "3mo", "6mo", "1y", "ytd", "max"],
@@ -80,18 +102,7 @@ interval = st.sidebar.selectbox(
     ["1m", "5m", "15m", "30m", "1h", "1d", "1wk", "1mo"],
     index=5
 )
-qty_input = st.sidebar.text_input("Quantities (comma-separated)", "10,5,2")
 refresh = st.sidebar.button("Refresh Data")
-
-# --- Parse quantities ---
-try:
-    qty_list = [int(q.strip()) for q in qty_input.split(",") if q.strip()]
-    if len(qty_list) != len(tickers):
-        raise ValueError("Quantities count must match tickers count.")
-    quantities = dict(zip(tickers, qty_list))
-except Exception as e:
-    st.error(f"Please enter valid integer quantities matching the number of tickers. Details: {e}")
-    st.stop()
 
 # --- Title ---
 st.title("📈 TradeSentinel: Intraday PnL & Risk Monitor")
