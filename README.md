@@ -46,7 +46,7 @@ TradeSentinel is a Python-powered dashboard for real-time portfolio monitoring, 
 </a>  
 No installation required — runs directly in your browser.
 
-### or Run locally:
+### Alternatively, clone the repo and run `dashboard.py` locally:
 ```bash
 # Clone the repository
 git clone https://github.com/sebakremis/TradeSentinel.git
