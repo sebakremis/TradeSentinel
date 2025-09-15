@@ -1,14 +1,11 @@
 # src/ensure_data.py
+
 """
 ensure_data.py
 ==============
-
-Utility for retrieving and validating historical market price data for one or
-more tickers using the Yahoo Finance API via the `yfinance` library.
-
-This module provides a single function, `ensure_prices`, which downloads price
-data for the specified tickers, ensures that a 'Close' column is present in the
-result, and returns the data in a dictionary keyed by ticker symbol.
+Utility for retrieving and validating historical market price data for one or more
+tickers using the Yahoo Finance API via the `yfinance` library. This version also
+enriches each ticker's DataFrame with a 'Sector' column (when available).
 
 Features
 --------
@@ -18,70 +15,84 @@ Features
 - Ensures a 'Close' column exists:
   - If missing but 'Adj Close' is present, uses 'Adj Close' as a substitute.
   - Skips tickers with neither 'Close' nor 'Adj Close'.
+- Enriches each DataFrame with a 'Sector' column fetched from yfinance metadata.
+- Caches sector lookups per run to minimize HTTP calls.
 - Logs progress, warnings, and errors using `log_utils` functions.
 
 Functions
 ---------
-- `ensure_prices(tickers: list[str], period: str = "5d", interval: str = "1d") -> dict[str, pandas.DataFrame]`  
-  Download and validate price data for the given tickers.
-
-Parameters
-----------
-tickers : list[str]
-    List of ticker symbols to fetch.
-period : str, optional
-    Data period to download (e.g., '1d', '5d', '1mo', '1y', 'max').
-interval : str, optional
-    Data interval (e.g., '1m', '5m', '1h', '1d', '1wk', '1mo').
+- ensure_prices(tickers: list[str], period: str = "5d", interval: str = "1d")
+  Download and validate price data for the given tickers and append 'Sector'.
 
 Returns
 -------
 dict[str, pandas.DataFrame]
-    Mapping of ticker symbol to its corresponding DataFrame containing at least
-    a 'Close' column.
+Mapping of ticker symbol to its corresponding DataFrame containing at least a
+'Close' column and a 'Sector' column (if retrievable).
 
 Dependencies
 ------------
 - yfinance
 - pandas (implied via yfinance output)
 - log_utils (for logging)
-- colorama (indirectly, via log_utils)
-
-Usage Example
--------------
-    from ensure_data import ensure_prices
-
-    tickers = ["AAPL", "MSFT", "GOOG"]
-    prices = ensure_prices(tickers, period="1mo", interval="1d")
-
-    for symbol, df in prices.items():
-        print(symbol, df.tail())
 
 Notes
 -----
 - If a ticker returns no data, it is skipped with a warning.
 - Any exceptions during download are caught and logged as errors.
+- Sector lookups are best-effort; failures result in Sector="Unknown" but do not
+  prevent price data from being returned.
 """
-
+import pandas as pd
 import yfinance as yf
 from log_utils import info, warn, error
 
+# Cache to avoid repeated sector lookups
+_sector_cache = {}
+
+def _get_sector(ticker: str) -> str:
+    """Fetch sector for a ticker, with caching and graceful fallback."""
+    if ticker in _sector_cache:
+        return _sector_cache[ticker]
+
+    sector = "Unknown"
+    try:
+        yf_t = yf.Ticker(ticker)
+        try:
+            info_dict = yf_t.get_info()
+        except Exception:
+            info_dict = getattr(yf_t, "info", {}) or {}
+        if isinstance(info_dict, dict):
+            sector = info_dict.get("sector") or "Unknown"
+    except Exception as e:
+        warn(f"Could not fetch sector for {ticker}: {e}")
+
+    _sector_cache[ticker] = sector
+    return sector
+
+
 def ensure_prices(tickers, period="5d", interval="1d"):
     """
-    Fetch historical price data for each ticker and ensure a 'Close' column exists.
+    Fetch historical price data for each ticker, ensure 'Close' exists,
+    flatten columns if needed, and add a 'Sector' column.
+
     Returns:
-        dict[str, pd.DataFrame]: Mapping of ticker -> DataFrame with at least a 'Close' column.
+        dict[ticker -> DataFrame] with flat column names
     """
     prices = {}
+
     for ticker in tickers:
         try:
             info(f"Fetching data for {ticker}...")
+
+            # Force single-ticker mode and request flat columns
             df = yf.download(
-                ticker,
+                str(ticker),
                 period=period,
                 interval=interval,
                 progress=False,
-                auto_adjust=True  # ✅ Explicit to avoid FutureWarning
+                auto_adjust=True,
+                group_by='column'  # prevent MultiIndex where possible
             )
 
             if df.empty:
@@ -97,10 +108,26 @@ def ensure_prices(tickers, period="5d", interval="1d"):
                     error(f"No 'Close' or 'Adj Close' column for {ticker}, skipping.")
                     continue
 
+            # Add sector as a constant column
+            df["Sector"] = _get_sector(ticker)
+
+            # ✅ Flatten columns immediately after adding Sector
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = [col[0] if isinstance(col, tuple) else col for col in df.columns]
+
             prices[ticker] = df
 
         except Exception as e:
             error(f"Error fetching data for {ticker}: {e}")
 
     return prices
+
+
+
+
+
+
+
+
+
 
