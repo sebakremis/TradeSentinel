@@ -73,7 +73,6 @@ def _get_sector(ticker: str) -> str:
     _sector_cache[ticker] = sector
     return sector
 
-
 def ensure_prices(tickers, period="5d", interval="1d"):
     """
     Fetch historical price data for each ticker, ensure 'Close' exists,
@@ -83,11 +82,9 @@ def ensure_prices(tickers, period="5d", interval="1d"):
         dict[ticker -> DataFrame] with flat column names
     """
     prices = {}
-
     for ticker in tickers:
         try:
-            info(f"Fetching data for {ticker}...")
-
+            info(f"Fetching data for {ticker} ...")
             # Force single-ticker mode and request flat columns
             df = yf.download(
                 str(ticker),
@@ -114,7 +111,7 @@ def ensure_prices(tickers, period="5d", interval="1d"):
             # Add sector as a constant column
             df["Sector"] = _get_sector(ticker)
 
-            # ✅ Flatten columns immediately after adding Sector
+            # Flatten columns immediately after adding Sector
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = [col[0] if isinstance(col, tuple) else col for col in df.columns]
 
@@ -124,6 +121,9 @@ def ensure_prices(tickers, period="5d", interval="1d"):
             error(f"Error fetching data for {ticker}: {e}")
 
     return prices
+
+
+
 
 
 

@@ -79,16 +79,41 @@ portfolio_df = st.sidebar.data_editor(
     use_container_width=True
 )
 
-# Sidebar inputs (temporary until refresh)
+# --- Period & Interval selection with dynamic filtering ---
+
+# Period selectbox (widget sets its own default via index)
 period_input = st.sidebar.selectbox(
     "Period",
     ["1d", "5d", "1mo", "3mo", "6mo", "1y", "ytd", "max"],
-    index=1
+    index=1,  # default to "5d"
+    key="active_period"
 )
+
+# Allowed intervals mapping
+interval_map = {
+    "1d":  ["1m", "5m", "15m", "30m", "1h"],
+    "5d":  ["5m", "15m", "30m", "1h", "1d"],
+    "1mo": ["15m", "30m", "1h", "1d", "1wk"],
+    "3mo": ["15m", "30m", "1h", "1d", "1wk"],
+    "6mo": ["1d", "1wk", "1mo"],
+    "1y":  ["1d", "1wk", "1mo"],
+    "ytd": ["1d", "1wk", "1mo"],
+    "max": ["1d", "1wk", "1mo"]
+}
+
+interval_options = interval_map[period_input]
+
+# Interval selectbox (widget sets its own default via index)
+default_interval_index = (
+    interval_options.index("5m") if period_input == "1d"
+    else interval_options.index("1d")
+)
+
 interval_input = st.sidebar.selectbox(
     "Interval",
-    ["1m", "5m", "15m", "30m", "1h", "1d", "1wk", "1mo"],
-    index=5
+    interval_options,
+    index=default_interval_index,
+    key="active_interval"
 )
 
 # Refresh button
@@ -127,8 +152,7 @@ if refresh:
     st.session_state.active_quantities = dict(
         zip(tickers_input, pd.Series(quantities_input).fillna(0).astype(int))
     )
-    st.session_state.active_period = period_input
-    st.session_state.active_interval = interval_input
+    
 
     # Fetch and store data
     with st.spinner("Fetching market data..."):
