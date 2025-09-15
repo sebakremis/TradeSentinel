@@ -178,7 +178,7 @@ if pnl_data:
             fig.update_traces(textposition="inside", textinfo="percent+label")
 
             # Remove the side legend
-            fig.update_layout(showlegend=False)
+            fig.update_layout(showlegend=False, title_x=0.3)
     
             st.plotly_chart(fig, use_container_width=True)
         else:
@@ -245,7 +245,7 @@ if pnl_data:
                 sector_alloc,
                 names="Sector",
                 values="Close",
-                title="Portfolio Allocation by Sector",
+                title="",
                 hole=0.3
             )
             fig_sector.update_traces(textposition="inside", textinfo="percent+label")
