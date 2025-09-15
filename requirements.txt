@@ -8,4 +8,5 @@ matplotlib>=3.6
 seaborn>=0.12
 plotly>=5.0.0
 colorama>=0.4.6
+pytest>=8.0
 
