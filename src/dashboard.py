@@ -157,25 +157,33 @@ if pnl_data:
         st.metric("Total Change (%)", f"{total_pct:.2f}%")
 
     with col2:
-        pie_df = df_pnl[["Ticker", "Position Value ($)"]]
-        if not pie_df.empty and pie_df["Position Value ($)"].sum() > 0:
-            pie_chart = (
-                alt.Chart(pie_df)
-                .mark_arc()
-                .encode(
-                    theta=alt.Theta(field="Position Value ($)", type="quantitative", stack=True),
-                    color=alt.Color(field="Ticker", type="nominal", legend=alt.Legend(title="Ticker")),
-                    tooltip=[
-                        alt.Tooltip("Ticker:N", title="Ticker"),
-                        alt.Tooltip("Position Value ($):Q", title="Position Value ($)", format="$.2f")
-                    ]
-                )
-                .properties(width=280, height=280, title="Portfolio Allocation")
+        pie_df = df_pnl[["Ticker", "Position Value ($)"]].copy()
+        total_value = pie_df["Position Value ($)"].sum()
+    
+        if not pie_df.empty and total_value > 0:
+            import plotly.express as px
+    
+            # Calculate percentage for labels
+            pie_df["Percentage"] = (pie_df["Position Value ($)"] / total_value) * 100
+    
+            fig = px.pie(
+                pie_df,
+                names="Ticker",
+                values="Position Value ($)",
+                title="Portfolio Allocation",
+                hole=0.3  # optional: donut style
             )
-            st.altair_chart(pie_chart, use_container_width=True)
+    
+            # Show ticker + percentage inside each slice
+            fig.update_traces(textposition="inside", textinfo="percent+label")
+    
+            st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("No data available for pie chart.")
 
+
+    
+    
     # --- Portfolio PnL Over Time ---
     st.subheader("📉 Portfolio PnL Over Time")
     pnl_time_data = []

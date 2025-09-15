@@ -80,7 +80,23 @@ def sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
     excess = returns - (risk_free_rate / 252)
     return np.sqrt(252) * excess.mean() / excess.std(ddof=0)
 
+def sortino_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
+    """
+    Calculate the annualized Sortino ratio.
+    """
+    downside = returns[returns < 0]
+    excess = returns - (risk_free_rate / 252)
+    downside_std = downside.std(ddof=0)
 
+    if downside_std == 0:
+        return np.nan  # or 0.0, depending on how you want to handle it
+
+    return np.sqrt(252) * excess.mean() / downside_std
+
+
+
+'''
+old version
 def sortino_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
     """
     Calculate the annualized Sortino ratio.
@@ -100,7 +116,7 @@ def sortino_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
     downside = returns[returns < 0]
     excess = returns - (risk_free_rate / 252)
     return np.sqrt(252) * excess.mean() / downside.std(ddof=0)
-
+'''
 
 def calmar_ratio(returns: pd.Series) -> float:
     """
