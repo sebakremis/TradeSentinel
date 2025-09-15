@@ -304,28 +304,29 @@ if pnl_data:
 
         # --- Portfolio Allocation by Sector ---
         st.subheader("📊 Portfolio Allocation by Sector")
-
-        # Build sector allocation from latest prices
+        
+        # Build sector allocation from latest prices *and* quantities
         latest_data = []
         for ticker, df in st.session_state.data.items():
             if df is not None and not df.empty:
                 latest_close = df["Close"].iloc[-1]
-                sector = df["Sector"].iloc[0]
+                qty = quantities.get(ticker, 0)  # same source as Portfolio Allocation
+                sector = df["Sector"].iloc[0] if "Sector" in df.columns else "Unknown"
+                position_value = latest_close * qty
                 latest_data.append({
                     "Ticker": ticker,
                     "Sector": sector,
-                    "Close": latest_close
+                    "PositionValue": position_value
                 })
-
+        
         if latest_data:
             sector_df = pd.DataFrame(latest_data)
-            sector_alloc = sector_df.groupby("Sector")["Close"].sum().reset_index()
-
-            
+            sector_alloc = sector_df.groupby("Sector")["PositionValue"].sum().reset_index()
+        
             fig_sector = px.pie(
                 sector_alloc,
                 names="Sector",
-                values="Close",
+                values="PositionValue",
                 title="",
                 hole=0.3
             )
@@ -336,7 +337,6 @@ if pnl_data:
             st.info("No data available for sector allocation chart.")
 
       
-
         # --- Advanced Metrics Section ---
         from metrics import (
             calculate_var, calculate_cvar, sharpe_ratio, sortino_ratio,
