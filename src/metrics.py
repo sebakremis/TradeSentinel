@@ -1,10 +1,10 @@
+# src/metrics.py
 """
 metrics.py — Advanced portfolio and trading performance metrics for TradeSentinel.
 
-This module provides reusable functions to calculate advanced risk, return,
-and performance statistics for portfolios or individual assets. It is designed
-to be imported into the Streamlit dashboard (`dashboard.py`) or used in
-offline analysis scripts.
+This module provides reusable functions to calculate advanced risk, return, and
+performance statistics for portfolios or individual assets. It is designed to be
+imported into the Streamlit dashboard (`dashboard.py`) or used in offline analysis scripts.
 
 Functions included:
 - Value at Risk (VaR) and Conditional VaR (CVaR / Expected Shortfall)
@@ -13,9 +13,18 @@ Functions included:
 - Correlation matrix
 - Win rate, loss rate, and profit factor
 
-All functions are pure and side‑effect free: they take pandas Series/DataFrames
-as input and return numeric results or DataFrames, making them easy to test
-and reuse.
+Robustness & Safety
+-------------------
+- All functions are pure and side‑effect free: they take pandas Series/DataFrames as input
+  and return numeric results or DataFrames, making them easy to test and reuse.
+- Empty or all‑NaN inputs are handled gracefully, returning `np.nan` rather than raising errors.
+- Division‑by‑zero cases (e.g., zero standard deviation or zero max drawdown) are explicitly guarded.
+- Behaviour on insufficient data is predictable and safe for use in automated pipelines.
+
+Typical usage:
+    from metrics import sharpe_ratio, max_drawdown
+    sr = sharpe_ratio(daily_returns)
+    mdd = max_drawdown((1 + daily_returns).cumprod())
 """
 
 import numpy as np

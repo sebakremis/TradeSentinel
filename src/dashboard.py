@@ -68,8 +68,8 @@ st.sidebar.title("Set portfolio to analyze:")
 
 # Default portfolio data
 default_data = pd.DataFrame({
-    "Ticker": ["AAPL", "MSFT", "TSLA"],
-    "Quantity": [10, 5, 2]
+    "Ticker": ["NVDA", "MSFT", "GOOGL"],
+    "Quantity": [100, 30, 70]
 })
 
 # Editable table for tickers and quantities
@@ -79,27 +79,76 @@ portfolio_df = st.sidebar.data_editor(
     use_container_width=True
 )
 
-# Extract tickers and quantities from the edited table
-tickers = portfolio_df["Ticker"].dropna().astype(str).str.strip().tolist()
-quantities = dict(
-    zip(
-        tickers,
-        portfolio_df["Quantity"].fillna(0).astype(int)
-    )
-)
-
-# Other sidebar controls
-period = st.sidebar.selectbox(
+# Sidebar inputs (temporary until refresh)
+period_input = st.sidebar.selectbox(
     "Period",
     ["1d", "5d", "1mo", "3mo", "6mo", "1y", "ytd", "max"],
     index=1
 )
-interval = st.sidebar.selectbox(
+interval_input = st.sidebar.selectbox(
     "Interval",
     ["1m", "5m", "15m", "30m", "1h", "1d", "1wk", "1mo"],
     index=5
 )
+
+# Refresh button
 refresh = st.sidebar.button("Refresh Data")
+
+# --- On refresh, validate and commit parameters ---
+if refresh:
+    tickers_input = (
+        portfolio_df["Ticker"]
+        .dropna()
+        .astype(str)
+        .str.strip()
+        .tolist()
+    )
+    quantities_input = portfolio_df["Quantity"]
+
+    invalid_tickers = [t for t in tickers_input if not t or not t.replace('.', '').isalnum()]
+    invalid_quantities = [
+        q for q in quantities_input
+        if pd.isna(q) or not isinstance(q, (int, float))
+    ]
+
+    if invalid_tickers:
+        st.sidebar.error(f"Invalid tickers: {', '.join(invalid_tickers)}")
+    if invalid_quantities:
+        st.sidebar.info(
+            "Please fill in all quantities with numeric values, "
+            "then press **Enter** to apply changes."
+        )
+
+    if invalid_tickers or invalid_quantities:
+        st.stop()
+
+    # Commit validated parameters to session_state
+    st.session_state.active_tickers = tickers_input
+    st.session_state.active_quantities = dict(
+        zip(tickers_input, pd.Series(quantities_input).fillna(0).astype(int))
+    )
+    st.session_state.active_period = period_input
+    st.session_state.active_interval = interval_input
+
+    # Fetch and store data
+    with st.spinner("Fetching market data..."):
+        prices = ensure_prices(
+            st.session_state.active_tickers,
+            period=st.session_state.active_period,
+            interval=st.session_state.active_interval
+        )
+        st.session_state.data = prices
+
+# --- Use stored parameters for display ---
+if "active_tickers" in st.session_state:
+    tickers = st.session_state.active_tickers
+    quantities = st.session_state.active_quantities
+    period = st.session_state.active_period
+    interval = st.session_state.active_interval
+else:
+    st.info("Set your portfolio parameters and click **Refresh Data** to load the dashboard.")
+    st.stop()
+
 
 # --- Title ---
 st.title("📈 TradeSentinel: Intraday PnL & Risk Monitor")
