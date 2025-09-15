@@ -210,6 +210,40 @@ if pnl_data:
         )
         st.altair_chart(chart, use_container_width=True)
 
+        # --- Portfolio Allocation by Sector ---
+        st.subheader("📊 Portfolio Allocation by Sector")
+
+        # Build sector allocation from latest prices
+        latest_data = []
+        for ticker, df in st.session_state.data.items():
+            if df is not None and not df.empty:
+                latest_close = df["Close"].iloc[-1]
+                sector = df["Sector"].iloc[0]
+                latest_data.append({
+                    "Ticker": ticker,
+                    "Sector": sector,
+                    "Close": latest_close
+                })
+
+        if latest_data:
+            sector_df = pd.DataFrame(latest_data)
+            sector_alloc = sector_df.groupby("Sector")["Close"].sum().reset_index()
+
+            import plotly.express as px
+            fig_sector = px.pie(
+                sector_alloc,
+                names="Sector",
+                values="Close",
+                title="Portfolio Allocation by Sector",
+                hole=0.3
+            )
+            fig_sector.update_traces(textposition="inside", textinfo="percent+label")
+            st.plotly_chart(fig_sector, use_container_width=True)
+        else:
+            st.info("No data available for sector allocation chart.")
+
+      
+
         # --- Advanced Metrics Section ---
         from metrics import (
             calculate_var, calculate_cvar, sharpe_ratio, sortino_ratio,
