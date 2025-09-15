@@ -210,6 +210,67 @@ if pnl_data:
         )
         st.altair_chart(chart, use_container_width=True)
 
+        # --- Advanced Metrics Section ---
+        from metrics import (
+            calculate_var, calculate_cvar, sharpe_ratio, sortino_ratio,
+            calmar_ratio, max_drawdown, correlation_matrix, win_loss_stats
+        )
+
+        st.subheader("📊 Advanced Metrics")
+
+        # Portfolio returns (daily or per interval)
+        portfolio_values = combined_df.groupby("Time")["Position Value ($)"].sum()
+        portfolio_returns = portfolio_values.pct_change().dropna()
+        cum_returns = (1 + portfolio_returns).cumprod()
+
+        # Risk & performance metrics
+        var_95 = calculate_var(portfolio_returns, 0.95)
+        cvar_95 = calculate_cvar(portfolio_returns, 0.95)
+        sharpe = sharpe_ratio(portfolio_returns)
+        sortino = sortino_ratio(portfolio_returns)
+        calmar = calmar_ratio(portfolio_returns)
+        mdd = max_drawdown(cum_returns)
+
+        # Win/loss stats from PnL column
+        win_loss = win_loss_stats(combined_df["PnL"])
+
+        # Display metrics in columns
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("VaR (95%)", f"{var_95:.2%}")
+            st.metric("CVaR (95%)", f"{cvar_95:.2%}")
+        with col2:
+            st.metric("Sharpe Ratio", f"{sharpe:.2f}")
+            st.metric("Sortino Ratio", f"{sortino:.2f}")
+        with col3:
+            st.metric("Calmar Ratio", f"{calmar:.2f}")
+            st.metric("Max Drawdown", f"{mdd:.2%}")
+
+        # Win/loss stats
+        st.write(f"**Win Rate:** {win_loss['win_rate']:.2%}")
+        st.write(f"**Loss Rate:** {win_loss['loss_rate']:.2%}")
+        st.write(f"**Profit Factor:** {win_loss['profit_factor']:.2f}")
+
+        # Correlation matrix heatmap
+        st.subheader("📈 Asset Correlation Matrix")
+        price_wide = combined_df.pivot(index="Time", columns="Ticker", values="Price")
+        corr_df = correlation_matrix(price_wide)
+
+        # Fix: name index before reset_index
+        corr_df = corr_df.rename_axis("Asset").reset_index()
+        corr_long = corr_df.melt(id_vars="Asset", var_name="Asset2", value_name="Correlation")
+
+
+        corr_chart = alt.Chart(corr_long).mark_rect().encode(
+            x=alt.X("Asset:N", title=""),
+            y=alt.Y("Asset2:N", title=""),
+            color=alt.Color("Correlation:Q", scale=alt.Scale(scheme="redblue", domain=(-1, 1))),
+            tooltip=["Asset", "Asset2", alt.Tooltip("Correlation", format=".2f")]
+).properties(width=400, height=400)
+
+        st.altair_chart(corr_chart, use_container_width=True)
+     
+                
         # --- Interactive PnL Table with CSV Export ---
         st.subheader("🔍 Explore & Export PnL Data")
         tickers_selected = st.multiselect(
@@ -266,68 +327,6 @@ if pnl_data:
         )
     else:
         st.info("No valid data to display. Try refreshing or adjusting tickers/period.")
-
-    # --- Advanced Metrics Section ---
-    from metrics import (
-        calculate_var, calculate_cvar, sharpe_ratio, sortino_ratio,
-        calmar_ratio, max_drawdown, correlation_matrix, win_loss_stats
-    )
-
-    st.subheader("📊 Advanced Metrics")
-
-    # Portfolio returns (daily or per interval)
-    portfolio_values = combined_df.groupby("Time")["Position Value ($)"].sum()
-    portfolio_returns = portfolio_values.pct_change().dropna()
-    cum_returns = (1 + portfolio_returns).cumprod()
-
-    # Risk & performance metrics
-    var_95 = calculate_var(portfolio_returns, 0.95)
-    cvar_95 = calculate_cvar(portfolio_returns, 0.95)
-    sharpe = sharpe_ratio(portfolio_returns)
-    sortino = sortino_ratio(portfolio_returns)
-    calmar = calmar_ratio(portfolio_returns)
-    mdd = max_drawdown(cum_returns)
-
-    # Win/loss stats from PnL column
-    win_loss = win_loss_stats(combined_df["PnL"])
-
-    # Display metrics in columns
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("VaR (95%)", f"{var_95:.2%}")
-        st.metric("CVaR (95%)", f"{cvar_95:.2%}")
-    with col2:
-        st.metric("Sharpe Ratio", f"{sharpe:.2f}")
-        st.metric("Sortino Ratio", f"{sortino:.2f}")
-    with col3:
-        st.metric("Calmar Ratio", f"{calmar:.2f}")
-        st.metric("Max Drawdown", f"{mdd:.2%}")
-
-    # Win/loss stats
-    st.write(f"**Win Rate:** {win_loss['win_rate']:.2%}")
-    st.write(f"**Loss Rate:** {win_loss['loss_rate']:.2%}")
-    st.write(f"**Profit Factor:** {win_loss['profit_factor']:.2f}")
-
-    # Correlation matrix heatmap
-    st.subheader("📈 Asset Correlation Matrix")
-    price_wide = combined_df.pivot(index="Time", columns="Ticker", values="Price")
-    corr_df = correlation_matrix(price_wide)
-
-    # Fix: name index before reset_index
-    corr_df = corr_df.rename_axis("Asset").reset_index()
-    corr_long = corr_df.melt(id_vars="Asset", var_name="Asset2", value_name="Correlation")
-
-
-    corr_chart = alt.Chart(corr_long).mark_rect().encode(
-        x=alt.X("Asset:N", title=""),
-        y=alt.Y("Asset2:N", title=""),
-        color=alt.Color("Correlation:Q", scale=alt.Scale(scheme="redblue", domain=(-1, 1))),
-        tooltip=["Asset", "Asset2", alt.Tooltip("Correlation", format=".2f")]
-).properties(width=400, height=400)
-
-    st.altair_chart(corr_chart, use_container_width=True)
-
-
 
 else:
     st.info("No PnL data available. Please refresh to fetch data.")
