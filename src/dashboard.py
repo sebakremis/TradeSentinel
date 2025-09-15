@@ -240,7 +240,7 @@ if pnl_data:
             sector_df = pd.DataFrame(latest_data)
             sector_alloc = sector_df.groupby("Sector")["Close"].sum().reset_index()
 
-            import plotly.express as px
+            
             fig_sector = px.pie(
                 sector_alloc,
                 names="Sector",
