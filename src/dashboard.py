@@ -252,24 +252,20 @@ if pnl_data:
         st.write(f"**Profit Factor:** {win_loss['profit_factor']:.2f}")
 
         # Correlation matrix heatmap
+        # --- Asset Correlation Matrix (Styled Table) ---
         st.subheader("📈 Asset Correlation Matrix")
+
+        # Pivot to get one column per asset
         price_wide = combined_df.pivot(index="Time", columns="Ticker", values="Price")
-        corr_df = correlation_matrix(price_wide)
 
-        # Fix: name index before reset_index
-        corr_df = corr_df.rename_axis("Asset").reset_index()
-        corr_long = corr_df.melt(id_vars="Asset", var_name="Asset2", value_name="Correlation")
+        # Compute correlation matrix and round to 2 decimals
+        corr_df = correlation_matrix(price_wide).round(2)
 
-
-        corr_chart = alt.Chart(corr_long).mark_rect().encode(
-            x=alt.X("Asset:N", title=""),
-            y=alt.Y("Asset2:N", title=""),
-            color=alt.Color("Correlation:Q", scale=alt.Scale(scheme="redblue", domain=(-1, 1))),
-            tooltip=["Asset", "Asset2", alt.Tooltip("Correlation", format=".2f")]
-).properties(width=400, height=400)
-
-        st.altair_chart(corr_chart, use_container_width=True)
-     
+        # Display with conditional formatting
+        st.dataframe(
+            corr_df.style.background_gradient(cmap="coolwarm", vmin=-1, vmax=1)
+)
+  
                 
         # --- Interactive PnL Table with CSV Export ---
         st.subheader("🔍 Explore & Export PnL Data")
