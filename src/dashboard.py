@@ -299,7 +299,7 @@ if pnl_data:
         with m2:
             st.metric("Average PnL (Filtered)", f"${avg_pnl_filtered:,.2f}")
         with m3:
-            st.metric("Total Position Value (Filtered)", f"${total_value_filtered:,.2f}")
+            st.metric("Total Position Value (Filtered, M$)", f"${total_value_filtered/1_000_000:,.2f}M")
         with m4:
             st.metric("Average Price (Filtered)", f"${avg_price_filtered:,.2f}")
 
