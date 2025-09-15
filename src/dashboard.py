@@ -449,6 +449,12 @@ if pnl_data:
 else:
     st.info("No PnL data available. Please refresh to fetch data.")
 
+st.markdown("---")
+st.markdown(
+    "🔗 [View Source Code on GitHub](https://github.com/sebakremis/TradeSentinel)",
+    unsafe_allow_html=True
+)
+st.caption("Built using Streamlit and Python.")
 
 
 
