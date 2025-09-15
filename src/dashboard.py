@@ -67,7 +67,7 @@ import signal
 import plotly.express as px
 
 # --- Sidebar controls ---
-st.sidebar.title("TradeSentinel Dashboard")
+st.sidebar.title("Set portfolio to analyze:")
 
 # Default portfolio data
 default_data = pd.DataFrame({
