@@ -12,12 +12,11 @@ TradeSentinel is a Python-powered dashboard for real-time portfolio monitoring, 
 - **PnL tracking:** Calculates mark-to-market PnL by instrument, sector, or portfolio.
 - **Risk metrics:** Computes Value-at-Risk (VaR), exposure by asset class, and limit breaches.
 - **Interactive dashboard:** Built with Streamlit for intuitive visualization.
-- **Alerts:** Email or Slack notifications when thresholds are exceeded.
 
 ## 🛠 Tech stack
 - **Python:** pandas, numpy, altair, streamlit
 - **Data APIs:** Yahoo Finance
-- **Deployment:** Streamlit Community Cloud (public)
+- **Deployment:** Streamlit Community Cloud
 
 ## 📂 Project structure
 - **data/** — Sample datasets  
@@ -32,9 +31,8 @@ TradeSentinel is a Python-powered dashboard for real-time portfolio monitoring, 
 
 
 ## 📈 Example use case
-- **Real-time monitoring:** A trading desk tracks intraday PnL and risk exposure.  
-- **Limit alerts:** Notifications trigger when VaR exceeds limits or PnL breaches thresholds.  
-- **Post-trade review:** Historical data supports trend analysis and daily reviews.  
+- **Intraday PnL tracking**: Monitor live portfolio PnL and key metrics during market hours to quickly spot drawdowns or performance spikes.
+- **On-demand CSV snapshots**: Export the current portfolio metrics view to CSV for quick sharing, further analysis, or archiving as a daily snapshot.
 
 ---
 
@@ -58,7 +56,7 @@ pip install -r ../requirements.txt
 # Run the dashboard
 streamlit run dashboard.py
 ```
-
+* **To exit a dashboard.py local session**: close the Dashboard tab & press `Ctrl + C` in your terminal.
 ## 📜 License  
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details. 
 
