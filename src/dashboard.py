@@ -321,7 +321,8 @@ if pnl_data:
 
 else:
     st.info("No PnL data available. Please refresh to fetch data.")
-
+'''
+commented out, streamlit app lunch is displayed as local
 # --- Conditional Shutdown Section ---
 server_addr = os.environ.get("STREAMLIT_SERVER_ADDRESS", "localhost")
 if server_addr in ("localhost", "127.0.0.1"):
@@ -332,7 +333,7 @@ if server_addr in ("localhost", "127.0.0.1"):
         st.warning("Dashboard shutdown initiated. Closing server...")
         pid = os.getpid()
         os.kill(pid, signal.SIGTERM)
-
+'''
 
 
 
