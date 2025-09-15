@@ -3,37 +3,35 @@
 dashboard.py
 ============
 
-Streamlit dashboard for monitoring intraday and historical Profit & Loss (PnL)
+Streamlit dashboard for monitoring intraday and historical Profit & Loss (PnL) 
 and portfolio risk metrics for multiple tickers.
 
 Features
 --------
 - **Sidebar Controls**:
-  - Input tickers (comma-separated).
+  - Editable table (`st.data_editor`) for entering tickers and quantities (dynamic rows, instant updates).
   - Select historical data period and price interval.
-  - Specify quantities per ticker.
   - Refresh data on demand.
 
 - **Data Fetching**:
-  - Retrieves market price data for the selected tickers using
-    `ensure_prices` from `ensure_data.py`.
+  - Retrieves market price data for the selected tickers using `ensure_prices` from `ensure_data.py`.
   - Caches data in `st.session_state` to avoid redundant fetches.
 
 - **PnL & Position Metrics**:
-  - Computes per-ticker PnL in absolute ($) and percentage terms.
+  - Computes per‑ticker PnL in absolute ($) and percentage terms.
   - Calculates position values based on latest prices and quantities.
   - Adds Quantity, Price, and Position Value ($) columns to all outputs.
   - Handles missing or invalid data gracefully.
 
 - **Portfolio Summary**:
   - Displays total PnL, total position value, and total % change.
-  - Shows a dynamic Portfolio Allocation pie chart by position value,
-    which updates automatically based on current filters.
+  - Shows dynamic Portfolio Allocation pie charts (by ticker and by sector) using Plotly, 
+    with legends hidden and titles aligned/optional.
 
 - **Visualization**:
-  - Styled per-ticker PnL DataFrame with green/red highlighting for gains/losses.
+  - Styled per‑ticker PnL DataFrame with green/red highlighting for gains/losses.
   - Portfolio PnL Over Time line chart by ticker.
-  - Portfolio Allocation pie chart (Altair) with tooltips.
+  - Portfolio Allocation pie charts with percentage labels inside slices.
 
 - **Interactive PnL Table with CSV Export**:
   - Filter by ticker(s) and date range.
@@ -43,21 +41,20 @@ Features
 Usage
 -----
 Run the dashboard with Streamlit:
-
     streamlit run src/dashboard.py
 
 Dependencies
 ------------
 - streamlit
 - pandas
-- altair
+- plotly
 - ensure_data.ensure_prices
 
 Notes
 -----
-Ensure that `ensure_data.py` is available and properly configured to fetch
-market data before running this dashboard.
+Ensure that `ensure_data.py` is available and properly configured to fetch market data before running this dashboard.
 """
+
 import streamlit as st
 import pandas as pd
 import altair as alt

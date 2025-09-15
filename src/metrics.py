@@ -60,83 +60,37 @@ def calculate_cvar(returns: pd.Series, confidence: float = 0.95) -> float:
     var = calculate_var(returns, confidence)
     return returns[returns <= var].mean()
 
-
 def sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
-    """
-    Calculate the annualized Sharpe ratio.
-
-    Parameters
-    ----------
-    returns : pd.Series
-        Series of periodic returns.
-    risk_free_rate : float, optional
-        Annual risk-free rate as a decimal (default 0.0).
-
-    Returns
-    -------
-    float
-        Annualized Sharpe ratio.
-    """
+    """Calculate the annualized Sharpe ratio."""
+    if returns.empty or returns.dropna().empty:
+        return np.nan
     excess = returns - (risk_free_rate / 252)
-    return np.sqrt(252) * excess.mean() / excess.std(ddof=0)
+    std_excess = excess.std(ddof=0)
+    if std_excess == 0:
+        return np.nan
+    return np.sqrt(252) * excess.mean() / std_excess
 
 def sortino_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
-    """
-    Calculate the annualized Sortino ratio.
-    """
+    """Calculate the annualized Sortino ratio."""
+    if returns.empty or returns.dropna().empty:
+        return np.nan
     downside = returns[returns < 0]
     excess = returns - (risk_free_rate / 252)
     downside_std = downside.std(ddof=0)
-
     if downside_std == 0:
-        return np.nan  # or 0.0, depending on how you want to handle it
-
+        return np.nan
     return np.sqrt(252) * excess.mean() / downside_std
 
-
-
-'''
-old version
-def sortino_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
-    """
-    Calculate the annualized Sortino ratio.
-
-    Parameters
-    ----------
-    returns : pd.Series
-        Series of periodic returns.
-    risk_free_rate : float, optional
-        Annual risk-free rate as a decimal (default 0.0).
-
-    Returns
-    -------
-    float
-        Annualized Sortino ratio.
-    """
-    downside = returns[returns < 0]
-    excess = returns - (risk_free_rate / 252)
-    return np.sqrt(252) * excess.mean() / downside.std(ddof=0)
-'''
-
 def calmar_ratio(returns: pd.Series) -> float:
-    """
-    Calculate the Calmar ratio: annualized return divided by max drawdown.
-
-    Parameters
-    ----------
-    returns : pd.Series
-        Series of periodic returns.
-
-    Returns
-    -------
-    float
-        Calmar ratio.
-    """
+    """Calculate the Calmar ratio: annualized return divided by max drawdown."""
+    if returns.empty or returns.dropna().empty:
+        return np.nan
     cumulative = (1 + returns).cumprod()
     mdd = max_drawdown(cumulative)
+    if len(returns) == 0:
+        return np.nan
     annual_return = (1 + returns).prod() ** (252 / len(returns)) - 1
     return annual_return / abs(mdd) if mdd != 0 else np.nan
-
 
 def max_drawdown(cumulative_returns: pd.Series) -> float:
     """
@@ -156,7 +110,6 @@ def max_drawdown(cumulative_returns: pd.Series) -> float:
     drawdown = cumulative_returns / rolling_max - 1
     return drawdown.min()
 
-
 def correlation_matrix(price_df: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate the correlation matrix of asset returns.
@@ -173,7 +126,6 @@ def correlation_matrix(price_df: pd.DataFrame) -> pd.DataFrame:
     """
     returns = price_df.pct_change().dropna()
     return returns.corr()
-
 
 def win_loss_stats(pnl_series: pd.Series) -> dict:
     """

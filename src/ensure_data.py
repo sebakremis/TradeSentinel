@@ -1,34 +1,36 @@
 # src/ensure_data.py
-
 """
 ensure_data.py
 ==============
-Utility for retrieving and validating historical market price data for one or more
-tickers using the Yahoo Finance API via the `yfinance` library. This version also
-enriches each ticker's DataFrame with a 'Sector' column (when available).
+
+Utility for retrieving, validating, and enriching historical market price data
+for one or more tickers using the Yahoo Finance API via the `yfinance` library.
 
 Features
 --------
-- Fetches historical OHLCV data for each ticker.
+- Fetches historical OHLCV data for each ticker in **single‑ticker mode** to avoid MultiIndex columns.
 - Supports configurable `period` and `interval` parameters.
-- Automatically adjusts prices to account for corporate actions (splits, dividends).
+- Automatically adjusts prices for corporate actions (splits, dividends).
 - Ensures a 'Close' column exists:
   - If missing but 'Adj Close' is present, uses 'Adj Close' as a substitute.
   - Skips tickers with neither 'Close' nor 'Adj Close'.
-- Enriches each DataFrame with a 'Sector' column fetched from yfinance metadata.
+- Enriches each DataFrame with a constant 'Sector' column from yfinance metadata.
 - Caches sector lookups per run to minimize HTTP calls.
+- Flattens any MultiIndex columns immediately after adding 'Sector'.
 - Logs progress, warnings, and errors using `log_utils` functions.
 
 Functions
 ---------
 - ensure_prices(tickers: list[str], period: str = "5d", interval: str = "1d")
-  Download and validate price data for the given tickers and append 'Sector'.
+    Download and validate price data for the given tickers and append 'Sector'.
 
 Returns
 -------
 dict[str, pandas.DataFrame]
-Mapping of ticker symbol to its corresponding DataFrame containing at least a
-'Close' column and a 'Sector' column (if retrievable).
+    Mapping of ticker symbol to its corresponding DataFrame containing at least:
+    - 'Close' (float)
+    - 'Sector' (string)
+    plus any other OHLCV columns returned by yfinance.
 
 Dependencies
 ------------
@@ -39,10 +41,11 @@ Dependencies
 Notes
 -----
 - If a ticker returns no data, it is skipped with a warning.
-- Any exceptions during download are caught and logged as errors.
-- Sector lookups are best-effort; failures result in Sector="Unknown" but do not
+- Any exceptions during download or sector lookup are caught and logged.
+- Sector lookups are best‑effort; failures result in Sector="Unknown" but do not
   prevent price data from being returned.
 """
+
 import pandas as pd
 import yfinance as yf
 from log_utils import info, warn, error
