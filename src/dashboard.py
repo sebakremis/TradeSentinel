@@ -64,6 +64,7 @@ import altair as alt
 from ensure_data import ensure_prices
 import os
 import signal
+import plotly.express as px
 
 # --- Sidebar controls ---
 st.sidebar.title("TradeSentinel Dashboard")
@@ -160,8 +161,7 @@ if pnl_data:
         pie_df = df_pnl[["Ticker", "Position Value ($)"]].copy()
         total_value = pie_df["Position Value ($)"].sum()
     
-        if not pie_df.empty and total_value > 0:
-            import plotly.express as px
+        if not pie_df.empty and total_value > 0:          
     
             # Calculate percentage for labels
             pie_df["Percentage"] = (pie_df["Position Value ($)"] / total_value) * 100
@@ -176,6 +176,9 @@ if pnl_data:
     
             # Show ticker + percentage inside each slice
             fig.update_traces(textposition="inside", textinfo="percent+label")
+
+            # Remove the side legend
+            fig.update_layout(showlegend=False)
     
             st.plotly_chart(fig, use_container_width=True)
         else:
