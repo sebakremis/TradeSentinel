@@ -31,43 +31,27 @@ import numpy as np
 import pandas as pd
 
 
-def calculate_var(returns: pd.Series, confidence: float = 0.95) -> float:
+def calculate_var(returns: pd.Series, confidence_level: float = 0.95) -> float:
     """
-    Calculate historical Value at Risk (VaR) at a given confidence level.
-
-    Parameters
-    ----------
-    returns : pd.Series
-        Series of periodic returns (e.g., daily returns).
-    confidence : float, optional
-        Confidence level for VaR (default is 0.95 for 95% VaR).
-
-    Returns
-    -------
-    float
-        The VaR value (negative means a loss).
+    Calculate the Value at Risk (VaR) at the given confidence level.
     """
-    return np.percentile(returns.dropna(), (1 - confidence) * 100)
+    if returns.empty or returns.dropna().empty:
+        return np.nan
+    return np.percentile(returns.dropna(), (1 - confidence_level) * 100)
 
 
-def calculate_cvar(returns: pd.Series, confidence: float = 0.95) -> float:
+def calculate_cvar(returns: pd.Series, confidence_level: float = 0.95) -> float:
     """
-    Calculate Conditional VaR (Expected Shortfall) at a given confidence level.
-
-    Parameters
-    ----------
-    returns : pd.Series
-        Series of periodic returns.
-    confidence : float, optional
-        Confidence level for CVaR (default 0.95).
-
-    Returns
-    -------
-    float
-        The average loss in the worst (1 - confidence)% of cases.
+    Calculate the Conditional Value at Risk (CVaR) at the given confidence level.
     """
-    var = calculate_var(returns, confidence)
-    return returns[returns <= var].mean()
+    if returns.empty or returns.dropna().empty:
+        return np.nan
+    var = calculate_var(returns, confidence_level)
+    cvar_values = returns[returns <= var]
+    if cvar_values.empty:
+        return np.nan
+    return cvar_values.mean()
+
 
 def sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
     """Calculate the annualized Sharpe ratio."""
