@@ -246,11 +246,7 @@ if pnl_data:
             st.metric("Calmar Ratio", f"{calmar:.2f}")
             st.metric("Max Drawdown", f"{mdd:.2%}")
 
-        # Win/loss stats
-        st.write(f"**Win Rate:** {win_loss['win_rate']:.2%}")
-        st.write(f"**Loss Rate:** {win_loss['loss_rate']:.2%}")
-        st.write(f"**Profit Factor:** {win_loss['profit_factor']:.2f}")
-
+        
         # --- Asset Correlation Matrix (Styled Table) ---
         st.subheader("📈 Asset Correlation Matrix")
 
