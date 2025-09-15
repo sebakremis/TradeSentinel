@@ -43,10 +43,9 @@ TradeSentinel is a Python-powered dashboard for real-time portfolio monitoring, 
 ## 🚀 Launch the dashboard
 
 ### Live demo
-<a href="https://tradesentinel-rsnsu2pdi68sqey8ny7wzl.streamlit.app/" target="_blank">
-  🌐 Click here to launch TradeSentinel on Streamlit Community Cloud
-</a>  
-No installation required — runs directly in your browser.
+<a href="https://tradesentinel-rsnsu2pdi68sqey8ny7wzl.streamlit.app/" target="_blank">🌐 Click here to launch TradeSentinel on Streamlit Community Cloud</a>  
+_No installation required — runs directly in your browser._  
+*(Tip: On GitHub, links always open in the same tab. Right‑click and choose “Open link in new tab” if you prefer.)*
 
 ### Alternatively, clone the repo and run `dashboard.py` locally:
 ```bash
