@@ -34,7 +34,7 @@ TradeSentinel is a Python-powered dashboard for real-time portfolio monitoring, 
 - **Intraday PnL tracking**: Monitor live portfolio PnL and key metrics during market hours to quickly spot drawdowns or performance spikes.
 - **Comprehensive portfolio analysis**: View and explore portfolio metrics and visualizations over a selected time horizon. Analyze historical performance, sector allocation, and asset distribution trends to support medium‑ and long‑term investment decisions.
 - **On-demand CSV snapshots**: Export the current portfolio metrics view to CSV for quick sharing, further analysis, or archiving as a daily snapshot.
-- **Foundation for larger financial platforms**: Use `TradeSentinel`’s modular architecture as the starting point for building more complex solutions — for example, integrating with broker APIs for live order execution, adding multi‑asset risk engines, or connecting to internal data warehouses for firm‑wide exposure reporting. Its clean separation between data ingestion, analytics, and visualization makes it easy to extend into a full‑scale portfolio management or risk monitoring system.
+- **Foundation for scalable financial platforms**: Use `TradeSentinel`’s modular architecture as the starting point for building more complex solutions — for example, integrating with broker APIs for live order execution, adding multi‑asset risk engines, or connecting to internal data warehouses for firm‑wide exposure reporting. Its clean separation between data ingestion, analytics, and visualization makes it easy to extend into a full‑scale portfolio management or risk monitoring system.
 
 ---
 
