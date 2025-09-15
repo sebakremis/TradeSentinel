@@ -249,6 +249,7 @@ if pnl_data:
                 hole=0.3
             )
             fig_sector.update_traces(textposition="inside", textinfo="percent+label")
+            fig_sector.update_layout(showlegend=False)
             st.plotly_chart(fig_sector, use_container_width=True)
         else:
             st.info("No data available for sector allocation chart.")
