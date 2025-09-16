@@ -53,6 +53,7 @@ Install dependencies and run the suite:
 ```bash
 pip install -r requirements.txt
 pytest
+```
 
 ## ✅ Test Results
 
