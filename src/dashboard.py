@@ -388,7 +388,7 @@ if pnl_data:
 )
   
                 
-        # --- Interactive PnL Table with CSV Export ---
+        # --- Editable Table: Interactive PnL Table with CSV Export ---
 
         st.subheader("🔍 Explore & Export PnL Data")
         
@@ -430,17 +430,41 @@ if pnl_data:
             with m4:
                 st.metric("Average Price (Filtered)", f"${avg_price_filtered:,.2f}")
         
-            # Ensure dates are visible as a column
-            df_display = filtered_df.sort_values("Time").copy()
-            df_display["Date"] = df_display["Time"].dt.strftime("%Y-%m-%d")
-            
-            # Drop the old index and reassign a clean one
-            df_display = df_display.drop(columns=["Time"]).reset_index(drop=True)
-            
-            # Now display without numeric index
-            st.dataframe(df_display, width="stretch" , hide_index=True)
+            # Sort so most recent entries appear first
+            df_display = filtered_df.sort_values("Time", ascending=False).copy()
 
-        
+
+           # Split into Date and Time columns
+            df_display["Date"] = df_display["Time"].dt.strftime("%Y-%m-%d")
+            df_display["Time"] = df_display["Time"].dt.strftime("%H:%M:%S")  # overwrite with clean 'Time'
+            
+            # Reorder so Date/Time appear first
+            cols = ["Date", "Time"] + [c for c in df_display.columns if c not in ["Date", "Time"]]
+            df_display = df_display[cols].reset_index(drop=True)
+            
+            # --- Round numeric columns to 2 decimals ---
+            for col in ["Price", "Position Value ($)", "PnL"]:
+                if col in df_display.columns:
+                    df_display[col] = df_display[col].astype(float).round(2)
+
+
+            # --- Round numeric columns to 2 decimals ---
+            for col in ["Price", "Position Value ($)", "PnL"]:
+                if col in df_display.columns:
+                    df_display[col] = df_display[col].astype(float).round(2)
+            
+            # --- Display with formatted view (but keep numeric for CSV) ---
+            st.dataframe(
+                df_display.style.format({
+                    "Price": "{:,.2f}",              # commas + 2 decimals
+                    "PnL": "{:,.2f}",                # commas + 2 decimals
+                    "Position Value ($)": "{:,.2f}"  # commas + 2 decimals
+                }),
+                width="stretch",
+                hide_index=True
+            )
+
+       
             # CSV export
             tickers_str = "_".join(tickers_selected) if tickers_selected else "All"
             filename = f"pnl_data_{tickers_str}_{date_range[0]}_{date_range[1]}.csv"
