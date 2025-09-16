@@ -121,7 +121,7 @@ refresh = st.sidebar.button("Refresh Data")
 
 # --- Static hint under the button (styled with italics) ---
 st.sidebar.markdown(
-    "_💡 For intraday price updates, choose a study period of 3 months or less "
+    "_💡 For **intraday** price data, choose a study period of 3 months or less "
     "and an interval shorter than 1 day._"
 )
 
