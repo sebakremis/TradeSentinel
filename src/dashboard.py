@@ -121,8 +121,7 @@ refresh = st.sidebar.button("Refresh Data")
 
 # --- Static hint under the button (styled with italics) ---
 st.sidebar.markdown(
-    "_💡 For **intraday** price data, choose a study period of 3 months or less "
-    "and an interval shorter than 1 day._"
+    "💡 If you need **intraday** price data, choose an interval shorter than 1 day."
 )
 
 # --- On refresh, validate and commit parameters ---
@@ -171,7 +170,6 @@ else:
     st.info("Set your portfolio parameters and click **Refresh Data** to load the dashboard.")
     st.stop()
 
-
 # --- Title ---
 st.title("📈 TradeSentinel: Intraday PnL & Risk Monitor")
 
@@ -201,11 +199,11 @@ for ticker, df in st.session_state.data.items():
             pnl_data.append({
                 "Ticker": ticker,
                 "Quantity": qty,
-                "Start Price": round(start, 2),
-                "End Price": round(end, 2),
-                "PnL ($)": round(weighted_pnl, 2),
-                "Change (%)": round(pct, 2),
-                "Position Value ($)": round(position_value, 2)
+                "Start Price": start,
+                "End Price": end,
+                "PnL ($)": weighted_pnl,
+                "Change (%)": pct,
+                "Position Value ($)": position_value
             })
         except Exception as e:
             st.warning(f"{ticker}: Error calculating PnL — {e}")
@@ -213,15 +211,30 @@ for ticker, df in st.session_state.data.items():
 # --- Display Per-Ticker Table ---
 if pnl_data:
     df_pnl = pd.DataFrame(pnl_data)
+
     st.subheader("📋 Per-Ticker PnL")
+
+    # Display with conditional coloring + formatted floats
     st.dataframe(
-        df_pnl.style.map(
+        df_pnl.style
+        .map(
             lambda v: "color: green" if isinstance(v, (int, float)) and v > 0
-                      else ("color: red" if isinstance(v, (int, float)) and v < 0 else ""),
+            else ("color: red" if isinstance(v, (int, float)) and v < 0 else ""),
             subset=["PnL ($)", "Change (%)"]
-        ),
+        )
+        .format({
+            "Quantity": "{:,.0f}",           # commas, no decimals
+            "Start Price": "{:,.2f}",        # commas + 2 decimals
+            "End Price": "{:,.2f}",          # commas + 2 decimals
+            "PnL ($)": "{:,.2f}",            # commas + 2 decimals
+            "Change (%)": "{:,.2f}",         # commas + 2 decimals
+            "Position Value ($)": "{:,.2f}"  # commas + 2 decimals
+        }),
         width="stretch"
     )
+
+
+
 
     # --- Portfolio Summary + Pie Chart ---
     total_pnl = df_pnl["PnL ($)"].sum()
@@ -456,13 +469,15 @@ if pnl_data:
             # --- Display with formatted view (but keep numeric for CSV) ---
             st.dataframe(
                 df_display.style.format({
-                    "Price": "{:,.2f}",              # commas + 2 decimals
-                    "PnL": "{:,.2f}",                # commas + 2 decimals
-                    "Position Value ($)": "{:,.2f}"  # commas + 2 decimals
+                    "Quantity": "{:,.0f}",          # commas, no decimals
+                    "Price": "{:,.2f}",             # commas + 2 decimals
+                    "PnL": "{:,.2f}",               # commas + 2 decimals
+                    "Position Value ($)": "{:,.2f}" # commas + 2 decimals
                 }),
                 width="stretch",
                 hide_index=True
             )
+
 
        
             # CSV export
