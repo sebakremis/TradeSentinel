@@ -76,7 +76,7 @@ default_data = pd.DataFrame({
 portfolio_df = st.sidebar.data_editor(
     default_data,
     num_rows="dynamic",  # allow adding/removing rows
-    use_container_width=True
+    width="stretch"
 )
 
 # --- Period & Interval selection with dynamic filtering ---
@@ -261,7 +261,7 @@ if pnl_data:
             # Remove the side legend
             fig.update_layout(showlegend=False, title_x=0.3)
     
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             st.info("No data available for pie chart.")
 
@@ -302,6 +302,7 @@ if pnl_data:
         )
         st.altair_chart(chart, use_container_width=True)
 
+
         # --- Portfolio Allocation by Sector ---
         st.subheader("📊 Portfolio Allocation by Sector")
         
@@ -332,7 +333,7 @@ if pnl_data:
             )
             fig_sector.update_traces(textposition="inside", textinfo="percent+label")
             fig_sector.update_layout(showlegend=False)
-            st.plotly_chart(fig_sector, use_container_width=True)
+            st.plotly_chart(fig_sector, width="stretch")
         else:
             st.info("No data available for sector allocation chart.")
 
@@ -390,64 +391,73 @@ if pnl_data:
   
                 
         # --- Interactive PnL Table with CSV Export ---
+
         st.subheader("🔍 Explore & Export PnL Data")
+        
         tickers_selected = st.multiselect(
             "Select Ticker(s)",
             options=sorted(combined_df["Ticker"].unique().tolist()),
             default=sorted(combined_df["Ticker"].unique().tolist()),
         )
+        
         date_min = combined_df["Time"].min().date()
         date_max = combined_df["Time"].max().date()
+        
         date_range = st.date_input(
             "Select Date Range",
             value=(date_min, date_max),
             min_value=date_min,
             max_value=date_max,
         )
-
+        
         filtered_df = combined_df[
             combined_df["Ticker"].isin(tickers_selected)
             & (combined_df["Time"].dt.date >= date_range[0])
             & (combined_df["Time"].dt.date <= date_range[1])
         ].copy()
+        
+        if not filtered_df.empty:
+            total_pnl_filtered = filtered_df["PnL"].sum()
+            avg_pnl_filtered = filtered_df["PnL"].mean()
+            total_value_filtered = filtered_df["Position Value ($)"].sum()
+            avg_price_filtered = filtered_df["Price"].mean()
+        
+            m1, m2, m3, m4 = st.columns(4)
+            with m1:
+                st.metric("Total PnL (Filtered)", f"${total_pnl_filtered:,.2f}")
+            with m2:
+                st.metric("Average PnL (Filtered)", f"${avg_pnl_filtered:,.2f}")
+            with m3:
+                st.metric("Total Position Value (Filtered, M$)", f"{total_value_filtered/1_000_000:,.2f} M")
+            with m4:
+                st.metric("Average Price (Filtered)", f"${avg_price_filtered:,.2f}")
+        
+            # Ensure dates are visible as a column
+            df_display = filtered_df.sort_values("Time").copy()
+            df_display["Date"] = df_display["Time"].dt.strftime("%Y-%m-%d")
+            
+            # Drop the old index and reassign a clean one
+            df_display = df_display.drop(columns=["Time"]).reset_index(drop=True)
+            
+            # Now display without numeric index
+            st.dataframe(df_display, width="stretch" , hide_index=True)
 
-        total_pnl_filtered = filtered_df["PnL"].sum() if not filtered_df.empty else 0.0
-        avg_pnl_filtered = filtered_df["PnL"].mean() if not filtered_df.empty else 0.0
-        total_value_filtered = filtered_df["Position Value ($)"].sum() if not filtered_df.empty else 0.0
-        avg_price_filtered = filtered_df["Price"].mean() if not filtered_df.empty else 0.0
+        
+            # CSV export
+            tickers_str = "_".join(tickers_selected) if tickers_selected else "All"
+            filename = f"pnl_data_{tickers_str}_{date_range[0]}_{date_range[1]}.csv"
+            csv_data = df_display.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="💾 Download filtered data as CSV",
+                data=csv_data,
+                file_name=filename,
+                mime="text/csv",
+            )
+        else:
+            st.info("No valid data to display. Try refreshing or adjusting tickers/period.")
+        
+        # --- end of block ---
 
-        m1, m2, m3, m4 = st.columns(4)
-        with m1:
-            st.metric("Total PnL (Filtered)", f"${total_pnl_filtered:,.2f}")
-        with m2:
-            st.metric("Average PnL (Filtered)", f"${avg_pnl_filtered:,.2f}")
-        with m3:
-            st.metric("Total Position Value (Filtered, M$)", f"${total_value_filtered/1_000_000:,.2f}M")
-        with m4:
-            st.metric("Average Price (Filtered)", f"${avg_price_filtered:,.2f}")
-
-        st.dataframe(
-            filtered_df.reset_index(drop=True)
-                       .sort_values("Time")
-                       .drop(columns=["Time"]),
-            width="stretch"
-        )
-
-        # CSV export
-        tickers_str = "_".join(tickers_selected) if tickers_selected else "All"
-        filename = f"pnl_data_{tickers_str}_{date_range[0]}_{date_range[1]}.csv"
-        csv_data = filtered_df.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            label="💾 Download filtered data as CSV",
-            data=csv_data,
-            file_name=filename,
-            mime="text/csv"
-        )
-    else:
-        st.info("No valid data to display. Try refreshing or adjusting tickers/period.")
-
-else:
-    st.info("No PnL data available. Please refresh to fetch data.")
 
 # Credits
 st.markdown("---")
