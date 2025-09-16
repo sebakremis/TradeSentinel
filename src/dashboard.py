@@ -116,25 +116,24 @@ interval_input = st.sidebar.selectbox(
     key="active_interval"
 )
 
-# Refresh button
+# --- Refresh button ---
 refresh = st.sidebar.button("Refresh Data")
+
+# --- Static hint under the button (styled with italics) ---
+st.sidebar.markdown(
+    "_💡 For intraday price updates, choose a study period of 3 months or less "
+    "and an interval shorter than 1 day._"
+)
 
 # --- On refresh, validate and commit parameters ---
 if refresh:
     tickers_input = (
-        portfolio_df["Ticker"]
-        .dropna()
-        .astype(str)
-        .str.strip()
-        .tolist()
+        portfolio_df["Ticker"].dropna().astype(str).str.strip().tolist()
     )
     quantities_input = portfolio_df["Quantity"]
 
     invalid_tickers = [t for t in tickers_input if not t or not t.replace('.', '').isalnum()]
-    invalid_quantities = [
-        q for q in quantities_input
-        if pd.isna(q) or not isinstance(q, (int, float))
-    ]
+    invalid_quantities = [q for q in quantities_input if pd.isna(q) or not isinstance(q, (int, float))]
 
     if invalid_tickers:
         st.sidebar.error(f"Invalid tickers: {', '.join(invalid_tickers)}")
@@ -143,7 +142,6 @@ if refresh:
             "Please fill in all quantities with numeric values, "
             "then press **Enter** to apply changes."
         )
-
     if invalid_tickers or invalid_quantities:
         st.stop()
 
@@ -152,16 +150,16 @@ if refresh:
     st.session_state.active_quantities = dict(
         zip(tickers_input, pd.Series(quantities_input).fillna(0).astype(int))
     )
-    
 
     # Fetch and store data
     with st.spinner("Fetching market data..."):
         prices = ensure_prices(
             st.session_state.active_tickers,
             period=st.session_state.active_period,
-            interval=st.session_state.active_interval
+            interval=st.session_state.active_interval,
         )
         st.session_state.data = prices
+
 
 # --- Use stored parameters for display ---
 if "active_tickers" in st.session_state:
