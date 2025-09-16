@@ -59,7 +59,7 @@ pytest
 
 All tests are currently passing:
 
-![All tests passing](../docs/images/tests_passed.png)
+![All tests passing](../docs/images/tests_passed_20250916.png)
 
 
 
