@@ -171,7 +171,7 @@ else:
     st.stop()
 
 # --- Title ---
-st.title("📈 TradeSentinel: Intraday PnL & Risk Monitor")
+st.title("📈 TradeSentinel: Portfolio Monitor")
 
 # --- Data Fetch ---
 if refresh or "data" not in st.session_state:
