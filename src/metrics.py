@@ -57,22 +57,32 @@ def sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
     """Calculate the annualized Sharpe ratio."""
     if returns.empty or returns.dropna().empty:
         return np.nan
+
     excess = returns - (risk_free_rate / 252)
     std_excess = excess.std(ddof=0)
-    if std_excess == 0:
+
+    # Guard against zero or near-zero volatility
+    if std_excess < 1e-12:
         return np.nan
+
     return np.sqrt(252) * excess.mean() / std_excess
+
 
 def sortino_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
     """Calculate the annualized Sortino ratio."""
     if returns.empty or returns.dropna().empty:
         return np.nan
-    downside = returns[returns < 0]
+
     excess = returns - (risk_free_rate / 252)
+    downside = excess[excess < 0]  # use excess returns for downside risk
     downside_std = downside.std(ddof=0)
-    if downside_std == 0:
+
+    # Guard against no downside risk (NaN or near-zero std)
+    if pd.isna(downside_std) or downside_std < 1e-12:
         return np.nan
+
     return np.sqrt(252) * excess.mean() / downside_std
+
 
 def calmar_ratio(returns: pd.Series) -> float:
     """Calculate the Calmar ratio: annualized return divided by max drawdown."""
@@ -121,26 +131,23 @@ def correlation_matrix(price_df: pd.DataFrame) -> pd.DataFrame:
     return returns.corr()
 
 def win_loss_stats(pnl_series: pd.Series) -> dict:
-    """
-    Calculate win rate, loss rate, and profit factor from a PnL series.
-
-    Parameters
-    ----------
-    pnl_series : pd.Series
-        Series of trade or period PnL values.
-
-    Returns
-    -------
-    dict
-        Dictionary with 'win_rate', 'loss_rate', and 'profit_factor'.
-    """
     wins = pnl_series[pnl_series > 0]
     losses = pnl_series[pnl_series < 0]
+
     win_rate = len(wins) / len(pnl_series) if len(pnl_series) > 0 else np.nan
     loss_rate = len(losses) / len(pnl_series) if len(pnl_series) > 0 else np.nan
-    profit_factor = wins.sum() / abs(losses.sum()) if losses.sum() != 0 else np.nan
+
+    if losses.sum() == 0:
+        if wins.sum() > 0:
+            profit_factor = np.inf   # all wins, no losses
+        else:
+            profit_factor = np.nan   # no wins and no losses (all zeros)
+    else:
+        profit_factor = wins.sum() / abs(losses.sum())
+
     return {
         "win_rate": win_rate,
         "loss_rate": loss_rate,
         "profit_factor": profit_factor
     }
+
