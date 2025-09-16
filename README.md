@@ -29,7 +29,8 @@ TradeSentinel is a Python-powered dashboard for real-time portfolio monitoring, 
 - **tests/** — Unit tests  
 - **requirements.txt** — Python dependencies  
 - **README.md** — Project documentation  
-- **LICENSE** — License file  
+- **LICENSE** — License file
+- **prompt_library.ipynb** - Examples of prompts used during development   
 
 
 ## 📈 Example use case
