@@ -262,7 +262,7 @@ if pnl_data:
                 pie_df,
                 names="Ticker",
                 values="Position Value ($)",
-                title="Portfolio Allocation",
+                title=" ",
                 hole=0.3  # optional: donut style
             )
     
@@ -309,7 +309,7 @@ if pnl_data:
                 y=alt.Y("PnL:Q", title="PnL ($)"),
                 color=alt.Color("Ticker:N", title="Ticker"),
             )
-            .properties(width=700, height=400, title="Portfolio PnL Over Time by Ticker")
+            .properties(width=700, height=400, title="")
         )
         st.altair_chart(chart, use_container_width=True)
 
@@ -317,12 +317,11 @@ if pnl_data:
         # --- Portfolio Allocation by Sector ---
         st.subheader("📊 Portfolio Allocation by Sector")
         
-        # Build sector allocation from latest prices *and* quantities
         latest_data = []
         for ticker, df in st.session_state.data.items():
             if df is not None and not df.empty:
                 latest_close = df["Close"].iloc[-1]
-                qty = quantities.get(ticker, 0)  # same source as Portfolio Allocation
+                qty = quantities.get(ticker, 0)
                 sector = df["Sector"].iloc[0] if "Sector" in df.columns else "Unknown"
                 position_value = latest_close * qty
                 latest_data.append({
@@ -333,20 +332,56 @@ if pnl_data:
         
         if latest_data:
             sector_df = pd.DataFrame(latest_data)
-            sector_alloc = sector_df.groupby("Sector")["PositionValue"].sum().reset_index()
         
-            fig_sector = px.pie(
-                sector_alloc,
-                names="Sector",
-                values="PositionValue",
-                title="",
-                hole=0.3
+            # Aggregate by sector and collect tickers
+            sector_alloc = (
+                sector_df.groupby("Sector")
+                .agg({
+                    "PositionValue": "sum",
+                    "Ticker": lambda s: ", ".join(sorted(set(s)))
+                })
+                .reset_index()
             )
-            fig_sector.update_traces(textposition="inside", textinfo="percent+label")
-            fig_sector.update_layout(showlegend=False)
-            st.plotly_chart(fig_sector, width="stretch")
+        
+            # Add percentage for table
+            total_val = sector_alloc["PositionValue"].sum()
+            sector_alloc["Percentage"] = (sector_alloc["PositionValue"] / total_val) * 100
+        
+            import plotly.graph_objects as go
+            fig_sector = go.Figure(
+                data=[
+                    go.Pie(
+                        labels=sector_alloc["Sector"],
+                        values=sector_alloc["PositionValue"],
+                        hole=0.3,
+                        textinfo="percent+label",
+                        textposition="inside",
+                        hoverinfo="skip"  # ✅ disables hover entirely
+                    )
+                ]
+            )
+        
+            fig_sector.update_layout(
+                title="",   # no undefined title
+                showlegend=False,
+                title_x=0.3,
+                margin=dict(l=10, r=10, t=60, b=10)
+            )
+            
+            # Show chart first
+            st.plotly_chart(fig_sector, use_container_width=True)
+            
+            # Then show the simplified table below (only Sector + Ticker, no index, no percentage)
+            st.dataframe(
+                sector_alloc[["Sector", "Ticker"]],
+                use_container_width=True,
+                hide_index=True
+            )
+
         else:
             st.info("No data available for sector allocation chart.")
+
+
 
       
         # --- Advanced Metrics Section ---
