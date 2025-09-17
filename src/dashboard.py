@@ -112,7 +112,7 @@ interval_options = interval_map[period_input]
 
 # Interval selectbox (widget sets its own default via index)
 default_interval_index = (
-    interval_options.index("5m") if period_input == "1d"
+    interval_options.index("30m") if period_input == "1d"
     else interval_options.index("1d")
 )
 
@@ -178,7 +178,7 @@ else:
     st.stop()
 
 # --- Title ---
-st.title("📈 TradeSentinel: Portfolio Monitor")
+st.title("📈 TradeSentinel: Portfolio Monitor (demo)")
 
 # --- Data Fetch ---
 if refresh or "data" not in st.session_state:
