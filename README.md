@@ -1,8 +1,8 @@
-# TradeSentinel — Portfolio Monitor (demo)
+# TradeSentinel — PortfolioAnalytics
 
-<a href="https://tradesentinel-rsnsu2pdi68sqey8ny7wzl.streamlit.app/" target="_blank">
-  <img src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg" alt="Open in Streamlit">
-</a>
+[🚀 Open demo version in Streamlit](https://tradesentinel-rsnsu2pdi68sqey8ny7wzl.streamlit.app/)
+
+* This repository is the private development repo for v1.0.0.
 
 ## 📌 Overview
 `TradeSentinel` is a Python-powered dashboard for real-time portfolio monitoring, providing instant insights into PnL, exposure, and risk metrics throughout the trading day. Designed for trading operations and risk management teams, it helps detect limit breaches early and supports informed decision-making.
@@ -44,25 +44,20 @@
 ## 🚀 Launch the dashboard
 
 ### Live demo
-<a href="https://tradesentinel-rsnsu2pdi68sqey8ny7wzl.streamlit.app/" target="_blank">🌐 Click here to launch TradeSentinel on Streamlit Community Cloud</a>  
+<a href="https://tradesentinel-rsnsu2pdi68sqey8ny7wzl.streamlit.app/" target="_blank">🌐 Click here to launch TradeSentinel demo on Streamlit Community Cloud</a>  
+
 _No installation required — runs directly in your browser._  
+
 *(Tip: On GitHub, links always open in the same tab. Right‑click and choose “Open link in new tab” if you prefer.)*
 
-### Alternatively, clone the repo and run `dashboard.py` locally:
-```bash
-# Clone the repository
-git clone https://github.com/sebakremis/TradeSentinel.git
-cd TradeSentinel/src
 
-# Install dependencies
-pip install -r ../requirements.txt
+## 📜 License
 
-# Run the dashboard
-streamlit run dashboard.py
-```
-* **To exit a dashboard.py local session**: close the Dashboard tab & press `Ctrl + C` in your terminal.
-## 📜 License  
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details. 
+This project is currently developed in a **private repository** and is not publicly distributed.  
+The codebase includes the [MIT License](LICENSE) to ensure that, if the repository is made public in the future, usage terms are already defined.  
+
+- While the repository remains private, the license has no practical effect since access is restricted.  
+- If the project is later published, the MIT License will apply, granting broad rights to use, modify, and distribute the software with attribution.  
 
 ---
 **Author:** Sebastian Kremis 
