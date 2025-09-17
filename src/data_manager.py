@@ -10,19 +10,14 @@ def get_ticker_file(ticker: str) -> Path:
     """Return the file path for a given ticker's CSV."""
     return DATA_DIR / f"{ticker.upper()}.csv"
 
-def fetch_and_store_ticker(ticker: str, start_date=None, end_date=None) -> pd.DataFrame:
-    """
-    Fetch data for a ticker using existing data_fetch module.
-    Store it in /data/market_data/<TICKER>.csv if not already present.
-    Returns the DataFrame.
-    """
+def fetch_and_store_ticker(ticker: str, start_date=None, end_date=None):
     file_path = get_ticker_file(ticker)
 
     if file_path.exists():
         return pd.read_csv(file_path, parse_dates=True)
 
-    # Fetch fresh data
-    df = data_fetch.fetch_data(ticker, start_date, end_date)
+    # FIX: call get_market_data instead of fetch_data
+    df = data_fetch.get_market_data([ticker], start=start_date, end=end_date, interval="1d", period="1y")
     df.to_csv(file_path, index=False)
     return df
 
