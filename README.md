@@ -1,4 +1,4 @@
-# TradeSentinel — Portfolio Monitor
+# TradeSentinel — Portfolio Monitor (demo)
 
 <a href="https://tradesentinel-rsnsu2pdi68sqey8ny7wzl.streamlit.app/" target="_blank">
   <img src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg" alt="Open in Streamlit">
