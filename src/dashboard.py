@@ -3,40 +3,44 @@
 dashboard.py
 ============
 
-Streamlit dashboard for monitoring intraday and historical Profit & Loss (PnL) 
-and portfolio risk metrics for multiple tickers.
+Streamlit dashboard for monitoring intraday and historical Profit & Loss (PnL), portfolio risk metrics, and asset/sector allocations for multiple tickers.
 
 Features
 --------
-- **Sidebar Controls**:
+- **Sidebar controls:**
   - Editable table (`st.data_editor`) for entering tickers and quantities (dynamic rows, instant updates).
-  - Select historical data period and price interval.
-  - Refresh data on demand.
+  - Select historical data period and price interval with context-aware interval options.
+  - Refresh data on demand with basic validation and helpful messages.
 
-- **Data Fetching**:
+- **Data fetching & caching:**
   - Retrieves market price data for the selected tickers using `ensure_prices` from `ensure_data.py`.
-  - Caches data in `st.session_state` to avoid redundant fetches.
+  - Caches data and user selections in `st.session_state` to avoid redundant fetches (`active_tickers`, `active_quantities`, `active_period`, `active_interval`, `data`).
 
-- **PnL & Position Metrics**:
-  - Computes per‑ticker PnL in absolute ($) and percentage terms.
+- **PnL & position metrics:**
+  - Computes per‑ticker PnL in absolute ($) and percentage terms from first to last bar in the selected period/interval.
   - Calculates position values based on latest prices and quantities.
   - Adds Quantity, Price, and Position Value ($) columns to all outputs.
   - Handles missing or invalid data gracefully.
 
-- **Portfolio Summary**:
+- **Portfolio summary & allocation:**
   - Displays total PnL, total position value, and total % change.
-  - Shows dynamic Portfolio Allocation pie charts (by ticker and by sector) using Plotly, 
-    with legends hidden and titles aligned/optional.
+  - Portfolio Allocation pie chart by ticker (Plotly), with labels inside slices and hidden legend.
+  - Portfolio Allocation by sector (Plotly) plus a simplified sector-to-tickers table.
 
-- **Visualization**:
+- **Visualization:**
   - Styled per‑ticker PnL DataFrame with green/red highlighting for gains/losses.
-  - Portfolio PnL Over Time line chart by ticker.
-  - Portfolio Allocation pie charts with percentage labels inside slices.
+  - Portfolio PnL Over Time line chart by ticker (Altair).
+  - Pie charts with percentage labels inside slices and centered titles.
 
-- **Interactive PnL Table with CSV Export**:
+- **Advanced risk & performance metrics:**
+  - VaR (95%), CVaR (95%), Sharpe, Sortino, Calmar ratios, and Max Drawdown computed from portfolio returns.
+  - Asset Correlation Matrix table with gradient styling.
+  - Win/Loss stats derived from PnL time series.
+
+- **Interactive PnL table with CSV export:**
   - Filter by ticker(s) and date range.
-  - Shows filtered summary metrics (total/average PnL, position value, price).
-  - Download filtered data as CSV (includes Quantity, Price, Position Value ($), and PnL) with dynamic filename.
+  - Shows filtered summary metrics (total/average PnL, position value in M$, average price).
+  - Download filtered data as CSV (includes Quantity, Price, Position Value ($), and PnL) with a dynamic filename.
 
 Usage
 -----
@@ -47,8 +51,10 @@ Dependencies
 ------------
 - streamlit
 - pandas
+- altair
 - plotly
 - ensure_data.ensure_prices
+- metrics (calculate_var, calculate_cvar, sharpe_ratio, sortino_ratio, calmar_ratio, max_drawdown, correlation_matrix, win_loss_stats)
 
 Notes
 -----
@@ -62,6 +68,7 @@ from ensure_data import ensure_prices
 import os
 import signal
 import plotly.express as px
+import plotly.graph_objects as go
 
 # --- Sidebar controls ---
 st.sidebar.title("Set portfolio to analyze:")
@@ -347,7 +354,7 @@ if pnl_data:
             total_val = sector_alloc["PositionValue"].sum()
             sector_alloc["Percentage"] = (sector_alloc["PositionValue"] / total_val) * 100
         
-            import plotly.graph_objects as go
+            
             fig_sector = go.Figure(
                 data=[
                     go.Pie(
