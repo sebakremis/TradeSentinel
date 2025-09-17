@@ -1,30 +1,24 @@
 # src/main.py
 import streamlit as st
 import tickers_store
+import data_manager
 
 st.set_page_config(page_title="TS Portfolio Analytics", layout="wide")
-
 st.title("📊 TS Portfolio Analytics")
 
-# Load current tickers
+# Load tickers
 tickers = tickers_store.load_followed_tickers()
 
-st.sidebar.header("Manage Followed Tickers")
+st.subheader("Followed Tickers")
+st.write(tickers)
 
-# Add new ticker
-new_ticker = st.sidebar.text_input("Add Ticker")
-if st.sidebar.button("Add"):
-    if new_ticker:
-        tickers_store.add_ticker(new_ticker.upper())
-        st.sidebar.success(f"Added {new_ticker.upper()}")
+# Fetch and display data
+for ticker in tickers:
+    st.markdown(f"### {ticker}")
+    try:
+        df = data_manager.load_ticker_data(ticker)
+        st.dataframe(df.head())  # preview only
+    except Exception as e:
+        st.error(f"Failed to load {ticker}: {e}")
 
-# Remove ticker
-ticker_to_remove = st.sidebar.selectbox("Remove Ticker", [""] + tickers)
-if st.sidebar.button("Remove") and ticker_to_remove:
-    tickers_store.remove_ticker(ticker_to_remove)
-    st.sidebar.warning(f"Removed {ticker_to_remove}")
-
-# Display followed tickers
-st.subheader("Currently Followed Tickers")
-st.write(tickers_store.load_followed_tickers())
 
