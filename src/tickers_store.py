@@ -9,12 +9,15 @@ def ensure_data_dir():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 def load_followed_tickers() -> list[str]:
-    """Load tickers from CSV, return as list of strings."""
-    ensure_data_dir()
+    """Load tickers from the CSV file."""
     if not TICKERS_FILE.exists():
         return []
     df = pd.read_csv(TICKERS_FILE)
-    return df["ticker"].tolist()
+    # Expecting a column named 'ticker'
+    if "ticker" in df.columns:
+        return df["ticker"].dropna().unique().tolist()
+    # If the file is just a single column with no header
+    return df.iloc[:, 0].dropna().unique().tolist()
 
 def save_followed_tickers(tickers: list[str]) -> None:
     """Save tickers list to CSV."""

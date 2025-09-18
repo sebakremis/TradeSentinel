@@ -31,6 +31,9 @@ def main():
 
     # Update button
     if st.button("Update Prices"):
+        tickers = load_followed_tickers()
+        st.write("Loaded tickers:", tickers)
+        
         for ticker in load_followed_tickers():
             for period, interval in intervals_full.items():
                 st.write(f"Fetching {ticker} {period}/{interval} …")
