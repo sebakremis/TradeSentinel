@@ -81,9 +81,30 @@ def load_prices(ticker: str, interval: str) -> pd.DataFrame:
         return pd.read_parquet(fp)
     return pd.DataFrame()
 
-def save_prices(ticker: str, period: str, interval: str, data):
-    filename = f"data/market_data/{ticker}_{period}_{interval}.csv"
-    data.to_csv(filename)
-    print(f"Saved {ticker} {period} {interval} data to {filename}")
+def save_prices(ticker: str, interval: str, df):
+    """
+    Save market data for a given ticker and interval as a Parquet file.
+
+    Args:
+        ticker (str): The stock ticker symbol (e.g., "AAPL").
+        interval (str): The data interval (e.g., "1d", "30m").
+        df (pd.DataFrame): The market data to save.
+
+    Notes:
+        - Files are stored under data/prices/<interval>/<ticker>.parquet
+        - The function ensures the directory exists before saving.
+        - Existing files are overwritten (no append/merge).
+    """
+    # Ensure the interval directory exists
+    interval_dir = BASE_DIR / interval
+    interval_dir.mkdir(parents=True, exist_ok=True)
+
+    # Build the file path
+    file_path = interval_dir / f"{ticker}.parquet"
+
+    # Save the DataFrame as Parquet
+    df.to_parquet(file_path, engine="pyarrow", index=True)
+
+    print(f"✅ Saved {ticker} {interval} data to {file_path}")
 
 

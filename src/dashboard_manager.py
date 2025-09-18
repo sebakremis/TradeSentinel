@@ -26,5 +26,6 @@ def process_dashboard_data(ticker: str):
     for period, interval in intervals_main.items():
         print(f"Fetching {period} data at {interval} interval for {ticker}")
         data = get_market_data(ticker, period, interval)
-        save_prices(ticker, interval, data)  # parquet version
+        # parquet version of save_prices expects (ticker, interval, df)
+        save_prices(ticker, interval, data)
 
