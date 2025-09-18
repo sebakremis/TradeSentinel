@@ -1,6 +1,8 @@
 # src/dashboard_manager.py
-from data_fetch import get_market_data
-from storage import save_prices_incremental
+from src.data_fetch import get_market_data
+from src.storage import save_prices_incremental
+import pandas as pd
+from src.storage import load_all_prices
 
 # Active mapping used by main.py for dashboard data
 intervals_main = {
@@ -19,30 +21,35 @@ intervals_full = {
     "ytd": ["1d", "1wk", "1mo"],
     "max": ["1d", "1wk", "1mo"]
 }
-import pandas as pd
+
+
 
 
 def process_dashboard_data(interval: str) -> pd.DataFrame:
     df = load_all_prices(interval)
-
     if df.empty:
         return df
 
-    # If columns are MultiIndex (ticker, field), flatten them
-    if isinstance(df.columns, pd.MultiIndex):
-        # Move ticker from columns into rows
-        df = df.stack(level=0).reset_index()
-        df = df.rename(columns={"level_1": "Ticker"})
-    else:
-        # If already flat, just ensure Ticker column exists
-        if "Ticker" not in df.columns:
-            df["Ticker"] = None
+    # Ensure Date is index
+    if "Date" in df.columns:
+        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+        df = df.set_index("Date")
 
-    # Standardize column order
-    cols = ["Date", "Ticker", "Open", "High", "Low", "Close", "Adj Close", "Volume"]
-    df = df[[c for c in cols if c in df.columns]]
+    # Keep only standard columns
+    cols = ["Ticker", "Open", "High", "Low", "Close", "Adj Close", "Volume"]
+    df = df[[c for c in cols if c in df.columns]].copy()
 
+    # Add interval
     df["Interval"] = interval
+
     return df
+
+
+
+
+
+
+
+
 
 

@@ -30,16 +30,21 @@ def main():
         tickers = load_followed_tickers()
         if not tickers:
             st.warning("⚠️ No tickers found in followed_tickers_test.csv")
+    
         for ticker in tickers:
             for period, interval in intervals_main.items():
-                st.write(f"Fetching {ticker} {period}/{interval} …")
+                st.write(f"Fetching {ticker} with period={period}, interval={interval} …")
+    
+                # Fetch with period (Yahoo requirement)
                 data = get_market_data(ticker, interval=interval, period=period)
+    
                 if not data.empty:
+                    # Save under interval folder (e.g. data/prices/30m/, data/prices/1d/)
                     save_prices_incremental(ticker, interval, data)
                     st.success(f"✅ Saved {ticker} {interval} ({period})")
                 else:
                     st.warning(f"⚠️ No data for {ticker} {period}/{interval}")
-
+    
         st.rerun()
 
 

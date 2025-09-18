@@ -74,53 +74,86 @@ def _file_path(ticker: str, interval: str) -> Path:
     folder.mkdir(parents=True, exist_ok=True)
     return folder / f"{ticker}.parquet"
 
+
 def load_all_prices(interval: str) -> pd.DataFrame:
-    """Load all parquet files for a given interval and return as a combined DataFrame."""
+    """
+    Load all tickers for a given interval into long format.
+    Each parquet file is one ticker; we add a Ticker column and concat.
+    """
     interval_dir = BASE_DIR / interval
+    if not interval_dir.exists():
+        return pd.DataFrame()
+
     frames = []
-    if interval_dir.exists():
-        for file_path in interval_dir.glob("*.parquet"):
-            try:
-                df = pd.read_parquet(file_path)
-                ticker = file_path.stem  # filename without extension
-                df["Ticker"] = ticker
-                df["Interval"] = interval   # ✅ tag the interval
-                frames.append(df)
-            except Exception as e:
-                st.warning(f"⚠️ Could not load {file_path.name}: {e}")
-    if frames:
-        return pd.concat(frames)
-    return pd.DataFrame()
+    for fp in interval_dir.glob("*.parquet"):
+        ticker = fp.stem.upper()
+        df = pd.read_parquet(fp)
+        if df.empty:
+            continue
+
+        # Ensure Date index
+        if not isinstance(df.index, pd.DatetimeIndex):
+            if "Date" in df.columns:
+                df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+                df = df.set_index("Date")
+        df.index.name = "Date"
+
+        # Add ticker column
+        df["Ticker"] = ticker
+
+        # Drop rows with no OHLCV values
+        value_cols = [c for c in ["Open", "High", "Low", "Close", "Adj Close", "Volume"] if c in df.columns]
+        if value_cols:
+            df = df.dropna(subset=value_cols, how="all")
+
+        frames.append(df)
+
+    if not frames:
+        return pd.DataFrame()
+
+    return pd.concat(frames).sort_index()
 
 
 
-def save_prices_incremental(ticker: str, interval: str, df):
-    from pathlib import Path
-    import pandas as pd
 
-    interval_dir = Path("data/prices") / interval
+def save_prices_incremental(ticker: str, interval: str, new_data: pd.DataFrame):
+    """
+    Save price data incrementally for a single ticker/interval.
+    Ensures flat schema: Date index, OHLCV columns, no prefixed names.
+    """
+    interval_dir = BASE_DIR / interval
     interval_dir.mkdir(parents=True, exist_ok=True)
-    file_path = interval_dir / f"{ticker}.parquet"
 
-    if file_path.exists():
-        existing = pd.read_parquet(file_path)
-        combined = pd.concat([existing, df])
+    fp = interval_dir / f"{ticker.upper()}.parquet"
+
+    # Normalize new_data
+    df = new_data.copy()
+    if not isinstance(df.index, pd.DatetimeIndex):
+        if "Date" in df.columns:
+            df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+            df = df.set_index("Date")
+    df.index.name = "Date"
+
+    # Drop any ticker prefixes in columns (e.g. "PLTR_Open")
+    df.columns = [c.split("_")[-1] if "_" in c else c for c in df.columns]
+
+    # Keep only standard OHLCV columns
+    keep = [c for c in ["Open", "High", "Low", "Close", "Adj Close", "Volume"] if c in df.columns]
+    df = df[keep]
+
+    # Load existing file if present
+    if fp.exists():
+        old = pd.read_parquet(fp)
+        old.index = pd.to_datetime(old.index)
+        combined = pd.concat([old, df])
         combined = combined[~combined.index.duplicated(keep="last")]
-        combined.sort_index(inplace=True)
-
-        if not combined.empty:
-            combined.to_parquet(file_path, engine="pyarrow", index=True)
-            last_date = combined.index[-1]
-            print(f"🔄 Updated {ticker} {interval} data up to {last_date}")
-        else:
-            print(f"⚠️ No data to update for {ticker} {interval}")
+        combined = combined.sort_index()
     else:
-        if df is not None and not df.empty:
-            df.to_parquet(file_path, engine="pyarrow", index=True)
-            last_date = df.index[-1]
-            print(f"✅ Created new file for {ticker} {interval} up to {last_date}")
-        else:
-            print(f"⚠️ No data fetched for {ticker} {interval}, nothing saved.")
+        combined = df.sort_index()
+
+    combined.to_parquet(fp)
+    print(f"✅ Saved {ticker} {interval} up to {combined.index.max()}")
+
 
 
 
