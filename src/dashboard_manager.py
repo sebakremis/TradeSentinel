@@ -22,7 +22,6 @@ intervals_full = {
     "max": ["1d", "1wk", "1mo"]
 }
 
-from src.sectors import SECTOR_MAP
 
 def process_dashboard_data(interval: str) -> pd.DataFrame:
     df = load_all_prices(interval)
@@ -38,8 +37,7 @@ def process_dashboard_data(interval: str) -> pd.DataFrame:
 
     df["Interval"] = interval
 
-    # ✅ Add sector, defaulting to "Unknown" if not found
-    df["Sector"] = df["Ticker"].map(SECTOR_MAP).fillna("Unknown")
+    
 
     return df
 
