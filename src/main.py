@@ -1,47 +1,52 @@
 # src/main.py
-import streamlit as st
+
+import argparse
 import tickers_store
-import data_manager
-
-st.set_page_config(page_title="TS Portfolio Analytics", layout="wide")
-st.title("📊 TS Portfolio Analytics")
-
-# --- Sidebar: Manage Followed Tickers ---
-st.sidebar.header("Manage Followed Tickers")
-
-# Load current tickers
-tickers = tickers_store.load_followed_tickers()
-
-# Add new ticker
-new_ticker = st.sidebar.text_input("Add Ticker")
-if st.sidebar.button("Add"):
-    if new_ticker:
-        tickers_store.add_ticker(new_ticker.upper())
-        st.sidebar.success(f"Added {new_ticker.upper()}")
-        st.rerun()   # <-- use this instead of experimental_rerun
-
-# Remove ticker
-if tickers:
-    ticker_to_remove = st.sidebar.selectbox("Remove Ticker", [""] + tickers)
-    if st.sidebar.button("Remove") and ticker_to_remove:
-        tickers_store.remove_ticker(ticker_to_remove)
-        st.sidebar.warning(f"Removed {ticker_to_remove}")
-        st.rerun()
+from data_fetch import get_market_data
+from storage import save_prices
+from dashboard_manager import process_dashboard_data
 
 
-# --- Main content ---
-st.subheader("Currently Followed Tickers")
-tickers = tickers_store.load_followed_tickers()
-st.write(tickers)
+def main():
+    tickers = tickers_store.load_followed_tickers()
+    
+    parser = argparse.ArgumentParser(
+        description="TS-PortfolioAnalytics: Fetch and store market data for dashboard or custom intervals."
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["dashboard", "custom"],
+        default="dashboard",
+        help="Choose 'dashboard' mode (fixed intervals from dashboard_manager) "
+             "or 'custom' mode (CLI-provided period/interval)."
+    )
+    parser.add_argument(
+        "--period",
+        help="Custom period (e.g., 3mo, 1y, 5d). Required if mode=custom."
+    )
+    parser.add_argument(
+        "--interval",
+        help="Custom interval (e.g., 30m, 1d, 1wk). Required if mode=custom."
+    )
+    args = parser.parse_args()
 
-# Fetch and display data for each ticker
-for ticker in tickers:
-    st.markdown(f"### {ticker}")
-    try:
-        df = data_manager.load_ticker_data(ticker)
-        st.dataframe(df.head())
-    except Exception as e:
-        st.error(f"Failed to load {ticker}: {e}")
+    if args.mode == "dashboard":
+        # Use the fixed mapping from dashboard_manager
+        for ticker in tickers:
+            process_dashboard_data(ticker)
+
+    else:  # custom mode
+        if not args.period or not args.interval:
+            raise ValueError("Custom mode requires both --period and --interval arguments.")
+        for ticker in tickers:
+            print(f"Fetching {args.period} data at {args.interval} interval for {ticker}")
+            data = get_market_data(ticker, args.period, args.interval)
+            save_prices(ticker, args.period, args.interval, data)
+
+
+if __name__ == "__main__":
+    main()
+
 
 
 
