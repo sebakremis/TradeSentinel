@@ -81,13 +81,9 @@ def load_prices(ticker: str, interval: str) -> pd.DataFrame:
         return pd.read_parquet(fp)
     return pd.DataFrame()
 
-def save_prices(ticker: str, interval: str, df: pd.DataFrame) -> None:
-    """Save prices to local storage, merging with existing data if present."""
-    fp = _file_path(ticker, interval)
-    if fp.exists():
-        existing = pd.read_parquet(fp)
-        df = pd.concat([existing, df])
-    # Remove duplicates and sort
-    df = df[~df.index.duplicated(keep="last")].sort_index()
-    df.to_parquet(fp)
+def save_prices(ticker: str, period: str, interval: str, data):
+    filename = f"data/market_data/{ticker}_{period}_{interval}.csv"
+    data.to_csv(filename)
+    print(f"Saved {ticker} {period} {interval} data to {filename}")
+
 
