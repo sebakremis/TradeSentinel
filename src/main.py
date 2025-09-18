@@ -9,7 +9,7 @@ from src.dashboard_manager import intervals_main
 
 BASE_DIR = Path("data/prices")
 
-load_all_prices()
+
 
 def main():
     st.title("📊 TradeSentinel Dashboard")
