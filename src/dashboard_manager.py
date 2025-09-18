@@ -20,8 +20,11 @@ intervals_full = {
     "max": ["1d", "1wk", "1mo"]
 }
 
+
+
 def process_dashboard_data(ticker: str):
     for period, interval in intervals_main.items():
         print(f"Fetching {period} data at {interval} interval for {ticker}")
         data = get_market_data(ticker, period, interval)
-        save_prices(ticker, period, interval, data)
+        save_prices(ticker, interval, data)  # parquet version
+
