@@ -3,7 +3,7 @@
 import argparse
 import tickers_store
 from data_fetch import get_market_data
-from storage import save_prices
+from storage import save_prices_incremental
 from dashboard_manager import process_dashboard_data
 
 
@@ -41,7 +41,7 @@ def main():
         for ticker in tickers:
             print(f"Fetching {args.period} data at {args.interval} interval for {ticker}")
             data = get_market_data(ticker, args.period, args.interval)
-            save_prices(ticker, args.period, args.interval, data)
+            save_prices_incremental(ticker, args.period, args.interval, data)
 
 
 if __name__ == "__main__":

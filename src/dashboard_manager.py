@@ -1,6 +1,6 @@
 # src/dashboard_manager.py
 from data_fetch import get_market_data
-from storage import save_prices
+from storage import save_prices_incremental
 
 # Active mapping used by main.py for dashboard data
 intervals_main = {
@@ -27,5 +27,5 @@ def process_dashboard_data(ticker: str):
         print(f"Fetching {period} data at {interval} interval for {ticker}")
         data = get_market_data(ticker, period, interval)
         # parquet version of save_prices expects (ticker, interval, df)
-        save_prices(ticker, interval, data)
+        save_prices_incremental(ticker, interval, data)
 
