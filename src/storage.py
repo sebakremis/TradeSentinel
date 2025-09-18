@@ -84,12 +84,14 @@ def load_all_prices(interval: str) -> pd.DataFrame:
                 df = pd.read_parquet(file_path)
                 ticker = file_path.stem  # filename without extension
                 df["Ticker"] = ticker
+                df["Interval"] = interval   # ✅ tag the interval
                 frames.append(df)
             except Exception as e:
                 st.warning(f"⚠️ Could not load {file_path.name}: {e}")
     if frames:
         return pd.concat(frames)
     return pd.DataFrame()
+
 
 
 def save_prices_incremental(ticker: str, interval: str, df):
