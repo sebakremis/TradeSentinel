@@ -1,51 +1,65 @@
-# src/main.py
+import streamlit as st
+import pandas as pd
+from pathlib import Path
 
-import argparse
-import tickers_store
-from data_fetch import get_market_data
-from storage import save_prices_incremental
-from dashboard_manager import process_dashboard_data
+from src.tickers_store import load_followed_tickers
+from src.data_fetch import get_market_data
+from src.storage import save_prices_incremental
+from src.dashboard_manager import intervals_main
 
+BASE_DIR = Path("data/prices")
+
+def load_all_prices(interval: str) -> pd.DataFrame:
+    """Load all tickers' data for a given interval and return as a combined DataFrame."""
+    tickers = load_followed_tickers()
+    frames = []
+    for ticker in tickers:
+        file_path = BASE_DIR / interval / f"{ticker}.parquet"
+        if file_path.exists():
+            df = pd.read_parquet(file_path)
+            df["Ticker"] = ticker
+            frames.append(df)
+    if frames:
+        return pd.concat(frames)
+    return pd.DataFrame()
 
 def main():
-    tickers = tickers_store.load_followed_tickers()
-    
-    parser = argparse.ArgumentParser(
-        description="TS-PortfolioAnalytics: Fetch and store market data for dashboard or custom intervals."
-    )
-    parser.add_argument(
-        "--mode",
-        choices=["dashboard", "custom"],
-        default="dashboard",
-        help="Choose 'dashboard' mode (fixed intervals from dashboard_manager) "
-             "or 'custom' mode (CLI-provided period/interval)."
-    )
-    parser.add_argument(
-        "--period",
-        help="Custom period (e.g., 3mo, 1y, 5d). Required if mode=custom."
-    )
-    parser.add_argument(
-        "--interval",
-        help="Custom interval (e.g., 30m, 1d, 1wk). Required if mode=custom."
-    )
-    args = parser.parse_args()
+    st.title("📊 TradeSentinel Dashboard")
 
-    if args.mode == "dashboard":
-        # Use the fixed mapping from dashboard_manager
+    # 🔎 Detect available intervals dynamically
+    if BASE_DIR.exists():
+        available_intervals = [p.name for p in BASE_DIR.iterdir() if p.is_dir()]
+    else:
+        available_intervals = []
+
+    if available_intervals:
+        interval = st.selectbox("Select interval", available_intervals)
+        df = load_all_prices(interval)
+
+        if not df.empty:
+            st.subheader(f"Market Data ({interval})")
+            st.data_editor(df, num_rows="dynamic", height=500)
+        else:
+            st.info(f"No data found for interval {interval}.")
+    else:
+        st.info("No market data found in database yet.")
+
+    # 🔄 Update button
+    if st.button("Update Prices"):
+        tickers = load_followed_tickers()
         for ticker in tickers:
-            process_dashboard_data(ticker)
-
-    else:  # custom mode
-        if not args.period or not args.interval:
-            raise ValueError("Custom mode requires both --period and --interval arguments.")
-        for ticker in tickers:
-            print(f"Fetching {args.period} data at {args.interval} interval for {ticker}")
-            data = get_market_data(ticker, args.period, args.interval)
-            save_prices_incremental(ticker, args.period, args.interval, data)
-
+            for period, interval in intervals_main.items():
+                st.write(f"Fetching {ticker} {period} {interval}...")
+                data = get_market_data(ticker, period, interval)
+                if data is not None and not data.empty:
+                    save_prices_incremental(ticker, interval, data)
+        st.success("✅ Prices updated successfully!")
+        st.rerun()  # modern replacement for experimental_rerun
 
 if __name__ == "__main__":
     main()
+
+
 
 
 
