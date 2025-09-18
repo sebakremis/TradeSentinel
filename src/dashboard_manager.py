@@ -19,13 +19,30 @@ intervals_full = {
     "ytd": ["1d", "1wk", "1mo"],
     "max": ["1d", "1wk", "1mo"]
 }
+import pandas as pd
 
 
+def process_dashboard_data(interval: str) -> pd.DataFrame:
+    df = load_all_prices(interval)
 
-def process_dashboard_data(ticker: str):
-    for period, interval in intervals_main.items():
-        print(f"Fetching {period} data at {interval} interval for {ticker}")
-        data = get_market_data(ticker, period, interval)
-        # parquet version of save_prices expects (ticker, interval, df)
-        save_prices_incremental(ticker, interval, data)
+    if df.empty:
+        return df
+
+    # If columns are MultiIndex (ticker, field), flatten them
+    if isinstance(df.columns, pd.MultiIndex):
+        # Move ticker from columns into rows
+        df = df.stack(level=0).reset_index()
+        df = df.rename(columns={"level_1": "Ticker"})
+    else:
+        # If already flat, just ensure Ticker column exists
+        if "Ticker" not in df.columns:
+            df["Ticker"] = None
+
+    # Standardize column order
+    cols = ["Date", "Ticker", "Open", "High", "Low", "Close", "Adj Close", "Volume"]
+    df = df[[c for c in cols if c in df.columns]]
+
+    df["Interval"] = interval
+    return df
+
 
