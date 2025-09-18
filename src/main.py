@@ -15,11 +15,7 @@ def main():
 
     if available_intervals:
         interval = st.selectbox("Select interval", available_intervals)
-        df = pd.concat(
-            [load_all_prices(ticker, interval).assign(Ticker=ticker, Interval=interval)
-             for ticker in load_followed_tickers()],
-            ignore_index=False
-        ) if load_followed_tickers() else pd.DataFrame()
+        df = load_all_prices(interval)
 
         if not df.empty:
             st.subheader(f"Market Data ({interval})")
@@ -32,20 +28,24 @@ def main():
     # Update button
     if st.button("Update Prices"):
         tickers = load_followed_tickers()
-        st.write("Loaded tickers:", tickers)
-        
-        for ticker in load_followed_tickers():
-            for period, interval in intervals_full.items():
-                st.write(f"Fetching {ticker} {period}/{interval} …")
-                data = get_market_data(ticker, interval=interval, period=period)
-                if not data.empty:
-                    save_prices_incremental(ticker, interval, data)
-        st.success("✅ Prices updated successfully!")
+        if not tickers:
+            st.warning("⚠️ No tickers found in followed_tickers_test.csv")
+        for ticker in tickers:
+            for period, intervals in intervals_full.items():
+                for interval in intervals:   # ✅ nested loop over each interval
+                    st.write(f"Fetching {ticker} {period}/{interval} …")
+                    data = get_market_data(ticker, interval=interval, period=period)
+                    if not data.empty:
+                        save_prices_incremental(ticker, interval, data)
+                        st.success(f"✅ Saved {ticker} {interval} ({period})")
+                    else:
+                        st.warning(f"⚠️ No data for {ticker} {period}/{interval}")
         st.rerun()
 
 
 if __name__ == "__main__":
     main()
+
 
 
 
