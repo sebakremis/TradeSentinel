@@ -74,12 +74,23 @@ def _file_path(ticker: str, interval: str) -> Path:
     folder.mkdir(parents=True, exist_ok=True)
     return folder / f"{ticker}.parquet"
 
-def load_prices(ticker: str, interval: str) -> pd.DataFrame:
-    """Load stored prices for a ticker/interval, or return empty DataFrame if none."""
-    fp = _file_path(ticker, interval)
-    if fp.exists():
-        return pd.read_parquet(fp)
+def load_all_prices(interval: str) -> pd.DataFrame:
+    """Load all parquet files for a given interval and return as a combined DataFrame."""
+    interval_dir = BASE_DIR / interval
+    frames = []
+    if interval_dir.exists():
+        for file_path in interval_dir.glob("*.parquet"):
+            try:
+                df = pd.read_parquet(file_path)
+                ticker = file_path.stem  # filename without extension
+                df["Ticker"] = ticker
+                frames.append(df)
+            except Exception as e:
+                st.warning(f"⚠️ Could not load {file_path.name}: {e}")
+    if frames:
+        return pd.concat(frames)
     return pd.DataFrame()
+
 
 def save_prices_incremental(ticker: str, interval: str, df):
     from pathlib import Path

@@ -4,24 +4,12 @@ from pathlib import Path
 
 from src.tickers_store import load_followed_tickers
 from src.data_fetch import get_market_data
-from src.storage import save_prices_incremental
+from src.storage import save_prices_incremental, load_all_prices
 from src.dashboard_manager import intervals_main
 
 BASE_DIR = Path("data/prices")
 
-def load_all_prices(interval: str) -> pd.DataFrame:
-    """Load all tickers' data for a given interval and return as a combined DataFrame."""
-    tickers = load_followed_tickers()
-    frames = []
-    for ticker in tickers:
-        file_path = BASE_DIR / interval / f"{ticker}.parquet"
-        if file_path.exists():
-            df = pd.read_parquet(file_path)
-            df["Ticker"] = ticker
-            frames.append(df)
-    if frames:
-        return pd.concat(frames)
-    return pd.DataFrame()
+load_all_prices()
 
 def main():
     st.title("📊 TradeSentinel Dashboard")
