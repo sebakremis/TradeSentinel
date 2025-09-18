@@ -123,25 +123,40 @@ def save_prices_incremental(ticker: str, interval: str, new_data: pd.DataFrame):
     """
     interval_dir = BASE_DIR / interval
     interval_dir.mkdir(parents=True, exist_ok=True)
-
     fp = interval_dir / f"{ticker.upper()}.parquet"
 
-    # Normalize new_data
     df = new_data.copy()
+
+    # Flatten MultiIndex columns if needed
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = ["_".join([str(c) for c in col if c]) for col in df.columns]
+
+    # Normalize column names
+    rename_map = {
+        "Open": "Open", "High": "High", "Low": "Low", "Close": "Close",
+        "Adj Close": "Adj Close", "Volume": "Volume"
+    }
+    # Also handle prefixed names like "PLTR_Open"
+    for col in list(df.columns):
+        for base in rename_map:
+            if col.endswith(base):
+                df = df.rename(columns={col: base})
+
+    # Ensure Date index
     if not isinstance(df.index, pd.DatetimeIndex):
         if "Date" in df.columns:
             df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
             df = df.set_index("Date")
     df.index.name = "Date"
 
-    # Drop any ticker prefixes in columns (e.g. "PLTR_Open")
-    df.columns = [c.split("_")[-1] if "_" in c else c for c in df.columns]
-
-    # Keep only standard OHLCV columns
+    # Keep only OHLCV columns that exist
     keep = [c for c in ["Open", "High", "Low", "Close", "Adj Close", "Volume"] if c in df.columns]
+    if not keep:
+        raise ValueError(f"No OHLCV columns found for {ticker} {interval}")
+
     df = df[keep]
 
-    # Load existing file if present
+    # Merge with existing file if present
     if fp.exists():
         old = pd.read_parquet(fp)
         old.index = pd.to_datetime(old.index)
@@ -153,6 +168,7 @@ def save_prices_incremental(ticker: str, interval: str, new_data: pd.DataFrame):
 
     combined.to_parquet(fp)
     print(f"✅ Saved {ticker} {interval} up to {combined.index.max()}")
+
 
 
 
