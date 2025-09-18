@@ -3,7 +3,7 @@ import pandas as pd
 
 from src.storage import load_all_prices, save_prices_incremental, BASE_DIR
 from src.data_fetch import get_market_data
-from src.dashboard_manager import intervals_full
+from src.dashboard_manager import intervals_full, intervals_main
 from src.tickers_store import load_followed_tickers
 
 
@@ -31,15 +31,15 @@ def main():
         if not tickers:
             st.warning("⚠️ No tickers found in followed_tickers_test.csv")
         for ticker in tickers:
-            for period, intervals in intervals_full.items():
-                for interval in intervals:   # ✅ nested loop over each interval
-                    st.write(f"Fetching {ticker} {period}/{interval} …")
-                    data = get_market_data(ticker, interval=interval, period=period)
-                    if not data.empty:
-                        save_prices_incremental(ticker, interval, data)
-                        st.success(f"✅ Saved {ticker} {interval} ({period})")
-                    else:
-                        st.warning(f"⚠️ No data for {ticker} {period}/{interval}")
+            for period, interval in intervals_main.items():
+                st.write(f"Fetching {ticker} {period}/{interval} …")
+                data = get_market_data(ticker, interval=interval, period=period)
+                if not data.empty:
+                    save_prices_incremental(ticker, interval, data)
+                    st.success(f"✅ Saved {ticker} {interval} ({period})")
+                else:
+                    st.warning(f"⚠️ No data for {ticker} {period}/{interval}")
+
         st.rerun()
 
 

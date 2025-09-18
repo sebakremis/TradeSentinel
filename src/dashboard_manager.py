@@ -4,7 +4,7 @@ from storage import save_prices_incremental
 
 # Active mapping used by main.py for dashboard data
 intervals_main = {
-    "3mo": "30m",
+    "60d": "30m",
     "1y": "1d"
 }
 
