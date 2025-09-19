@@ -22,21 +22,32 @@ def main():
 
         if not df.empty:
             st.subheader(f"Market Data ({interval})")
-
-            # --- START OF FIX ---
-            # Define the columns you want to display on the dashboard
-            display_columns = [
-                'Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume',
-                'Ticker', 'Interval', 'Sector'
-            ]
+            # Create a copy to avoid modifying the original DataFrame
+            display_df = df.copy()
             
-            # Create a new DataFrame with only the selected columns
-            # This handles cases where some columns might be missing
-            display_df = df.reindex(columns=display_columns)
-
-            # Display the new DataFrame
-            st.data_editor(display_df, num_rows="dynamic", height=500)
-            # --- END OF FIX ---
+            # Reset the index to make 'Date' a column, preventing KeyError
+            if display_df.index.name is not None:
+                display_df = display_df.reset_index(names=[display_df.index.name])
+            else:
+                display_df = display_df.reset_index(names=['Date'])
+            
+            # Sort by Ticker and Date to ensure the last entry is the most recent
+            display_df = display_df.sort_values(['Ticker', 'Date'])
+            
+            # Calculate 'Change' and 'Change %'
+            # Group by ticker to perform calculations within each stock's data
+            display_df['Change'] = display_df.groupby('Ticker')['Close'].diff()
+            display_df['Change %'] = display_df.groupby('Ticker')['Close'].pct_change() * 100
+            
+            # Get the last price for each unique ticker
+            last_prices_df = display_df.groupby('Ticker').tail(1)
+            
+            # Define the columns to display
+            display_columns = ['Ticker', 'Close', 'Change', 'Change %', 'Date']
+            
+            # Display the final DataFrame in Streamlit
+            st.dataframe(last_prices_df[display_columns], hide_index=True)
+                    
         else:
             st.info(f"No data found for interval {interval}.")
     else:
