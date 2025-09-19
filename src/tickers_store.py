@@ -3,7 +3,7 @@ import pandas as pd
 from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-TICKERS_FILE = DATA_DIR / "followed_tickers_test.csv"
+TICKERS_FILE = DATA_DIR / "followed_tickers.csv"
 
 def ensure_data_dir():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
