@@ -6,7 +6,7 @@ from src.data_fetch import get_market_data
 from src.dashboard_manager import intervals_full, intervals_main, load_all_prices
 from src.tickers_store import load_followed_tickers
 from src.config import BASE_DIR
-from src.indicators import calculate_price_change
+from src.indicators import calculate_price_change, ema
 
 
 def main():
@@ -36,13 +36,13 @@ def main():
             
             # Call the new function from indicators.py to add calculated columns
             display_df = calculate_price_change(display_df)
+            display_df = ema(display_df, n=20)  # Example: 20-period EMA
 
             # Get the last price for each unique ticker
             last_prices_df = display_df.groupby('Ticker').tail(1).copy()
             
             # Define the columns to display
-            display_columns = ['Ticker', 'Close', 'Change', 'Change %', 'Date']
-
+            display_columns = ['Ticker', 'Close', f'EMA_20','Change', 'Change %', 'Date']
             # Select only the columns you want to display
             final_df = last_prices_df[display_columns].copy()
 
