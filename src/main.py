@@ -44,9 +44,6 @@ def main():
         df_daily = distance_from_ema(df_daily)
 
 
-
-
-
         # Extract last row for each ticker from daily data
         last_daily_df = df_daily.groupby('Ticker').tail(1).copy()
         
@@ -106,6 +103,32 @@ def main():
         # Sort the DataFrame by 'Ticker' alphabetically
         final_df = final_df.sort_values(by='Ticker')
         
+        # --- Start of new filter section ---
+        st.subheader("Data Filters")
+
+        col1, col2 = st.columns(2)
+
+        # Filter by 1d Trend
+        trend_1d_options = final_df['Trend_1d'].dropna().unique().tolist()
+        trend_1d_options.insert(0, 'All')
+        selected_trend_1d = col1.selectbox("Filter by 1d Trend", trend_1d_options)
+
+        # Filter by 30m Trend
+        trend_30m_options = final_df['Trend_30m'].dropna().unique().tolist()
+        trend_30m_options.insert(0, 'All')
+        selected_trend_30m = col2.selectbox("Filter by 30m Trend", trend_30m_options)
+
+        # Apply the filters
+        filtered_df = final_df.copy()
+
+        if selected_trend_1d != 'All':
+            filtered_df = filtered_df[filtered_df['Trend_1d'] == selected_trend_1d]
+
+        if selected_trend_30m != 'All':
+            filtered_df = filtered_df[filtered_df['Trend_30m'] == selected_trend_30m]
+            
+        # --- End of new filter section ---
+
         # Function to apply color
         def color_change(value):
             if isinstance(value, (int, float)):
@@ -115,8 +138,8 @@ def main():
                     return 'color: red;'
             return ''
             
-        # Apply the style to the final DataFrame
-        styled_df = final_df.style.applymap(color_change, subset=['Change %'])
+        # Apply the style to the filtered DataFrame
+        styled_df = filtered_df.style.applymap(color_change, subset=['Change %'])
         styled_df = styled_df.format({
             'Last': '{:.2f}',
             'Change %': '{:.2f}%',
