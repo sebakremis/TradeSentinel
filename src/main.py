@@ -1,10 +1,13 @@
+# main.py
+
 import streamlit as st
 import pandas as pd
 
-from src.storage import load_all_prices, save_prices_incremental, BASE_DIR
+from src.storage import save_prices_incremental
 from src.data_fetch import get_market_data
-from src.dashboard_manager import intervals_full, intervals_main
+from src.dashboard_manager import intervals_full, intervals_main, load_all_prices
 from src.tickers_store import load_followed_tickers
+from src.config import BASE_DIR
 
 
 def main():

@@ -1,8 +1,43 @@
 # src/dashboard_manager.py
-from src.data_fetch import get_market_data
-from src.storage import save_prices_incremental
+
 import pandas as pd
-from src.storage import load_all_prices
+from src.config import BASE_DIR
+
+def load_all_prices(interval: str) -> pd.DataFrame:
+    """
+    Load all tickers for a given interval into long format.
+    Each parquet file is one ticker; we add a Ticker column and concat.
+    """
+    interval_dir = BASE_DIR / interval
+    if not interval_dir.exists():
+        return pd.DataFrame()
+
+    frames = []
+    for fp in interval_dir.glob("*.parquet"):
+        df = pd.read_parquet(fp)
+        if df.empty:
+            continue
+        frames.append(df)
+
+    if not frames:
+        return pd.DataFrame()
+
+    # Concatenate all DataFrames and sort by index
+    combined_df = pd.concat(frames)
+
+    # Clean up the combined DataFrame before returning
+    if "Date" in combined_df.columns:
+        combined_df = combined_df.set_index("Date")
+    combined_df.index = pd.to_datetime(combined_df.index).tz_localize(None)
+    combined_df.index.name = "Date"
+    
+    # Drop rows with no OHLCV values
+    value_cols = [c for c in ["Open", "High", "Low", "Close", "Adj Close", "Volume"] if c in combined_df.columns]
+    if value_cols:
+        combined_df = combined_df.dropna(subset=value_cols, how="all")
+
+    return combined_df.sort_index()
+
 
 # Active mapping used by main.py for dashboard data
 intervals_main = {
@@ -21,26 +56,6 @@ intervals_full = {
     "ytd": ["1d", "1wk", "1mo"],
     "max": ["1d", "1wk", "1mo"]
 }
-
-
-def process_dashboard_data(interval: str) -> pd.DataFrame:
-    df = load_all_prices(interval)
-    if df.empty:
-        return df
-
-    if "Date" in df.columns:
-        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-        df = df.set_index("Date")
-
-    cols = ["Ticker", "Open", "High", "Low", "Close", "Adj Close", "Volume"]
-    df = df[[c for c in cols if c in df.columns]].copy()
-
-    df["Interval"] = interval
-
-    
-
-    return df
-
 
 
 

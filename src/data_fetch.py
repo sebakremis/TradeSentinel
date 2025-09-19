@@ -1,40 +1,25 @@
 # src/data_fetch.py
+
 import pandas as pd
 import yfinance as yf
 import io
 import contextlib
 import os
 
-# Get the directory of the current script file (data_fetch.py)
+# Your SECTOR_CSV_PATH and load_sector_data() functions are assumed to be correct
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Construct the absolute path to the CSV file
 SECTOR_CSV_PATH = os.path.join(SCRIPT_DIR, "..", "data", "followed_tickers_sectors.csv")
 
 def load_sector_data():
-    """
-    Loads sector data from a CSV file into a dictionary for fast lookup.
-    """
-    print(f"DEBUG: Attempting to load CSV from path: {SECTOR_CSV_PATH}")
-    
+    # ... (Your working load_sector_data function here)
     try:
-        # Load the CSV without setting an index
         df = pd.read_csv(SECTOR_CSV_PATH)
-        
-        # Convert it to a dictionary for quick lookup
         sector_dict = df.set_index('Ticker')['Sector'].to_dict()
-        
-        print("DEBUG: CSV file loaded successfully.")
-        print(f"DEBUG: Loaded sectors for tickers: {sector_dict.keys()}")
         return sector_dict
-    except FileNotFoundError:
-        print(f"❌ Error: The file was not found at {SECTOR_CSV_PATH}")
-        return {}
     except Exception as e:
-        print(f"❌ Error loading sector data from CSV: {e}")
+        print(f"❌ Error loading sector data: {e}")
         return {}
-
-# Load the sector data once when the module is imported
+        
 SECTOR_DATA = load_sector_data()
 
 def get_market_data(
@@ -45,11 +30,9 @@ def get_market_data(
     end: str = None
 ) -> pd.DataFrame:
     """
-    Fetch market data for a ticker from Yahoo Finance and adds sector data from a local CSV.
+    Fetch market data for a ticker from Yahoo Finance, calculate Adj Close,
+    and add sector data from a local CSV.
     """
-    
-    # Clean the ticker string to ensure a perfect match with the dictionary keys
-    # .strip() removes whitespace, .upper() converts to uppercase
     clean_ticker = ticker.strip().upper()
 
     stderr_buffer = io.StringIO()
@@ -61,20 +44,35 @@ def get_market_data(
                 period=None if start else period,
                 start=start,
                 end=end,
-                auto_adjust=True,
+                # Explicitly disable auto_adjust to avoid inconsistencies
+                auto_adjust=False,
             )
         except Exception as e:
-            print(f"❌ Failed to fetch {clean_ticker} ({period}, {interval}): {e}")
+            print(f"❌ Failed to fetch {clean_ticker}: {e}")
             return pd.DataFrame()
 
     if df.empty:
-        print(f"⚠️ No data returned for {clean_ticker} ({period}, {interval})")
+        print(f"⚠️ No data returned for {clean_ticker}")
         return pd.DataFrame()
 
     if isinstance(df.index, pd.DatetimeIndex) and df.index.tz is not None:
         df.index = df.index.tz_localize(None)
+
+    # Manual calculation of Adjusted Close
+    if "Adj Close" in df.columns and "Close" in df.columns:
+        if not df["Adj Close"].empty and df["Adj Close"].iloc[-1] != df["Close"].iloc[-1]:
+            # If both columns exist and are different, the scale factor is valid
+            scale_factor = df["Adj Close"] / df["Close"]
+            df["Adj Close"] = df["Close"] * scale_factor.fillna(method='ffill')
+        else:
+            # If Adj Close is missing or identical to Close, just copy Close
+            df["Adj Close"] = df["Close"]
+
+    # If Adj Close column doesn't exist at all, create it from Close
+    elif "Close" in df.columns:
+        df["Adj Close"] = df["Close"]
     
-    # Get sector from the pre-loaded dictionary using the clean ticker
+    # Get sector from the pre-loaded dictionary
     sector = SECTOR_DATA.get(clean_ticker, 'N/A')
     
     # Add the Ticker, Interval, and Sector columns to the DataFrame
