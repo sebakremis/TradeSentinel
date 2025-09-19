@@ -36,6 +36,7 @@ def main():
             df_daily = df_daily.reset_index(names=['Date'])
         
         # Perform trend calculation on daily data
+        df_daily = calculate_price_change(df_daily)
         df_daily = trend(df_daily, fast_n=ema_fast_period, slow_n=ema_slow_period)
         
         # Extract last row for each ticker from daily data
@@ -44,7 +45,7 @@ def main():
     else:
         st.warning("Daily data (1d) not found. Please update.")
         # Create a placeholder DataFrame with the expected columns
-        last_daily_df = pd.DataFrame(columns=['Ticker', 'Close', 'Trend', f'EMA_{ema_fast_period}', f'EMA_{ema_slow_period}'])
+        last_daily_df = pd.DataFrame(columns=['Ticker', 'Close', 'Change %', 'Trend'])
 
     # Load intraday data and perform calculations
     df_intraday = load_all_prices(intraday_interval)
@@ -56,7 +57,7 @@ def main():
             df_intraday = df_intraday.reset_index(names=['Date'])
         
         # Perform price change calculation on intraday data
-        df_intraday = calculate_price_change(df_intraday)
+        df_intraday = trend(df_intraday, fast_n=ema_fast_period, slow_n=ema_slow_period)
         
         # Extract last row for each ticker from intraday data
         last_intraday_df = df_intraday.groupby('Ticker').tail(1).copy()
@@ -64,18 +65,18 @@ def main():
     else:
         st.warning("Intraday data (30m) not found. Please update.")
         # Create a placeholder DataFrame with the expected columns
-        last_intraday_df = pd.DataFrame(columns=['Ticker', 'Close', 'Change', 'Change %'])
+        last_intraday_df = pd.DataFrame(columns=['Ticker', 'Trend'])
 
     # Merge the two DataFrames on 'Ticker' to create a single display table
     merged_df = pd.merge(
-        last_daily_df.rename(columns={'Close': 'Close_1d'}), 
-        last_intraday_df.rename(columns={'Close': 'Close_30m', 'Change': 'Change_30m', 'Change %': 'Change %_30m'}),
+        last_daily_df.rename(columns={'Close': 'Last', 'Trend': 'Trend_1d'}), 
+        last_intraday_df.rename(columns={'Close': 'Close_30m', 'Trend': 'Trend_30m'}),
         on='Ticker', 
         how='outer'
     )
     
     # Define a list of all required columns to prevent KeyErrors
-    expected_columns = ['Ticker', 'Close_1d', 'Trend', 'Change_30m', 'Change %_30m', 'Date_1d', 'Close_30m', 'Date_30m']
+    expected_columns = ['Ticker', 'Last', 'Change %', 'Trend_1d','Trend_30m']
 
     # Add missing columns with NaN values
     for col in expected_columns:
@@ -85,14 +86,14 @@ def main():
     # Check if the final merged DataFrame is empty
     if not merged_df.empty:
         # Define columns to display from the merged DataFrame
-        display_columns = ['Ticker', 'Close_1d', 'Trend', 'Change_30m', 'Change %_30m']
+        display_columns = ['Ticker', 'Last', 'Change %', 'Trend_1d','Trend_30m']
         
         final_df = merged_df[display_columns].copy()
 
         # Round numeric columns for display
-        final_df['Close_1d'] = final_df['Close_1d'].round(2)
-        final_df['Change_30m'] = final_df['Change_30m'].round(2)
-        final_df['Change %_30m'] = final_df['Change %_30m'].round(2)
+        final_df['Last'] = final_df['Last'].round(2)
+        # final_df['Change_30m'] = final_df['Change_30m'].round(2)
+        final_df['Change %'] = final_df['Change %'].round(2)
 
         # Sort the DataFrame by 'Ticker' alphabetically
         final_df = final_df.sort_values(by='Ticker')
@@ -107,11 +108,10 @@ def main():
             return ''
             
         # Apply the style to the final DataFrame
-        styled_df = final_df.style.applymap(color_change, subset=['Change_30m', 'Change %_30m'])
+        styled_df = final_df.style.applymap(color_change, subset=['Change %'])
         styled_df = styled_df.format({
-            'Close_1d': '{:.2f}',
-            'Change_30m': '{:.2f}',
-            'Change %_30m': '{:.2f}%'
+            'Last': '{:.2f}',
+            'Change %': '{:.2f}%'
         })
         
         # Display the styled DataFrame

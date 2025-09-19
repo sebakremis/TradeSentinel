@@ -5,7 +5,7 @@ from pathlib import Path
 # Assuming BASE_DIR is defined as a parent directory
 from src.config import DATA_DIR, BASE_DIR
 
-def load_followed_tickers(filename='followed_tickers_test.csv'):
+def load_followed_tickers(filename='followed_tickers.csv'):
     """
     Loads followed tickers from a single CSV file.
     Returns a DataFrame with 'Ticker' and 'Sector' columns.
