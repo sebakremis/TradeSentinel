@@ -1,23 +1,38 @@
-# src/tickers_store.py
 import pandas as pd
+import streamlit as st
 from pathlib import Path
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-TICKERS_FILE = DATA_DIR / "followed_tickers.csv"
+# Assuming BASE_DIR is defined as a parent directory
+from src.config import DATA_DIR, BASE_DIR
 
-def ensure_data_dir():
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+def load_followed_tickers(filename='followed_tickers_test.csv'):
+    """
+    Loads followed tickers from a single CSV file.
+    Returns a DataFrame with 'Ticker' and 'Sector' columns.
+    """
+    # Construct the correct path to the tickers file using the DATA_DIR constant
+    filepath = DATA_DIR / filename
+    
+    tickers_df = pd.DataFrame()
 
-def load_followed_tickers() -> list[str]:
-    """Load tickers from the CSV file."""
-    if not TICKERS_FILE.exists():
-        return []
-    df = pd.read_csv(TICKERS_FILE)
-    # Expecting a column named 'ticker'
-    if "ticker" in df.columns:
-        return df["ticker"].dropna().unique().tolist()
-    # If the file is just a single column with no header
-    return df.iloc[:, 0].dropna().unique().tolist()
+    try:
+        tickers_df = pd.read_csv(filepath)
+    except FileNotFoundError:
+        st.error(f"❌ Error loading tickers: File not found at {filepath}")
+        return pd.DataFrame(columns=['Ticker', 'Sector'])
+    except Exception as e:
+        st.error(f"❌ Error loading tickers: {e}")
+        return pd.DataFrame(columns=['Ticker', 'Sector'])
+
+    if tickers_df.empty or 'Ticker' not in tickers_df.columns:
+        st.warning(f"⚠️ No tickers found in {filename} or 'Ticker' column is missing.")
+        return pd.DataFrame(columns=['Ticker', 'Sector'])
+
+    # Ensure 'Sector' column exists; add it if not found
+    if 'Sector' not in tickers_df.columns:
+        tickers_df['Sector'] = 'N/A'
+        
+    return tickers_df
 
 def save_followed_tickers(tickers: list[str]) -> None:
     """Save tickers list to CSV."""
