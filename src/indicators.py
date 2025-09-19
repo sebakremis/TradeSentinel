@@ -1,5 +1,11 @@
 import pandas as pd
 
+def distance_from_ema(df: pd.DataFrame)->pd.DataFrame:
+    df = df.sort_values(['Ticker', 'Date'])
+    df['Distance_Ema20'] = ((df['Close']-df['EMA_20'])/ df['EMA_20'])*100
+    return df
+    
+
 def calculate_price_change(df: pd.DataFrame) -> pd.DataFrame:
     """
     Calculates the 'Change' and 'Change %' columns for a DataFrame.

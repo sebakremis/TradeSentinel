@@ -7,7 +7,7 @@ from src.data_fetch import get_market_data
 from src.dashboard_manager import intervals_full, intervals_main, load_all_prices
 from src.tickers_store import load_followed_tickers
 from src.config import BASE_DIR, DATA_DIR
-from src.indicators import calculate_price_change, ema, trend
+from src.indicators import calculate_price_change, ema, trend,distance_from_ema
 
 
 def main():
@@ -38,14 +38,22 @@ def main():
         # Perform trend calculation on daily data
         df_daily = calculate_price_change(df_daily)
         df_daily = trend(df_daily, fast_n=ema_fast_period, slow_n=ema_slow_period)
-        
+
+        # calculate distance to fast ema
+        df_daily = ema(df_daily,ema_fast_period)
+        df_daily = distance_from_ema(df_daily)
+
+
+
+
+
         # Extract last row for each ticker from daily data
         last_daily_df = df_daily.groupby('Ticker').tail(1).copy()
         
     else:
         st.warning("Daily data (1d) not found. Please update.")
         # Create a placeholder DataFrame with the expected columns
-        last_daily_df = pd.DataFrame(columns=['Ticker', 'Close', 'Change %', 'Trend'])
+        last_daily_df = pd.DataFrame(columns=['Ticker', 'Close', 'Change %', 'Trend', 'Distance_Ema20'])
 
     # Load intraday data and perform calculations
     df_intraday = load_all_prices(intraday_interval)
@@ -76,7 +84,7 @@ def main():
     )
     
     # Define a list of all required columns to prevent KeyErrors
-    expected_columns = ['Ticker', 'Last', 'Change %', 'Trend_1d','Trend_30m']
+    expected_columns = ['Ticker', 'Last', 'Change %', 'Trend_1d','Trend_30m','Distance_Ema20']
 
     # Add missing columns with NaN values
     for col in expected_columns:
@@ -86,13 +94,13 @@ def main():
     # Check if the final merged DataFrame is empty
     if not merged_df.empty:
         # Define columns to display from the merged DataFrame
-        display_columns = ['Ticker', 'Last', 'Change %', 'Trend_1d','Trend_30m']
+        display_columns = ['Ticker', 'Last', 'Change %', 'Trend_1d','Trend_30m', 'Distance_Ema20']
         
         final_df = merged_df[display_columns].copy()
 
         # Round numeric columns for display
         final_df['Last'] = final_df['Last'].round(2)
-        # final_df['Change_30m'] = final_df['Change_30m'].round(2)
+        final_df['Distance_Ema20'] = final_df['Distance_Ema20'].round(2)
         final_df['Change %'] = final_df['Change %'].round(2)
 
         # Sort the DataFrame by 'Ticker' alphabetically
@@ -111,7 +119,8 @@ def main():
         styled_df = final_df.style.applymap(color_change, subset=['Change %'])
         styled_df = styled_df.format({
             'Last': '{:.2f}',
-            'Change %': '{:.2f}%'
+            'Change %': '{:.2f}%',
+            'Distance_Ema20': '{:.2f}%'
         })
         
         # Display the styled DataFrame
