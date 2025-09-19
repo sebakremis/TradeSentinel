@@ -17,7 +17,8 @@ def main():
     available_intervals = [p.name for p in BASE_DIR.iterdir() if p.is_dir()] if BASE_DIR.exists() else []
 
     if available_intervals:
-        interval = st.selectbox("Select interval", available_intervals)
+        # Box to select interval
+        interval = st.radio("Select interval", available_intervals)
         df = load_all_prices(interval)
 
         if not df.empty:
@@ -44,9 +45,40 @@ def main():
             
             # Define the columns to display
             display_columns = ['Ticker', 'Close', 'Change', 'Change %', 'Date']
+
+            # Select only the columns you want to display
+            final_df = last_prices_df[display_columns].copy()
+
+            # Round the numeric columns
+            final_df['Change'] = final_df['Change'].round(2)
+            final_df['Change %'] = final_df['Change %'].round(2)
+
+            # sort the DataFrame by 'Ticker' alphabetically
+            final_df = final_df.sort_values(by='Ticker')
+
+            # Function to apply color
+            def color_change(value):
+                if isinstance(value, (int, float)):
+                    if value > 0:
+                        return 'color: green;'
+                    elif value < 0:
+                        return 'color: red;'
+                return ''
+
+            # Apply the style to the final DataFrame
+            styled_df = final_df.style.applymap(color_change, subset=['Change', 'Change %'])
+
+            styled_df = styled_df.format({
+                'Close': '{:.2f}',
+                'Change': '{:.2f}',
+                'Change %': '{:.2f}%'
+            })
+
+            # Display the styled DataFrame
+            st.dataframe(styled_df, hide_index=True)            
+
             
-            # Display the final DataFrame in Streamlit
-            st.dataframe(last_prices_df[display_columns], hide_index=True)
+            
                     
         else:
             st.info(f"No data found for interval {interval}.")
