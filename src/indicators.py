@@ -49,3 +49,40 @@ def ema(df: pd.DataFrame, n: int) -> pd.DataFrame:
         lambda x: x.ewm(span=n, adjust=False).mean()
     )
     return df
+
+def trend(df: pd.DataFrame, fast_n: int = 20, slow_n: int = 50, price_col: str = 'Close') -> pd.DataFrame:
+    """
+    Determines the trend based on a fast and slow EMA crossover.
+
+    The trend is classified as 'long', 'short', or 'no trend' based on the
+    relative positions of the last price, fast EMA, and slow EMA.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame containing 'Close' and 'Ticker'
+                           columns.
+        fast_n (int): The period for the fast EMA.
+        slow_n (int): The period for the slow EMA.
+        price_col (str): The column to use for the price (default: 'Close').
+
+    Returns:
+        pd.DataFrame: The DataFrame with a new 'Trend' column.
+    """
+    # Calculate the fast and slow EMAs and add them to the DataFrame
+    df = ema(df, fast_n)
+    df = ema(df, slow_n)
+
+    # Get the column names for the EMAs
+    fast_ema_col = f'EMA_{fast_n}'
+    slow_ema_col = f'EMA_{slow_n}'
+
+    # Define the conditions for the trend
+    long_condition = (df[price_col] > df[slow_ema_col]) & (df[fast_ema_col] > df[slow_ema_col])
+    short_condition = (df[price_col] < df[slow_ema_col]) & (df[fast_ema_col] < df[slow_ema_col])
+    
+    # Use np.select for efficient conditional assignment
+    import numpy as np
+    conditions = [long_condition, short_condition]
+    choices = ['long', 'short']
+    df['Trend'] = np.select(conditions, choices, default='no trend')
+
+    return df
