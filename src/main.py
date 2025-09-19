@@ -19,7 +19,21 @@ def main():
 
         if not df.empty:
             st.subheader(f"Market Data ({interval})")
-            st.data_editor(df, num_rows="dynamic", height=500)
+
+            # --- START OF FIX ---
+            # Define the columns you want to display on the dashboard
+            display_columns = [
+                'Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume',
+                'Ticker', 'Interval', 'Sector'
+            ]
+            
+            # Create a new DataFrame with only the selected columns
+            # This handles cases where some columns might be missing
+            display_df = df.reindex(columns=display_columns)
+
+            # Display the new DataFrame
+            st.data_editor(display_df, num_rows="dynamic", height=500)
+            # --- END OF FIX ---
         else:
             st.info(f"No data found for interval {interval}.")
     else:
@@ -46,7 +60,6 @@ def main():
                     st.warning(f"⚠️ No data for {ticker} {period}/{interval}")
     
         st.rerun()
-
 
 if __name__ == "__main__":
     main()

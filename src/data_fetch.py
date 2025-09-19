@@ -3,13 +3,39 @@ import pandas as pd
 import yfinance as yf
 import io
 import contextlib
+import os
 
-# It's assumed that a logger object is defined elsewhere in your project,
-# e.g., in a config or main module. For this example, we'll use a simple
-# placeholder.
-# If you have a logger, replace the print() statements with logger.error/warning.
-# import logging
-# logger = logging.getLogger(__name__)
+# Get the directory of the current script file (data_fetch.py)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Construct the absolute path to the CSV file
+SECTOR_CSV_PATH = os.path.join(SCRIPT_DIR, "..", "data", "followed_tickers_sectors.csv")
+
+def load_sector_data():
+    """
+    Loads sector data from a CSV file into a dictionary for fast lookup.
+    """
+    print(f"DEBUG: Attempting to load CSV from path: {SECTOR_CSV_PATH}")
+    
+    try:
+        # Load the CSV without setting an index
+        df = pd.read_csv(SECTOR_CSV_PATH)
+        
+        # Convert it to a dictionary for quick lookup
+        sector_dict = df.set_index('Ticker')['Sector'].to_dict()
+        
+        print("DEBUG: CSV file loaded successfully.")
+        print(f"DEBUG: Loaded sectors for tickers: {sector_dict.keys()}")
+        return sector_dict
+    except FileNotFoundError:
+        print(f"❌ Error: The file was not found at {SECTOR_CSV_PATH}")
+        return {}
+    except Exception as e:
+        print(f"❌ Error loading sector data from CSV: {e}")
+        return {}
+
+# Load the sector data once when the module is imported
+SECTOR_DATA = load_sector_data()
 
 def get_market_data(
     ticker: str,
@@ -19,52 +45,42 @@ def get_market_data(
     end: str = None
 ) -> pd.DataFrame:
     """
-    Fetch market data and company sector for a ticker from Yahoo Finance.
-    
-    This function uses yfinance to download historical price data and
-    company information, then combines them into a single DataFrame.
-    It also handles potential download errors and suppresses noisy output.
+    Fetch market data for a ticker from Yahoo Finance and adds sector data from a local CSV.
     """
     
+    # Clean the ticker string to ensure a perfect match with the dictionary keys
+    # .strip() removes whitespace, .upper() converts to uppercase
+    clean_ticker = ticker.strip().upper()
+
     stderr_buffer = io.StringIO()
     with contextlib.redirect_stderr(stderr_buffer):
         try:
-            # Create a Ticker object to fetch both price data and company info
-            ticker_obj = yf.Ticker(ticker)
-            
-            # Fetch historical price data
+            ticker_obj = yf.Ticker(clean_ticker)
             df = ticker_obj.history(
                 interval=interval,
                 period=None if start else period,
                 start=start,
                 end=end,
                 auto_adjust=True,
-            )            
-            # Get the company's info dictionary
-            info = ticker_obj.info
-            
+            )
         except Exception as e:
-            # Use your project's logger if available
-            print(f"❌ Failed to fetch {ticker} ({period}, {interval}): {e}")
+            print(f"❌ Failed to fetch {clean_ticker} ({period}, {interval}): {e}")
             return pd.DataFrame()
 
     if df.empty:
-        # Use your project's logger if available
-        print(f"⚠️ No data returned for {ticker} ({period}, {interval})")
+        print(f"⚠️ No data returned for {clean_ticker} ({period}, {interval})")
         return pd.DataFrame()
 
-    # If the index is a timezone-aware DatetimeIndex, make it timezone-naive
     if isinstance(df.index, pd.DatetimeIndex) and df.index.tz is not None:
         df.index = df.index.tz_localize(None)
-
-    # Extract the 'sector' from the info dictionary and add it to the DataFrame
-    # Use .get() to safely handle cases where the 'sector' key might be missing
-    sector = info.get('sector', 'N/A')
-    df["Sector"] = sector
     
-    # Add the Ticker and Interval columns for easier data management
-    df["Ticker"] = ticker
+    # Get sector from the pre-loaded dictionary using the clean ticker
+    sector = SECTOR_DATA.get(clean_ticker, 'N/A')
+    
+    # Add the Ticker, Interval, and Sector columns to the DataFrame
+    df["Ticker"] = clean_ticker
     df["Interval"] = interval
+    df["Sector"] = sector
     
     return df
 
