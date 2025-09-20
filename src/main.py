@@ -11,7 +11,7 @@ from src.indicators import calculate_price_change, ema, trend,distance_from_ema
 
 
 def main():
-    st.title("📊 TradeSentinel Dashboard")
+    st.title("📊 TradeSentinel: Market View")
     
     # Add a number input for the EMA periods
     with st.expander("Indicator Settings"):
@@ -103,51 +103,110 @@ def main():
         # Sort the DataFrame by 'Ticker' alphabetically
         final_df = final_df.sort_values(by='Ticker')
         
-        # --- Start of new filter section ---
-        st.subheader("Data Filters")
+        # --- Start of new filter and sort section ---
+        st.subheader("") #'Data Filters and Sorting'
 
-        col1, col2 = st.columns(2)
+        col1_filters, col2_filters, col3_filters = st.columns(3)
 
-        # Filter by 1d Trend
-        trend_1d_options = final_df['Trend_1d'].dropna().unique().tolist()
-        trend_1d_options.insert(0, 'All')
-        selected_trend_1d = col1.selectbox("Filter by 1d Trend", trend_1d_options)
-
-        # Filter by 30m Trend
-        trend_30m_options = final_df['Trend_30m'].dropna().unique().tolist()
-        trend_30m_options.insert(0, 'All')
-        selected_trend_30m = col2.selectbox("Filter by 30m Trend", trend_30m_options)
-
-        # Apply the filters
+        # Initialize filtered_df here, so it is always defined
         filtered_df = final_df.copy()
 
+        # Filter by 1d Trend
+        trend_1d_options = filtered_df['Trend_1d'].dropna().unique().tolist()
+        trend_1d_options.insert(0, 'All')
+        
+        # Get the index of 'long' for the default value
+        default_index_1d = trend_1d_options.index('long') if 'long' in trend_1d_options else 0
+        selected_trend_1d = col1_filters.selectbox(
+            "Filter by 1d Trend", 
+            trend_1d_options, 
+            index=default_index_1d
+        )
+
+        # Filter by 30m Trend
+        trend_30m_options = filtered_df['Trend_30m'].dropna().unique().tolist()
+        trend_30m_options.insert(0, 'All')
+        
+        # Get the index of 'long' for the default value
+        default_index_30m = trend_30m_options.index('long') if 'long' in trend_30m_options else 0
+        selected_trend_30m = col2_filters.selectbox(
+            "Filter by 30m Trend", 
+            trend_30m_options, 
+            index=default_index_30m
+        )
+
+        # Add a selectbox for sorting
+        sort_options = ['Ticker', 'Change %', 'Last', 'Distance_Ema20']
+        
+        # Get the index of 'Distance_Ema20' for the default value
+        default_sort_index = sort_options.index('Distance_Ema20')
+        selected_sort = col3_filters.selectbox(
+            "Sort By", 
+            sort_options, 
+            index=default_sort_index
+        )
+        
+        # Apply the filters
         if selected_trend_1d != 'All':
             filtered_df = filtered_df[filtered_df['Trend_1d'] == selected_trend_1d]
 
         if selected_trend_30m != 'All':
             filtered_df = filtered_df[filtered_df['Trend_30m'] == selected_trend_30m]
-            
-        # --- End of new filter section ---
-
-        # Function to apply color
-        def color_change(value):
-            if isinstance(value, (int, float)):
-                if value > 0:
-                    return 'color: green;'
-                elif value < 0:
-                    return 'color: red;'
-            return ''
-            
-        # Apply the style to the filtered DataFrame
-        styled_df = filtered_df.style.applymap(color_change, subset=['Change %'])
-        styled_df = styled_df.format({
-            'Last': '{:.2f}',
-            'Change %': '{:.2f}%',
-            'Distance_Ema20': '{:.2f}%'
-        })
         
-        # Display the styled DataFrame
-        st.dataframe(styled_df, hide_index=True)
+        # Apply the selected sorting
+        filtered_df = filtered_df.sort_values(by=selected_sort)
+        
+        # --- End of new filter and sort section ---
+        
+        
+        # --- New selection and action section ---
+        # Create two columns for the side-by-side layout
+        col_select, col_table = st.columns([1, 2])
+
+        # Place the selection logic in the first column
+        with col_select:
+            st.subheader("Select Tickers for Action")
+            # Store the selected tickers in a list
+            selected_tickers = []
+            
+            # Use a container to display a checkable list of tickers
+            with st.container(border=True, height=300):
+                for _, row in filtered_df.iterrows():
+                    ticker = row['Ticker']
+                    # Use the key parameter to ensure state is maintained
+                    if st.checkbox(f"**{ticker}**", key=f"checkbox_{ticker}"):
+                        selected_tickers.append(ticker)
+
+        # Place the styled DataFrame in the second column
+        with col_table:
+            st.subheader("Filtered Data")
+            st.dataframe(
+                filtered_df,  # Pass the unstyled DataFrame here
+                hide_index=True,
+                use_container_width=True,
+                column_config={
+                    "Ticker": st.column_config.TextColumn("Ticker"),
+                    "Last": st.column_config.NumberColumn("Last", format="%.2f"),
+                    "Change %": st.column_config.NumberColumn("Change %", format="%.2f%%"),
+                    "Trend_1d": st.column_config.TextColumn("Trend_1d"),
+                    "Trend_30m": st.column_config.TextColumn("Trend_30m"),
+                    "Distance_Ema20": st.column_config.NumberColumn("Distance_Ema20", format="%.2f%%"),
+                }
+            )
+
+        # The action button should be placed outside the columns to span the full width
+        if st.button("Perform Action on Selected Tickers", disabled=not selected_tickers):
+            if selected_tickers:
+                st.info(f"Performing action for the following tickers: {', '.join(selected_tickers)}")
+                # Place your specific logic here
+                st.success("Action completed!")
+            else:
+                st.warning("Please select at least one ticker.")
+# --- End of new selection and action section ---
+
+# You must also remove the previous styling section and the `styled_df` variable.
+# The `st.column_config` takes care of all formatting and sorting.  
+        
         
     else:
         st.info("No data found for any of the selected intervals.")
