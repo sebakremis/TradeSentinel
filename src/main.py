@@ -164,17 +164,19 @@ def main():
             else:
                 st.warning("Please enter a ticker symbol to add.")
 
-        rem_ticker = st.text_input("Enter Ticker Symbol to Remove", max_chars=5, key='rem_ticker_input').upper().strip()
-        if st.button("Remove Ticker", key='remove_button'):
-            if rem_ticker:
-                if rem_ticker in tickers_df['Ticker'].values:
-                    remove_ticker(rem_ticker)
-                    st.success(f"✅ Removed ticker {rem_ticker}")
-                    st.session_state['rem_ticker_input'] = ""
-                else:
-                    st.warning(f"⚠️ Ticker {rem_ticker} not found in followed list.")
+        # Updated: Replace text input with selectbox for removing tickers
+        ticker_list_to_remove = tickers_df['Ticker'].tolist()
+        rem_ticker_select = st.selectbox("Select Ticker Symbol to Remove", options=ticker_list_to_remove, key='rem_ticker_select')
+        
+        if st.button("Remove Selected Ticker", key='remove_button'):
+            if rem_ticker_select:
+                try:
+                    remove_ticker(rem_ticker_select)
+                    st.success(f"✅ Removed ticker {rem_ticker_select}")
+                except Exception as e:
+                    st.error(f"❌ An error occurred while removing ticker: {e}")
             else:
-                st.warning("Please enter a ticker symbol to remove.")
+                st.warning("Please select a ticker to remove.")
             st.rerun()
 
 if __name__ == "__main__":
