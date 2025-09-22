@@ -1,51 +1,64 @@
-import yfinance as yf
 import pandas as pd
+import yfinance as yf
 import streamlit as st
-import time
+import datetime as dt
+from src.storage import save_prices_incremental
+from src.tickers_store import load_followed_tickers
 
-def get_market_data(ticker, interval, period):
+def get_multiple_market_data(tickers, interval, period):
     """
-    Fetches market data for a given ticker, interval, and period using yfinance.
-    This version uses the yf.Ticker() object which is more stable than yf.download()
-    for single tickers.
-
-    Args:
-        ticker (str): The stock ticker symbol.
-        interval (str): The interval for the data (e.g., '30m', '1d').
-        period (str): The period for the data (e.g., '1y', '5d').
-
+    Fetches market data for multiple tickers from Yahoo Finance.
+    
     Returns:
-        pd.DataFrame: A DataFrame with the fetched data, or an empty DataFrame on failure.
+        pd.DataFrame: A DataFrame with a MultiIndex column structure or an empty DataFrame.
     """
     try:
-        # Create a Ticker object for the given symbol
-        stock_ticker = yf.Ticker(ticker)
-
-        # Use the history method to get data. This method is often more reliable.
-        data = stock_ticker.history(period=period, interval=interval, actions=False)
-
-        # Check for empty or malformed data immediately
-        if data.empty or data.dropna(how='all').empty or 'Close' not in data.columns:
-            st.warning(f"⚠️ No data returned for {ticker} with interval {interval} and period {period}.")
-            return pd.DataFrame()
-
-        # Check if 'Close' column is a Series before converting to numeric
-        if isinstance(data['Close'], pd.Series):
-            data['Close'] = pd.to_numeric(data['Close'], errors='coerce')
-        else:
-            st.warning(f"⚠️ 'Close' column not found or is not a Series for {ticker}")
-            return pd.DataFrame()
-
+        data = yf.download(
+            tickers=tickers,
+            period=period,
+            interval=interval,
+            group_by='ticker',
+            auto_adjust=True,
+            threads=True,
+            proxy=None
+        )
+        return data
     except Exception as e:
-        # Catch any exceptions during the API call or data processing
-        st.error(f"❌ Error fetching data for {ticker}: {e}")
+        st.error(f"Error fetching data: {e}")
         return pd.DataFrame()
 
-    # Add a small delay to avoid hitting API rate limits
-    time.sleep(1)
+def fetch_and_save_data(tickers: list) -> bool:
+    """
+    Fetches market data for a list of tickers and saves it incrementally.
+    Returns True if data was successfully saved for at least one ticker, False otherwise.
+    """
+    st.info("Fetching all tickers at once. This may take a moment...")
     
-    return data
+    saved_files_count = 0
+    try:
+        daily_data = get_multiple_market_data(tickers=tickers, interval='1d', period='1y')
+        intraday_data = get_multiple_market_data(tickers=tickers, interval='30m', period='5d')
 
-
+        if not daily_data.empty:
+            for ticker in tickers:
+                if (ticker, 'Close') in daily_data.columns:
+                    save_prices_incremental(ticker, '1d', daily_data[ticker])
+                    saved_files_count += 1
+                else:
+                    st.warning(f"⚠️ No daily data found for {ticker}")
+        
+        if not intraday_data.empty:
+            for ticker in tickers:
+                if (ticker, 'Close') in intraday_data.columns:
+                    save_prices_incremental(ticker, '30m', intraday_data[ticker])
+                    saved_files_count += 1
+                else:
+                    st.warning(f"⚠️ No intraday data found for {ticker}")
+        
+        return saved_files_count > 0
+    
+    except Exception as e:
+        st.error(f"❌ An error occurred during data fetching: {e}")
+        return False
 
 

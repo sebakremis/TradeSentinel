@@ -1,80 +1,62 @@
 import pandas as pd
 from pathlib import Path
+import streamlit as st
+from src.config import DATA_DIR
+from src.data_fetch import get_multiple_market_data
+from src.tickers_store import load_followed_tickers
 
-# Assuming the root of your project is one level above src
-from src.config import BASE_DIR, DATA_DIR
-
-intervals_full = {
-    "1m": "1 Minute",
-    "2m": "2 Minutes",
-    "5m": "5 Minutes",
-    "15m": "15 Minutes",
-    "30m": "30 Minutes",
-    "60m": "60 Minutes",
-    "90m": "90 Minutes",
-    "1h": "1 Hour",
-    "1d": "1 Day",
-    "5d": "5 Days",
-    "1wk": "1 Week",
-    "1mo": "1 Month",
-    "3mo": "3 Months"
-}
-
-intervals_main = {
-    "1d": "1 Day",
-    "30m": "30 Minutes"
-}
-
-def load_all_prices(interval, data_dir=DATA_DIR):
+@st.cache_data(ttl=3600)  # Cache the data for 1 hour (3600 seconds)
+def get_all_prices_cached(tickers):
     """
-    Loads all saved ticker price data for a given interval.
+    Fetches daily and intraday data for all tickers and combines them into two DataFrames.
+    This function is decorated with Streamlit's caching to avoid re-fetching data on every rerun.
+    It does NOT display any messages, as that is handled by the main app.
     """
-    all_dfs = []
-    
-    # Construct the path to the directory containing the price data for the given interval
-    interval_path = data_dir / "prices" / interval
-    
-    # --- DEBUGGING STATEMENTS ---
-    print(f"Attempting to load data from: {interval_path}")
-    if not interval_path.exists():
-        print(f"Directory not found: {interval_path}")
+    daily_data = get_multiple_market_data(tickers, interval='1d', period='1y')
+    intraday_data = get_multiple_market_data(tickers, interval='30m', period='5d')
+
+    if daily_data.empty or intraday_data.empty:
+        # A simple warning can be useful for debugging a failure, but
+        # info/success messages should be handled by the main app.
+        st.warning("⚠️ Could not fetch data for all tickers.")
+        return pd.DataFrame(), pd.DataFrame()
+
+    all_daily_dfs = []
+    all_intraday_dfs = []
+
+    for ticker in tickers:
+        if (ticker, 'Close') in daily_data.columns:
+            df_daily = daily_data[ticker].copy()
+            df_daily['Ticker'] = ticker
+            all_daily_dfs.append(df_daily)
+
+        if (ticker, 'Close') in intraday_data.columns:
+            df_intraday = intraday_data[ticker].copy()
+            df_intraday['Ticker'] = ticker
+            all_intraday_dfs.append(df_intraday)
+
+    df_daily_combined = pd.concat(all_daily_dfs).sort_index() if all_daily_dfs else pd.DataFrame()
+    df_intraday_combined = pd.concat(all_intraday_dfs).sort_index() if all_intraday_dfs else pd.DataFrame()
+
+    return df_daily_combined, df_intraday_combined
+
+def load_all_prices(interval):
+    """
+    This function now acts as a wrapper, retrieving the cached DataFrame.
+    """
+    tickers_df = load_followed_tickers()
+    if tickers_df.empty:
         return pd.DataFrame()
-    # --- END DEBUGGING STATEMENTS ---
-
-    # Updated to look for .parquet files instead of .csv
-    for file_path in interval_path.glob("*.parquet"):
-        # --- DEBUGGING STATEMENTS ---
-        print(f"Found file: {file_path}")
-        # --- END DEBUGGING STATEMENTS ---
-        try:
-            df = pd.read_parquet(file_path)
-            # Make sure the 'Ticker' column is correctly identified
-            df['Ticker'] = file_path.stem
-            all_dfs.append(df)
-            # --- DEBUGGING STATEMENTS ---
-            print(f"Successfully loaded file. DataFrame shape: {df.shape}")
-            # --- END DEBUGGING STATEMENTS ---
-        except Exception as e:
-            # --- DEBUGGING STATEMENTS ---
-            print(f"Error loading {file_path}: {e}")
-            # --- END DEBUGGING STATEMENTS ---
-            continue
-
-    if not all_dfs:
-        # --- DEBUGGING STATEMENTS ---
-        print("No DataFrames were loaded for this interval.")
-        # --- END DEBUGGING STATEMENTS ---
-        return pd.DataFrame()
-
-    # Fixed: Removed ignore_index=True to preserve the Date index
-    combined_df = pd.concat(all_dfs)
     
-    # --- DEBUGGING STATEMENTS ---
-    print(f"Final combined DataFrame shape: {combined_df.shape}")
-    print(f"Final combined DataFrame columns: {combined_df.columns.tolist()}")
-    # --- END DEBUGGING STATEMENTS ---
+    tickers = tickers_df['Ticker'].tolist()
     
-    return combined_df
+    df_daily, df_intraday = get_all_prices_cached(tickers)
+    
+    if interval == '1d':
+        return df_daily
+    elif interval == '30m':
+        return df_intraday
+    return pd.DataFrame()              
 
 
 

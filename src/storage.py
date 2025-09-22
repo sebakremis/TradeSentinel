@@ -1,53 +1,66 @@
-from pathlib import Path
 import pandas as pd
-from src.config import BASE_DIR, DATA_DIR
+from pathlib import Path
+import streamlit as st
+from src.config import DATA_DIR
 
 def save_prices_incremental(ticker: str, interval: str, new_data: pd.DataFrame):
     """
     Save price data incrementally for a single ticker/interval,
-    ensuring all columns are preserved.
+    ensuring all columns are preserved and handling the index correctly.
     """
-    # Use DATA_DIR to correctly construct the path to the prices directory
     interval_dir = DATA_DIR / "prices" / interval
     interval_dir.mkdir(parents=True, exist_ok=True)
     fp = interval_dir / f"{ticker.upper()}.parquet"
 
     df = new_data.copy()
 
-    # Flatten MultiIndex columns if needed
+    # Flatten the multi-level column DataFrame if it exists.
     if isinstance(df.columns, pd.MultiIndex):
-        df.columns = ["_".join([str(c) for c in col if c]) for col in df.columns]
+        df.columns = df.columns.get_level_values(1)
 
-    # Normalize column names
-    # This is a safer and cleaner way to handle column renaming
-    df.columns = df.columns.str.replace(f'{ticker.upper()}_', '', regex=False)
-    
-    # Ensure Date index
+    # Ensure the index is a DatetimeIndex and has a name
     if not isinstance(df.index, pd.DatetimeIndex):
-        if "Date" in df.columns:
-            df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-            df = df.set_index("Date")
+        df.index = pd.to_datetime(df.index, errors="coerce")
+    
+    # Set the index name to 'Date'
     df.index.name = "Date"
+    df.dropna(subset=[df.index.name], inplace=True)
+    
+    # Add the 'Ticker' column to the new data
+    df['Ticker'] = ticker
 
     # Merge with existing file if present
     if fp.exists():
         try:
-            old = pd.read_parquet(fp)
+            # Load old data and set 'Date' as the index for merging
+            old = pd.read_parquet(fp).set_index("Date")
             old.index = pd.to_datetime(old.index)
             
-            # Concatenate and handle duplicates
+            # Concatenate and handle duplicates, keeping the most recent data
             combined = pd.concat([old, df])
             combined = combined[~combined.index.duplicated(keep="last")]
             combined = combined.sort_index()
         except Exception as e:
-            # Handle potential corruption in old parquet files by overwriting
-            print(f"Error reading {fp}: {e}. Overwriting file.")
+            st.warning(f"Error reading {fp}: {e}. Overwriting file.")
             combined = df.sort_index()
     else:
         combined = df.sort_index()
 
+    # Drop any columns that are all NaN
+    combined = combined.dropna(axis=1, how='all')
+
+    # Save the DataFrame with 'Date' as a regular column
+    combined.reset_index(inplace=True)
     combined.to_parquet(fp)
-    print(f"✅ Saved {ticker} {interval} up to {combined.index.max()}")
+    
+    # The last date of the data is now in the 'Date' column
+    if not combined.empty and "Date" in combined.columns:
+        last_date = combined["Date"].max().date()
+        print(f"✅ Saved {ticker} {interval} up to {last_date}")
+
+
+
+
 
 
 
