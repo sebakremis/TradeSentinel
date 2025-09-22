@@ -11,6 +11,7 @@ from ensure_data import ensure_prices
 # Retrieve the data directly from session state
 portfolio_tuples = st.session_state.get('portfolio', None)
 
+# --- Title ---
 st.title("📈 Simulated Portfolio Analysis")
 
  # --- Sidebar controls ---
@@ -116,9 +117,6 @@ if "active_tickers" in st.session_state:
 else:
     st.info("Set your portfolio parameters and click **Refresh Data** to load the dashboard.")
     st.stop()
-
-# --- Title ---
-st.title("📈 TradeSentinel: Portfolio Monitor")
 
 # --- Data Fetch ---
 if refresh or "data" not in st.session_state:
