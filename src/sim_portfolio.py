@@ -17,7 +17,7 @@ def calculate_portfolio(selected_tickers, df, portfolio_size):
     investment_per_ticker = portfolio_size / num_tickers
     
     # Calculate shares for each ticker
-    portfolio_df['Shares'] = investment_per_ticker / portfolio_df['Last']
+    portfolio_df['Shares'] = round(investment_per_ticker / portfolio_df['Last'])
     
     # Create the list of (Ticker, Shares) tuples
     portfolio_list = list(zip(portfolio_df['Ticker'], portfolio_df['Shares']))

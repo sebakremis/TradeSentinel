@@ -5,7 +5,7 @@ import numpy as np
 from src.storage import save_prices_incremental
 from src.data_fetch import get_market_data
 from src.dashboard_manager import intervals_full, intervals_main, load_all_prices
-from src.tickers_store import load_followed_tickers
+from src.tickers_store import load_followed_tickers, add_ticker, remove_ticker,TickerValidationError
 from src.config import BASE_DIR, DATA_DIR
 from src.indicators import calculate_price_change, ema, trend,distance_from_ema
 from src.sim_portfolio import calculate_portfolio
@@ -205,7 +205,7 @@ def main():
                 st.session_state['portfolio'] = portfolio_tuples
                 
                 # Switch to the new page using its name
-                st.switch_page("pages/02_Portfolio_Dashboard.py")
+                st.switch_page("pages/02_Portfolio_Sim.py")
             else:
                 st.warning("Please select at least one ticker.")
     # --- End of new selection and action section ---
@@ -213,30 +213,88 @@ def main():
     else:
         st.info("No data found for any of the selected intervals.")
         
-    # Update button
-    if st.button("Update Prices"):
-        tickers_df = load_followed_tickers()
-        if tickers_df.empty:
-            st.warning("⚠️ No tickers found to update.")
+    
+    # start of Followed Tickers management
+    st.subheader("Tickers Management")
+    tickers_df = load_followed_tickers()
+
+    # create two columns for layout
+    col1_followed, col2_buttons = st.columns(2)
+    with col1_followed:
+        st.markdown("**Followed Tickers:**")
+        if not tickers_df.empty:
+            followed_tickers_str = ', '.join(tickers_df['Ticker'].tolist())
+            st.markdown(followed_tickers_str)
         else:
-            tickers = tickers_df['Ticker'].tolist()
-            # Define periods for each interval.
-            periods = {'1d': '1y', '30m': '5d'}
+            st.markdown("No followed tickers found.")
 
-            for ticker in tickers:
-                for interval, interval_full_name in intervals_main.items():
-                    period = periods.get(interval, '1d')
-                    st.write(f"Fetching {ticker} with period={period}, interval={interval} …")
+    # Buttons for followed tickers management
+    with col2_buttons:
+        # Text inputs are now outside the button logic to persist their state
+        
+        
+        
+        # Add a key to each st.button to prevent duplicate widget errors if used elsewhere
+        
+        if st.button("Update Prices", key='update_button'):
+            if tickers_df.empty:
+                st.warning("⚠️ No tickers found to update.")
+            else:
+                tickers = tickers_df['Ticker'].tolist()
+                # Define periods for each interval.
+                periods = {'1d': '1y', '30m': '5d'}
 
-                    data = get_market_data(ticker, interval=interval, period=period)
+                for ticker in tickers:
+                    for interval, interval_full_name in intervals_main.items():
+                        period = periods.get(interval, '1d')
+                        st.write(f"Fetching {ticker} with period={period}, interval={interval} …")
 
-                    if not data.empty:
-                        save_prices_incremental(ticker, interval, data)
-                        st.success(f"✅ Saved {ticker} {interval} ({period})")
+                        data = get_market_data(ticker, interval=interval, period=period)
+
+                        if not data.empty:
+                            save_prices_incremental(ticker, interval, data)
+                            st.success(f"✅ Saved {ticker} {interval} ({period})")
+                        else:
+                            st.warning(f"⚠️ No data for {ticker} {period}/{interval}")
+
+                st.rerun()
+
+        new_ticker = st.text_input("Enter Ticker Symbol to Add", max_chars=5, key='add_ticker_input').upper().strip()        
+        if st.button("Add Ticker", key='add_button'):
+            if new_ticker: # Check if the text input is not empty
+                try:
+                    add_ticker(new_ticker)
+                    st.success(f"✅ Added ticker {new_ticker}")
+                    st.session_state['add_ticker_input'] = "" # Clear input field after action
+                except TickerValidationError as e:
+                    st.error(f"❌ {e}")
+                except Exception as e:
+                    st.error(f"❌ An unexpected error occurred: {e}")
+                st.rerun()
+            else:
+                st.warning("Please enter a ticker symbol to add.")
+
+        rem_ticker = st.text_input("Enter Ticker Symbol to Remove", max_chars=5, key='rem_ticker_input').upper().strip()        
+        if st.button("Remove Ticker", key='remove_button'):
+            if rem_ticker: # Check if the text input is not empty
+                try:
+                    # Correct logic: check if ticker exists in the 'Ticker' column
+                    if rem_ticker in tickers_df['Ticker'].values:
+                        remove_ticker(rem_ticker)
+                        st.success(f"✅ Removed ticker {rem_ticker}")
+                        st.session_state['rem_ticker_input'] = "" # Clear input field after action
                     else:
-                        st.warning(f"⚠️ No data for {ticker} {period}/{interval}")
+                        st.warning(f"⚠️ Ticker {rem_ticker} not found in followed list.")
+                except TickerValidationError as e:
+                    st.error(f"❌ {e}")
+                except Exception as e:
+                    st.error(f"❌ An unexpected error occurred: {e}")
+                st.rerun()
+            else:
+                st.warning("Please enter a ticker symbol to remove.")
 
-            st.rerun()
+
+    
 
 if __name__ == "__main__":
     main()
