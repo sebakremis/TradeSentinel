@@ -256,7 +256,7 @@ if pnl_data:
             )
             .properties(width=700, height=400, title="")
         )
-        st.altair_chart(chart, width='stretch')
+        st.altair_chart(chart)
 
 
         # --- Portfolio Allocation by Sector ---
