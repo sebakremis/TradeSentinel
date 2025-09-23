@@ -256,7 +256,7 @@ if pnl_data:
             )
             .properties(width=700, height=400, title="")
         )
-        st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, width='stretch')
 
 
         # --- Portfolio Allocation by Sector ---
@@ -314,12 +314,12 @@ if pnl_data:
             )
             
             # Show chart first
-            st.plotly_chart(fig_sector, use_container_width=True)
+            st.plotly_chart(fig_sector, width='stretch')
             
             # Then show the simplified table below (only Sector + Ticker, no index, no percentage)
             st.dataframe(
                 sector_alloc[["Sector", "Ticker"]],
-                use_container_width=True,
+                width='stretch',
                 hide_index=True
             )
 
