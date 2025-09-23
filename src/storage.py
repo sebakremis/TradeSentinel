@@ -56,7 +56,7 @@ def save_prices_incremental(ticker: str, interval: str, new_data: pd.DataFrame):
     # The last date of the data is now in the 'Date' column
     if not combined.empty and "Date" in combined.columns:
         last_date = combined["Date"].max().date()
-        print(f"✅ Saved {ticker} {interval} up to {last_date}")
+        
 
 
 

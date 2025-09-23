@@ -16,7 +16,8 @@ def main():
         st.session_state.data_fetched = False
 
     ema_fast_period = 20
-    ema_slow_period = 50
+    ema_mid_period = 50
+    ema_slow_period = 100
     
     df_daily = pd.DataFrame()
     if st.session_state.data_fetched:
@@ -29,7 +30,7 @@ def main():
             df_daily = df_daily.reset_index(names=['Date'])
         
         df_daily = calculate_price_change(df_daily)
-        df_daily = trend(df_daily, fast_n=ema_fast_period, slow_n=ema_slow_period)
+        df_daily = trend(df_daily, fast_n=ema_fast_period, mid_n=ema_mid_period, slow_n=ema_slow_period)
         df_daily = ema(df_daily, ema_fast_period)
         df_daily = distance_from_ema(df_daily)
         
