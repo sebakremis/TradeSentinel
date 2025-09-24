@@ -71,7 +71,7 @@ def main():
                 "Distance_Ema20": st.column_config.NumberColumn("Distance_Ema20", format="%.2f%%"),
                 "Select": st.column_config.CheckboxColumn("Select", default=False)
             },
-            num_rows="dynamic"
+            num_rows="fixed"
         )
         
         selected_tickers_df = edited_df[edited_df['Select']]

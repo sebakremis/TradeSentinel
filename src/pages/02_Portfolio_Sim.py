@@ -34,7 +34,7 @@ portfolio_df = st.sidebar.data_editor(
 period_input = st.sidebar.selectbox(
     "Period",
     ["1d", "5d", "1mo", "3mo", "6mo", "1y", "ytd", "max"],
-    index=2,  # default to "1mo"
+    index=5,  # default to "1y"
     key="active_period"
 )
 
