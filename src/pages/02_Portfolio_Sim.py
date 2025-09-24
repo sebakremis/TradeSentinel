@@ -69,9 +69,9 @@ interval_input = st.sidebar.selectbox(
 refresh = st.sidebar.button("Refresh Data")
 
 # --- Static hint under the button (styled with italics) ---
-st.sidebar.markdown(
-    "💡 If you need **intraday** price data, choose an interval shorter than 1 day."
-)
+# st.sidebar.markdown(
+#    "💡 If you need **intraday** price data, choose an interval shorter than 1 day."
+# )
 
 # --- On refresh, validate and commit parameters ---
 if refresh:
