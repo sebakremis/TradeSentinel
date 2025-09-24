@@ -1,4 +1,6 @@
+# src/indicators.py
 import pandas as pd
+import numpy as np
 
 def distance_from_ema(df: pd.DataFrame)->pd.DataFrame:
     df = df.sort_values(['Ticker', 'Date'])
@@ -26,7 +28,7 @@ def calculate_price_change(df: pd.DataFrame) -> pd.DataFrame:
 
     # Group by ticker and calculate the difference and percentage change
     df['Change'] = df.groupby('Ticker')['Close'].diff()
-    df['Change %'] = df.groupby('Ticker')['Close'].pct_change() * 100
+    df['Change %'] = df.groupby('Ticker')['Close'].pct_change(fill_method=None) * 100
 
     return df
 
@@ -86,12 +88,12 @@ def trend(df: pd.DataFrame, fast_n: int = 20, mid_n: int = 50, slow_n: int = 100
 
     # Define the conditions for the trend based on the three EMAs
     # Long: Fast EMA > Mid EMA > Slow EMA
-    long_condition = (df[fast_ema_col] > df[mid_ema_col]) & (df[mid_ema_col] > df[slow_ema_col])
+    long_condition = (df[fast_ema_col] > df[mid_ema_col]) & (df[mid_ema_col] > df[slow_ema_col]) & (df[price_col] > df[fast_ema_col])
     # Short: Fast EMA < Mid EMA < Slow EMA
-    short_condition = (df[fast_ema_col] < df[mid_ema_col]) & (df[mid_ema_col] < df[slow_ema_col])
+    short_condition = (df[fast_ema_col] < df[mid_ema_col]) & (df[mid_ema_col] < df[slow_ema_col]) & (df[price_col] > df[fast_ema_col])
     
     # Use np.select for efficient conditional assignment
-    import numpy as np
+    
     conditions = [long_condition, short_condition]
     choices = ['long', 'short']
     df['Trend'] = np.select(conditions, choices, default='neutral')

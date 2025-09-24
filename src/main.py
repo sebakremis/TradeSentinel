@@ -56,8 +56,8 @@ def main():
         col1_filters, col2_filters = st.columns(2)
         
         # Create a separate DataFrame for filtering
-        filtered_df = final_df.copy()
         
+        sorted_df = final_df.sort_values(by='Distance_Ema20')
         
             
         col_select, col_table = st.columns([1, 2])
@@ -68,16 +68,17 @@ def main():
             with st.container(border=True, height=300):
                 # The crucial fix: iterate over the full, unfiltered final_df
                 # to ensure checkbox keys are stable across reruns.
-                for _, row in filtered_df.iterrows():
+                for _, row in sorted_df.iterrows():
                     ticker = row['Ticker']
                     if st.checkbox(f"**{ticker}**", key=f"checkbox_{ticker}"):
                         selected_tickers.append(ticker)
 
         with col_table:
             st.subheader("")
+            
             st.dataframe(
-                # Use the filtered_df here for display
-                filtered_df,
+                # Use the sorted_df here for display
+                sorted_df,
                 hide_index=True,
                 width='stretch',
                 column_config={
