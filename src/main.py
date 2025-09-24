@@ -1,3 +1,4 @@
+# src/main.py
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -21,7 +22,7 @@ def main():
     
     df_daily = pd.DataFrame()
     if st.session_state.data_fetched:
-        df_daily = load_all_prices('1d')
+        df_daily = load_all_prices()
     
     if not df_daily.empty:
         st.success("✅ Dashboard data is ready.")
