@@ -52,43 +52,30 @@ def main():
         final_df['Change %'] = final_df['Change %'].round(2)
         
         st.subheader("")
-
         col1_filters, col2_filters = st.columns(2)
-        
-        # Create a separate DataFrame for filtering
-        
         sorted_df = final_df.sort_values(by='Distance_Ema20')
-        
-            
-        col_select, col_table = st.columns([1, 2])
-        
-        with col_select:
-            st.subheader("Add to Portfolio Simulator")
-            selected_tickers = []
-            with st.container(border=True, height=300):
-                # The crucial fix: iterate over the full, unfiltered final_df
-                # to ensure checkbox keys are stable across reruns.
-                for _, row in sorted_df.iterrows():
-                    ticker = row['Ticker']
-                    if st.checkbox(f"**{ticker}**", key=f"checkbox_{ticker}"):
-                        selected_tickers.append(ticker)
 
-        with col_table:
-            st.subheader("")
-            
-            st.dataframe(
-                # Use the sorted_df here for display
-                sorted_df,
-                hide_index=True,
-                width='stretch',
-                column_config={
-                    "Ticker": st.column_config.TextColumn("Ticker"),
-                    "Close": st.column_config.NumberColumn("Close", format="%.2f"),
-                    "Change %": st.column_config.NumberColumn("Change %", format="%.2f%%"),
-                    "Trend": st.column_config.TextColumn("Trend"),
-                    "Distance_Ema20": st.column_config.NumberColumn("Distance_Ema20", format="%.2f%%"),
-                }
-            )
+        # Refactored to use st.data_editor for interactive selection
+        display_df = sorted_df.copy()
+        display_df['Select'] = False # Add a new 'Select' column for checkboxes
+
+        edited_df = st.data_editor(
+            display_df,
+            hide_index=True,
+            width='stretch',
+            column_config={
+                "Ticker": st.column_config.TextColumn("Ticker"),
+                "Close": st.column_config.NumberColumn("Close", format="%.2f"),
+                "Change %": st.column_config.NumberColumn("Change %", format="%.2f%%"),
+                "Trend": st.column_config.TextColumn("Trend"),
+                "Distance_Ema20": st.column_config.NumberColumn("Distance_Ema20", format="%.2f%%"),
+                "Select": st.column_config.CheckboxColumn("Select", default=False)
+            },
+            num_rows="dynamic"
+        )
+        
+        selected_tickers_df = edited_df[edited_df['Select']]
+        selected_tickers = selected_tickers_df['Ticker'].tolist()
 
         if st.button("Simulate Portfolio", disabled=not selected_tickers):
             if selected_tickers:
