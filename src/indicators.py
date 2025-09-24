@@ -98,7 +98,7 @@ def trend(df: pd.DataFrame, fast_n: int = 20, slow_n: int = 50, price_col: str =
 
     return df
 
-def higher_high(df: pd.DataFrame, lookback: int = 20) -> pd.DataFrame:
+def higher_high(df: pd.DataFrame, lookback: int = 10) -> pd.DataFrame:
     """
     Calculates the higher high for each Ticker over a specified lookback period.
 

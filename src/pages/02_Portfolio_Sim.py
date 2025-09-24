@@ -161,19 +161,20 @@ if pnl_data:
 
     # Display with conditional coloring + formatted floats
     st.dataframe(
-        df_pnl.style
+        df_pnl.sort_values(by='PnL ($)', ascending=False)
+        .style
         .map(
             lambda v: "color: green" if isinstance(v, (int, float)) and v > 0
             else ("color: red" if isinstance(v, (int, float)) and v < 0 else ""),
             subset=["PnL ($)", "Change (%)"]
         )
         .format({
-            "Quantity": "{:,.0f}",           # commas, no decimals
-            "Start Price": "{:,.2f}",        # commas + 2 decimals
-            "End Price": "{:,.2f}",          # commas + 2 decimals
-            "PnL ($)": "{:,.2f}",            # commas + 2 decimals
-            "Change (%)": "{:,.2f}",         # commas + 2 decimals
-            "Position Value ($)": "{:,.2f}"  # commas + 2 decimals
+            "Quantity": "{:,.0f}",
+            "Start Price": "{:,.2f}",
+            "End Price": "{:,.2f}",
+            "PnL ($)": "{:,.2f}",
+            "Change (%)": "{:,.2f}",
+            "Position Value ($)": "{:,.2f}"
         }),
         width="stretch"
     )

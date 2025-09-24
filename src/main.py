@@ -55,7 +55,7 @@ def main():
         
         st.subheader("")
         
-        sorted_df = final_df.sort_values(by='Distance', ascending=False)
+        sorted_df = final_df.sort_values(by='Distance', ascending=True)
 
         # Refactored to use st.data_editor for interactive selection
         display_df = sorted_df.copy()
