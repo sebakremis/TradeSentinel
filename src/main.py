@@ -7,7 +7,7 @@ from pathlib import Path
 from src.config import DATA_DIR
 from src.dashboard_manager import load_all_prices, get_all_prices_cached
 from src.tickers_store import load_followed_tickers, add_ticker, remove_ticker, TickerValidationError
-from src.indicators import calculate_price_change, ema, trend, distance_from_ema
+from src.indicators import calculate_price_change, ema, trend, higher_high, distance_higher_high
 from src.sim_portfolio import calculate_portfolio
 
 def main():
@@ -17,8 +17,8 @@ def main():
         st.session_state.data_fetched = False
 
     ema_fast_period = 20
-    ema_mid_period = 50
-    ema_slow_period = 100
+    ema_slow_period = 50
+    
     
     df_daily = pd.DataFrame()
     if st.session_state.data_fetched:
@@ -31,29 +31,31 @@ def main():
             df_daily = df_daily.reset_index(names=['Date'])
         
         df_daily = calculate_price_change(df_daily)
-        df_daily = trend(df_daily, fast_n=ema_fast_period, mid_n=ema_mid_period, slow_n=ema_slow_period)
+        df_daily = trend(df_daily, fast_n=ema_fast_period, slow_n=ema_slow_period)
         df_daily = ema(df_daily, ema_fast_period)
-        df_daily = distance_from_ema(df_daily)
+        df_daily = higher_high(df_daily)
+        df_daily = distance_higher_high(df_daily)
         
         # Create a copy for the final display
         final_df = df_daily.groupby('Ticker').tail(1).copy()
         
         # Ensure required columns exist and are formatted
-        expected_columns = ['Ticker', 'Close', 'Change %', 'Trend', 'Distance_Ema20']
+        expected_columns = ['Ticker', 'Close', 'Change %', 'Trend', 'HigherHigh', 'Distance']
         for col in expected_columns:
             if col not in final_df.columns:
                 final_df[col] = np.nan
         
-        display_columns = ['Ticker', 'Close', 'Change %', 'Trend', 'Distance_Ema20']
+        display_columns = ['Ticker', 'Close', 'Change %', 'Trend', 'HigherHigh', 'Distance']
         final_df = final_df[display_columns].copy()
         
         final_df['Close'] = final_df['Close'].round(2)
-        final_df['Distance_Ema20'] = final_df['Distance_Ema20'].round(2)
+        final_df['HigherHigh'] = final_df['HigherHigh'].round(2)
+        final_df['Distance'] = final_df['Distance'].round(2)
         final_df['Change %'] = final_df['Change %'].round(2)
         
         st.subheader("")
-        col1_filters, col2_filters = st.columns(2)
-        sorted_df = final_df.sort_values(by='Distance_Ema20')
+        
+        sorted_df = final_df.sort_values(by='Distance', ascending=False)
 
         # Refactored to use st.data_editor for interactive selection
         display_df = sorted_df.copy()
@@ -68,7 +70,8 @@ def main():
                 "Close": st.column_config.NumberColumn("Close", format="%.2f"),
                 "Change %": st.column_config.NumberColumn("Change %", format="%.2f%%"),
                 "Trend": st.column_config.TextColumn("Trend"),
-                "Distance_Ema20": st.column_config.NumberColumn("Distance_Ema20", format="%.2f%%"),
+                "HigherHigh": st.column_config.NumberColumn("HigherHigh", format="%.2f"),
+                "Distance": st.column_config.NumberColumn("Distance", format="%.2f%%"),
                 "Select": st.column_config.CheckboxColumn("Select", default=False)
             },
             num_rows="fixed"
