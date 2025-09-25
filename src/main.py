@@ -6,7 +6,7 @@ from pathlib import Path
 
 from src.config import DATA_DIR
 from src.dashboard_manager import load_all_prices, get_all_prices_cached
-from src.tickers_store import load_followed_tickers, add_ticker, remove_ticker, TickerValidationError
+from src.tickers_manager import load_followed_tickers, add_ticker, remove_ticker, TickerValidationError
 from src.indicators import calculate_price_change, ema, trend, higher_high, distance_higher_high
 from src.sim_portfolio import calculate_portfolio
 

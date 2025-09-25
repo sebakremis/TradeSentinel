@@ -6,7 +6,7 @@ import os
 import signal
 import plotly.express as px
 import plotly.graph_objects as go
-from ensure_data import ensure_prices
+from data_manager import ensure_prices
 
 # Retrieve the data directly from session state
 portfolio_tuples = st.session_state.get('portfolio', None)

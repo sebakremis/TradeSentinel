@@ -1,4 +1,4 @@
-# src/tickers_store.py
+# src/tickers_manager.py
 import pandas as pd
 import streamlit as st
 from pathlib import Path

@@ -2,8 +2,8 @@ import pandas as pd
 from pathlib import Path
 import streamlit as st
 from src.config import DATA_DIR
-from src.data_fetch import get_multiple_market_data
-from src.tickers_store import load_followed_tickers
+from src.data_manager import get_multiple_market_data
+from src.tickers_manager import load_followed_tickers
 
 @st.cache_data(ttl=3600)  # Cache the data for 1 hour (3600 seconds)
 def get_all_prices_cached(tickers):
