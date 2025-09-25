@@ -3,12 +3,13 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from pathlib import Path
+import altair as alt
 
 # Assuming these imports are correctly set up
 from src.config import DATA_DIR
 from src.dashboard_manager import load_all_prices, get_all_prices_cached
 from src.tickers_manager import load_followed_tickers, add_ticker, remove_ticker, TickerValidationError
-from src.indicators import calculate_price_change, ema, trend, highest_close, distance_highest_close
+from src.indicators import calculate_price_change, ema, trend, highest_close, distance_highest_close, annualized_metrics
 from src.sim_portfolio import calculate_portfolio
 
 def main():
@@ -30,38 +31,52 @@ def main():
     if not df_daily.empty:
         st.success("✅ Dashboard data is ready.")
 
-        # --- REMOVE THIS BLOCK ---
-        # The previous get_all_prices_cached function already returns a DataFrame
-        # with 'Date' and 'Ticker' as columns, so this line is now redundant.
-        # if 'Date' not in df_daily.columns:
-        #     df_daily = df_daily.reset_index(names=['Date', 'Ticker'])
-        # -------------------------
-        
+               
         # Now, the rest of the code should work as expected
         df_daily = calculate_price_change(df_daily)
         df_daily = trend(df_daily, fast_n=ema_fast_period, slow_n=ema_slow_period)
         df_daily = ema(df_daily, ema_fast_period)
         df_daily = highest_close(df_daily)
         df_daily = distance_highest_close(df_daily)
+        df_daily = annualized_metrics(df_daily, n_days=200)
         
         final_df = df_daily.groupby('Ticker').tail(1).copy()
         
-        expected_columns = ['Ticker', 'Close', 'Change %', 'Trend', 'HighestClose', 'Distance']
+        expected_columns = ['Ticker', 'Close', 'Change %', 'Annualized Avg', 'Annualized Vol', 'Trend', 'Highest Close', 'Distance' ]
         for col in expected_columns:
             if col not in final_df.columns:
                 final_df[col] = np.nan
         
-        display_columns = ['Ticker', 'Close', 'Change %', 'Trend', 'HighestClose', 'Distance']
+        display_columns = ['Ticker', 'Close', 'Change %', 'Annualized Avg', 'Annualized Vol', 'Trend', 'Highest Close', 'Distance' ]
         final_df = final_df[display_columns].copy()
         
         final_df['Close'] = final_df['Close'].round(2)
-        final_df['HighestClose'] = final_df['HighestClose'].round(2)
+        final_df['Highest Close'] = final_df['Highest Close'].round(2)
         final_df['Distance'] = final_df['Distance'].round(2)
         final_df['Change %'] = final_df['Change %'].round(2)
+        final_df['Annualized Avg'] = final_df['Annualized Avg'].round(2)
+        final_df['Annualized Vol'] = final_df['Annualized Vol'].round(2)
         
-        st.subheader("")
-        
-        sorted_df = final_df.sort_values(by='Distance', ascending=True)
+        # --- NEW: RISK-RETURN SCATTER PLOT ---
+        st.subheader("Risk-Return Profile of Followed Tickers")
+
+        if not final_df.empty and 'Annualized Avg' in final_df.columns and 'Annualized Vol' in final_df.columns:
+            # Create the scatter plot using Altair
+            chart = alt.Chart(final_df).mark_point(size=100).encode(
+                x=alt.X('Annualized Vol', title='Annualized Volatility (%)'),
+                y=alt.Y('Annualized Avg', title='Annualized Average Return (%)'),
+                tooltip=['Ticker', 'Annualized Avg', 'Annualized Vol'], # Show data on hover
+                color=alt.Color('Ticker', legend=None) # Color points by ticker
+            ).properties(
+                title='Risk vs. Return'
+            ).interactive() # Enable zooming and panning
+
+            st.altair_chart(chart, use_container_width=True)
+        else:
+            st.warning("Cannot generate risk-return plot. Ensure tickers are selected and data is loaded.")
+
+        # --- END OF NEW CODE ---
+        sorted_df = final_df.sort_values(by='Annualized Avg', ascending=False)
 
         display_df = sorted_df.copy()
         display_df['Select'] = False
@@ -74,8 +89,10 @@ def main():
                 "Ticker": st.column_config.TextColumn("Ticker"),
                 "Close": st.column_config.NumberColumn("Close", format="%.2f"),
                 "Change %": st.column_config.NumberColumn("Change %", format="%.2f%%"),
+                "Annualized Avg": st.column_config.NumberColumn("Annualized Avg", format="%.2f%%"),
+                "Annualized Vol": st.column_config.NumberColumn("Annualized Vol", format="%.2f%%"),
                 "Trend": st.column_config.TextColumn("Trend"),
-                "HighestClose": st.column_config.NumberColumn("HighestClose", format="%.2f"),
+                "Highest Close": st.column_config.NumberColumn("Highest Close", format="%.2f"),
                 "Distance": st.column_config.NumberColumn("Distance", format="%.2f%%"),
                 "Select": st.column_config.CheckboxColumn("Select", default=False)
             },

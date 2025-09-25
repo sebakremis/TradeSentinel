@@ -107,7 +107,7 @@ def highest_close(df: pd.DataFrame, lookback: int = 20) -> pd.DataFrame:
         lookback (int): The number of periods to look back for the highest high.
 
     Returns:
-        pd.DataFrame: The DataFrame with a new 'HighestClose' column.
+        pd.DataFrame: The DataFrame with a new 'Highest Close' column.
     """
     if 'Close' not in df.columns or 'Ticker' not in df.columns:
         raise ValueError("DataFrame must contain 'Close' and 'Ticker' columns.")
@@ -115,7 +115,7 @@ def highest_close(df: pd.DataFrame, lookback: int = 20) -> pd.DataFrame:
     df = df.sort_values(['Ticker', 'Date'])
     
     # Calculate the rolling highest high for each ticker
-    df['HighestClose'] = df.groupby('Ticker')['Close'].transform(
+    df['Highest Close'] = df.groupby('Ticker')['Close'].transform(
         lambda x: x.shift(1).rolling(window=lookback, min_periods=1).max()
     )
     
@@ -124,18 +124,40 @@ def highest_close(df: pd.DataFrame, lookback: int = 20) -> pd.DataFrame:
 def distance_highest_close(df: pd.DataFrame) -> pd.DataFrame:
     """
     Calculates the percent difference between the Close price and the
-    pre-calculated Highest High value.
+    pre-calculated Highest Close value.
 
     Args:
-        df (pd.DataFrame): The DataFrame with 'Close' and 'HighestClose' columns.
+        df (pd.DataFrame): The DataFrame with 'Close' and 'Highest Close' columns.
 
     Returns:
         pd.DataFrame: The DataFrame with a new 'Percent_Diff_From_HH' column.
     """
-    if 'Close' not in df.columns or 'HighestClose' not in df.columns:
-        raise ValueError("DataFrame must contain 'Close' and 'HighestClose' columns.")
+    if 'Close' not in df.columns or 'Highest Close' not in df.columns:
+        raise ValueError("DataFrame must contain 'Close' and 'Highest Close' columns.")
         
     # Calculate the percent difference using the numerical formula
-    df['Distance'] = ((df['Close'] - df['HighestClose']) / df['HighestClose']) * 100
+    df['Distance'] = ((df['Close'] - df['Highest Close']) / df['Highest Close']) * 100
     
     return df
+
+def annualized_metrics(df: pd.DataFrame, col: str = 'Change %', n_days: int = 200) -> pd.DataFrame:
+    """
+    Calculates the annualized average and volatility of a specified column.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame, expected to have 'Ticker' and a 'Date' index.
+        col (str): The name of the column to calculate volatility for. Default is 'Change %'.
+        n_days (int): The number of days to use for the rolling window. Default is 200.
+
+    Returns:
+        pd.DataFrame: The original DataFrame with the new 'Annualized Avg' and 'Annualized Vol' columns.
+    """
+    df_copy = df.copy()
+
+    # Calculate rolling average and volatility for each ticker using transform
+    df_copy['Annualized Avg'] = df_copy.groupby('Ticker')[col].transform(lambda x: x.rolling(window=n_days).mean()) * 252
+    
+    # Calculate rolling standard deviation (volatility) and then annualize it
+    df_copy['Annualized Vol'] = df_copy.groupby('Ticker')[col].transform(lambda x: x.rolling(window=n_days).std()) * np.sqrt(252)
+
+    return df_copy
