@@ -117,57 +117,75 @@ def main():
         st.info("No data found. Click 'Update Prices' to fetch data.")
     st.markdown("Select tickers to simulate an equally-weighted portfolio.")
     st.markdown("---")
-
+    st.markdown("### Update Prices")
+    if st.button("Update Prices", key='update_button'):
+        if tickers_df.empty:
+            st.warning("⚠️ No tickers found to update.")
+        else:
+            with st.spinner("Fetching and updating all ticker data..."):
+                get_all_prices_cached.clear()
+                st.session_state.data_fetched = True
+            st.success("✅ Data fetch and processing complete.")
+            st.rerun()
+            
+    st.markdown("---")
     st.subheader("Tickers Management")
     tickers_df = load_followed_tickers()
-    col1_followed, col2_buttons = st.columns(2)
-    with col1_followed:
-        st.markdown("**Followed Tickers:**")
-        if not tickers_df.empty:
-            followed_tickers_str = ', '.join(tickers_df['Ticker'].tolist())
-            st.markdown(followed_tickers_str)
-        else:
-            st.markdown("No followed tickers found.")
-
-    with col2_buttons:
-        if st.button("Update Prices", key='update_button'):
-            if tickers_df.empty:
-                st.warning("⚠️ No tickers found to update.")
-            else:
-                with st.spinner("Fetching and updating all ticker data..."):
-                    get_all_prices_cached.clear()
-                    st.session_state.data_fetched = True
-                st.success("✅ Data fetch and processing complete.")
-                st.rerun()
-
-        new_ticker = st.text_input("Enter Ticker Symbol to Add", max_chars=5, key='add_ticker_input').upper().strip()
-        if st.button("Add Ticker", key='add_button'):
-            if new_ticker:
-                try:
-                    add_ticker(new_ticker)
-                    st.success(f"✅ Added ticker {new_ticker}")
-                    st.session_state['add_ticker_input'] = ""
-                except TickerValidationError as e:
-                    st.error(f"❌ {e}")
-                except Exception as e:
-                    st.error(f"❌ An unexpected error occurred: {e}")
-                st.rerun()
-            else:
-                st.warning("Please enter a ticker symbol to add.")
-
-        ticker_list_to_remove = tickers_df['Ticker'].tolist()
-        rem_ticker_select = st.selectbox("Select Ticker Symbol to Remove", options=ticker_list_to_remove, key='rem_ticker_select')
+    
+    # This section is now always visible
+    st.markdown("**📝 Followed Tickers:**")
+    if not tickers_df.empty:
+        followed_tickers_list = tickers_df['Ticker'].tolist()
         
-        if st.button("Remove Selected Ticker", key='remove_button'):
-            if rem_ticker_select:
-                try:
-                    remove_ticker(rem_ticker_select)
-                    st.success(f"✅ Removed ticker {rem_ticker_select}")
-                except Exception as e:
-                    st.error(f"❌ An error occurred while removing ticker: {e}")
-            else:
-                st.warning("Please select a ticker to remove.")
+        # Display tickers in a grid-like structure using columns
+        num_cols = 5
+        cols = st.columns(num_cols)
+        
+        for i, ticker in enumerate(followed_tickers_list):
+            with cols[i % num_cols]:
+                # Create a colorful badge for each ticker
+                st.markdown(
+                    f"<div style='background-color: #36454F; padding: 5px; border-radius: 5px; text-align: center; margin: 2px;'>"
+                    f"<span style='color: #F5F5DC; font-weight: bold;'>{ticker}</span>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+    else:
+        st.info("No followed tickers. Please add tickers to follow.")
+    
+
+    # Buttons
+    
+    
+
+    new_ticker = st.text_input("Enter Ticker Symbol to Add", max_chars=5, key='add_ticker_input').upper().strip()
+    if st.button("Add Ticker", key='add_button'):
+        if new_ticker:
+            try:
+                add_ticker(new_ticker)
+                st.success(f"✅ Added ticker {new_ticker}")
+                st.session_state['add_ticker_input'] = ""
+            except TickerValidationError as e:
+                st.error(f"❌ {e}")
+            except Exception as e:
+                st.error(f"❌ An unexpected error occurred: {e}")
             st.rerun()
+        else:
+            st.warning("Please enter a ticker symbol to add.")
+
+    ticker_list_to_remove = tickers_df['Ticker'].tolist()
+    rem_ticker_select = st.selectbox("Select Ticker Symbol to Remove", options=ticker_list_to_remove, key='rem_ticker_select')
+        
+    if st.button("Remove Selected Ticker", key='remove_button'):
+        if rem_ticker_select:
+            try:
+                remove_ticker(rem_ticker_select)
+                st.success(f"✅ Removed ticker {rem_ticker_select}")
+            except Exception as e:
+                st.error(f"❌ An error occurred while removing ticker: {e}")
+        else:
+            st.warning("Please select a ticker to remove.")
+        st.rerun()
 
 if __name__ == "__main__":
     main()
