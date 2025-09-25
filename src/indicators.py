@@ -98,44 +98,44 @@ def trend(df: pd.DataFrame, fast_n: int = 20, slow_n: int = 50, price_col: str =
 
     return df
 
-def higher_high(df: pd.DataFrame, lookback: int = 15) -> pd.DataFrame:
+def highest_close(df: pd.DataFrame, lookback: int = 20) -> pd.DataFrame:
     """
-    Calculates the higher high for each Ticker over a specified lookback period.
+    Calculates the highest high for each Ticker over a specified lookback period.
 
     Args:
         df (pd.DataFrame): The input DataFrame with 'Close', 'Date', and 'Ticker' columns.
-        lookback (int): The number of periods to look back for the higher high.
+        lookback (int): The number of periods to look back for the highest high.
 
     Returns:
-        pd.DataFrame: The DataFrame with a new 'HigherHigh' column.
+        pd.DataFrame: The DataFrame with a new 'HighestClose' column.
     """
     if 'Close' not in df.columns or 'Ticker' not in df.columns:
         raise ValueError("DataFrame must contain 'Close' and 'Ticker' columns.")
         
     df = df.sort_values(['Ticker', 'Date'])
     
-    # Calculate the rolling higher high for each ticker
-    df['HigherHigh'] = df.groupby('Ticker')['Close'].transform(
+    # Calculate the rolling highest high for each ticker
+    df['HighestClose'] = df.groupby('Ticker')['Close'].transform(
         lambda x: x.shift(1).rolling(window=lookback, min_periods=1).max()
     )
     
     return df
 
-def distance_higher_high(df: pd.DataFrame) -> pd.DataFrame:
+def distance_highest_close(df: pd.DataFrame) -> pd.DataFrame:
     """
     Calculates the percent difference between the Close price and the
-    pre-calculated Higher High value.
+    pre-calculated Highest High value.
 
     Args:
-        df (pd.DataFrame): The DataFrame with 'Close' and 'HigherHigh' columns.
+        df (pd.DataFrame): The DataFrame with 'Close' and 'HighestClose' columns.
 
     Returns:
         pd.DataFrame: The DataFrame with a new 'Percent_Diff_From_HH' column.
     """
-    if 'Close' not in df.columns or 'HigherHigh' not in df.columns:
-        raise ValueError("DataFrame must contain 'Close' and 'HigherHigh' columns.")
+    if 'Close' not in df.columns or 'HighestClose' not in df.columns:
+        raise ValueError("DataFrame must contain 'Close' and 'HighestClose' columns.")
         
     # Calculate the percent difference using the numerical formula
-    df['Distance'] = ((df['Close'] - df['HigherHigh']) / df['HigherHigh']) * 100
+    df['Distance'] = ((df['Close'] - df['HighestClose']) / df['HighestClose']) * 100
     
     return df

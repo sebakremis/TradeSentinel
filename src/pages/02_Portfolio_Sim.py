@@ -176,7 +176,8 @@ if pnl_data:
             "Change (%)": "{:,.2f}",
             "Position Value ($)": "{:,.2f}"
         }),
-        width="stretch"
+        width="stretch",
+        hide_index=True
     )
 
 
