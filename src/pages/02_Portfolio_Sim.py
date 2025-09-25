@@ -439,7 +439,7 @@ if pnl_data:
  
         # --- Editable Table: Interactive PnL Table with CSV Export ---
 
-        st.subheader("🔍 Explore & Export PnL Data")
+        st.subheader("🔍 Export PnL Data")
         
         tickers_selected = st.multiselect(
             "Select Ticker(s)",
@@ -469,15 +469,7 @@ if pnl_data:
             total_value_filtered = filtered_df["Position Value ($)"].sum()
             avg_price_filtered = filtered_df["Price"].mean()
         
-            m1, m2, m3, m4 = st.columns(4)
-            with m1:
-                st.metric("Total PnL (Filtered)", f"${total_pnl_filtered:,.2f}")
-            with m2:
-                st.metric("Average PnL (Filtered)", f"${avg_pnl_filtered:,.2f}")
-            with m3:
-                st.metric("Total Position Value (Filtered, M$)", f"{total_value_filtered/1_000_000:,.2f} M")
-            with m4:
-                st.metric("Average Price (Filtered)", f"${avg_price_filtered:,.2f}")
+            
         
             # Sort so most recent entries appear first
             df_display = filtered_df.sort_values("Time", ascending=False).copy()

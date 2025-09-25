@@ -150,7 +150,7 @@ def annualized_metrics(df: pd.DataFrame, col: str = 'Change %', n_days: int = 20
         n_days (int): The number of days to use for the rolling window. Default is 200.
 
     Returns:
-        pd.DataFrame: The original DataFrame with the new 'Annualized Avg', 'Annualized Vol', 
+        pd.DataFrame: The original DataFrame with the new 'Avg Return', 'Annualized Vol', 
                       and 'Sharpe Ratio' columns.
     """
     df_copy = df.copy()
@@ -160,13 +160,13 @@ def annualized_metrics(df: pd.DataFrame, col: str = 'Change %', n_days: int = 20
     annualized_risk_free_rate = 0.02
 
     # Calculate rolling annualized average return
-    df_copy['Annualized Avg'] = df_copy.groupby('Ticker')[col].transform(lambda x: x.rolling(window=n_days).mean()) * 252
+    df_copy['Avg Return'] = df_copy.groupby('Ticker')[col].transform(lambda x: x.rolling(window=n_days).mean()) * 252
 
     # Calculate rolling annualized volatility
     df_copy['Annualized Vol'] = df_copy.groupby('Ticker')[col].transform(lambda x: x.rolling(window=n_days).std()) * np.sqrt(252)
     
     # Calculate rolling Sharpe Ratio
-    df_copy['Sharpe Ratio'] = (df_copy['Annualized Avg'] - annualized_risk_free_rate) / df_copy['Annualized Vol']
+    df_copy['Sharpe Ratio'] = (df_copy['Avg Return'] - annualized_risk_free_rate) / df_copy['Annualized Vol']
     
     # Optional: Fill NaN values with 0 for cleaner output
     df_copy = df_copy.fillna(0)

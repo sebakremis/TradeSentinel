@@ -42,31 +42,31 @@ def main():
         
         final_df = df_daily.groupby('Ticker').tail(1).copy()
         
-        expected_columns = ['Ticker', 'Close', 'Change %', 'Annualized Avg', 'Annualized Vol', 'Sharpe Ratio', 'Trend', 'Highest Close', 'Distance HC' ]
+        expected_columns = ['Ticker', 'Close', 'Change %', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio', 'Trend', 'Highest Close', 'Distance HC' ]
         for col in expected_columns:
             if col not in final_df.columns:
                 final_df[col] = np.nan
         
-        display_columns = ['Ticker', 'Close', 'Change %', 'Annualized Avg', 'Annualized Vol', 'Sharpe Ratio', 'Trend', 'Highest Close', 'Distance HC' ]
+        display_columns = ['Ticker', 'Close', 'Change %', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio', 'Trend', 'Highest Close', 'Distance HC' ]
         final_df = final_df[display_columns].copy()
         
         final_df['Close'] = final_df['Close'].round(2)
         final_df['Highest Close'] = final_df['Highest Close'].round(2)
         final_df['Distance HC'] = final_df['Distance HC'].round(2)
         final_df['Change %'] = final_df['Change %'].round(2)
-        final_df['Annualized Avg'] = final_df['Annualized Avg'].round(2)
+        final_df['Avg Return'] = final_df['Avg Return'].round(2)
         final_df['Annualized Vol'] = final_df['Annualized Vol'].round(2)
         final_df['Sharpe Ratio'] = final_df['Sharpe Ratio'].round(2)
         
         # --- NEW: RISK-RETURN SCATTER PLOT ---
         st.subheader("Followed Tickers Overview")
 
-        if not final_df.empty and 'Annualized Avg' in final_df.columns and 'Annualized Vol' in final_df.columns:
+        if not final_df.empty and 'Avg Return' in final_df.columns and 'Annualized Vol' in final_df.columns:
             # Create the scatter plot using Altair
             chart = alt.Chart(final_df).mark_point(size=100).encode(
                 x=alt.X('Annualized Vol', title='Annualized Volatility (%)'),
-                y=alt.Y('Annualized Avg', title='Annualized Average Return (%)'),
-                tooltip=['Ticker', 'Annualized Avg', 'Annualized Vol'], # Show data on hover
+                y=alt.Y('Avg Return', title='Annualized Average Return (%)'),
+                tooltip=['Ticker', 'Avg Return', 'Annualized Vol'], # Show data on hover
                 color=alt.Color('Ticker', legend=None) # Color points by ticker
             ).properties(
                 title='Risk vs. Return'
@@ -91,7 +91,7 @@ def main():
                 "Ticker": st.column_config.TextColumn("Ticker"),
                 "Close": st.column_config.NumberColumn("Close", format="%.2f"),
                 "Change %": st.column_config.NumberColumn("Change %", format="%.2f%%"),
-                "Annualized Avg": st.column_config.NumberColumn("Annualized Avg", format="%.2f%%"),
+                "Avg Return": st.column_config.NumberColumn("Avg Return", format="%.2f%%"),
                 "Annualized Vol": st.column_config.NumberColumn("Annualized Vol", format="%.2f%%"),
                 "Sharpe Ratio": st.column_config.NumberColumn("Sharpe Ratio", format="%.2f%%"),
                 "Trend": st.column_config.TextColumn("Trend"),
