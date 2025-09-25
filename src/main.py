@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
+# Assuming these imports are correctly set up
 from src.config import DATA_DIR
 from src.dashboard_manager import load_all_prices, get_all_prices_cached
 from src.tickers_manager import load_followed_tickers, add_ticker, remove_ticker, TickerValidationError
@@ -11,25 +12,22 @@ from src.indicators import calculate_price_change, ema, trend, highest_close, di
 from src.sim_portfolio import calculate_portfolio
 
 def main():
+    st.set_page_config(layout="wide")
     st.title("📊 TradeSentinel: Market View")
-
-    if 'data_fetched' not in st.session_state:
-        st.session_state.data_fetched = False
 
     ema_fast_period = 20
     ema_slow_period = 50
     
-    
-    df_daily = pd.DataFrame()
-    if st.session_state.data_fetched:
-        df_daily = load_all_prices()
+    # The data is now loaded from the database via the cached function
+    df_daily = load_all_prices()
     
     if not df_daily.empty:
         st.success("✅ Dashboard data is ready.")
 
+        # Ensure 'Date' is a column for calculations
         if 'Date' not in df_daily.columns:
-            df_daily = df_daily.reset_index(names=['Date'])
-        
+            df_daily = df_daily.reset_index(names=['Date', 'Ticker'])
+            
         df_daily = calculate_price_change(df_daily)
         df_daily = trend(df_daily, fast_n=ema_fast_period, slow_n=ema_slow_period)
         df_daily = ema(df_daily, ema_fast_period)
@@ -107,11 +105,15 @@ def main():
             if tickers_df.empty:
                 st.warning("⚠️ No tickers found to update.")
             else:
-                with st.spinner("Fetching all ticker data..."):
+                with st.spinner("Fetching and updating all ticker data..."):
+                    # This line is the key change. Clearing the cache forces
+                    # get_all_prices_cached to re-fetch from the API and update the database.
                     get_all_prices_cached.clear()
+                    # A subsequent call to load_all_prices() will use the new data
+                    # This is implicitly handled by the rerun, so we don't need to call it again here.
                     st.session_state.data_fetched = True
-                st.rerun()
                 st.success("✅ Data fetch and processing complete.")
+                st.rerun()
 
         new_ticker = st.text_input("Enter Ticker Symbol to Add", max_chars=5, key='add_ticker_input').upper().strip()
         if st.button("Add Ticker", key='add_button'):
