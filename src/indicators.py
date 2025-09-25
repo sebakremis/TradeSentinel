@@ -136,28 +136,39 @@ def distance_highest_close(df: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("DataFrame must contain 'Close' and 'Highest Close' columns.")
         
     # Calculate the percent difference using the numerical formula
-    df['Distance'] = ((df['Close'] - df['Highest Close']) / df['Highest Close']) * 100
+    df['Distance HC'] = ((df['Close'] - df['Highest Close']) / df['Highest Close']) * 100
     
     return df
 
 def annualized_metrics(df: pd.DataFrame, col: str = 'Change %', n_days: int = 200) -> pd.DataFrame:
     """
-    Calculates the annualized average and volatility of a specified column.
+    Calculates the annualized average return, volatility, and Sharpe Ratio of a specified column.
 
     Args:
         df (pd.DataFrame): The input DataFrame, expected to have 'Ticker' and a 'Date' index.
-        col (str): The name of the column to calculate volatility for. Default is 'Change %'.
+        col (str): The name of the column to calculate metrics for. Default is 'Change %'.
         n_days (int): The number of days to use for the rolling window. Default is 200.
 
     Returns:
-        pd.DataFrame: The original DataFrame with the new 'Annualized Avg' and 'Annualized Vol' columns.
+        pd.DataFrame: The original DataFrame with the new 'Annualized Avg', 'Annualized Vol', 
+                      and 'Sharpe Ratio' columns.
     """
     df_copy = df.copy()
 
-    # Calculate rolling average and volatility for each ticker using transform
+    # Define a simple, constant risk-free rate (e.g., 2% or 0.02)
+    # A more robust solution might fetch this rate from a financial data provider.
+    annualized_risk_free_rate = 0.02
+
+    # Calculate rolling annualized average return
     df_copy['Annualized Avg'] = df_copy.groupby('Ticker')[col].transform(lambda x: x.rolling(window=n_days).mean()) * 252
-    
-    # Calculate rolling standard deviation (volatility) and then annualize it
+
+    # Calculate rolling annualized volatility
     df_copy['Annualized Vol'] = df_copy.groupby('Ticker')[col].transform(lambda x: x.rolling(window=n_days).std()) * np.sqrt(252)
+    
+    # Calculate rolling Sharpe Ratio
+    df_copy['Sharpe Ratio'] = (df_copy['Annualized Avg'] - annualized_risk_free_rate) / df_copy['Annualized Vol']
+    
+    # Optional: Fill NaN values with 0 for cleaner output
+    df_copy = df_copy.fillna(0)
 
     return df_copy

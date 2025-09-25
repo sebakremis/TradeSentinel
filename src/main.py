@@ -42,20 +42,21 @@ def main():
         
         final_df = df_daily.groupby('Ticker').tail(1).copy()
         
-        expected_columns = ['Ticker', 'Close', 'Change %', 'Annualized Avg', 'Annualized Vol', 'Trend', 'Highest Close', 'Distance' ]
+        expected_columns = ['Ticker', 'Close', 'Change %', 'Annualized Avg', 'Annualized Vol', 'Sharpe Ratio', 'Trend', 'Highest Close', 'Distance HC' ]
         for col in expected_columns:
             if col not in final_df.columns:
                 final_df[col] = np.nan
         
-        display_columns = ['Ticker', 'Close', 'Change %', 'Annualized Avg', 'Annualized Vol', 'Trend', 'Highest Close', 'Distance' ]
+        display_columns = ['Ticker', 'Close', 'Change %', 'Annualized Avg', 'Annualized Vol', 'Sharpe Ratio', 'Trend', 'Highest Close', 'Distance HC' ]
         final_df = final_df[display_columns].copy()
         
         final_df['Close'] = final_df['Close'].round(2)
         final_df['Highest Close'] = final_df['Highest Close'].round(2)
-        final_df['Distance'] = final_df['Distance'].round(2)
+        final_df['Distance HC'] = final_df['Distance HC'].round(2)
         final_df['Change %'] = final_df['Change %'].round(2)
         final_df['Annualized Avg'] = final_df['Annualized Avg'].round(2)
         final_df['Annualized Vol'] = final_df['Annualized Vol'].round(2)
+        final_df['Sharpe Ratio'] = final_df['Sharpe Ratio'].round(2)
         
         # --- NEW: RISK-RETURN SCATTER PLOT ---
         st.subheader("Risk-Return Profile of Followed Tickers")
@@ -76,7 +77,7 @@ def main():
             st.warning("Cannot generate risk-return plot. Ensure tickers are selected and data is loaded.")
 
         # --- END OF NEW CODE ---
-        sorted_df = final_df.sort_values(by='Annualized Avg', ascending=False)
+        sorted_df = final_df.sort_values(by='Sharpe Ratio', ascending=False)
 
         display_df = sorted_df.copy()
         display_df['Select'] = False
@@ -91,9 +92,10 @@ def main():
                 "Change %": st.column_config.NumberColumn("Change %", format="%.2f%%"),
                 "Annualized Avg": st.column_config.NumberColumn("Annualized Avg", format="%.2f%%"),
                 "Annualized Vol": st.column_config.NumberColumn("Annualized Vol", format="%.2f%%"),
+                "Sharpe Ratio": st.column_config.NumberColumn("Sharpe Ratio", format="%.2f%%"),
                 "Trend": st.column_config.TextColumn("Trend"),
                 "Highest Close": st.column_config.NumberColumn("Highest Close", format="%.2f"),
-                "Distance": st.column_config.NumberColumn("Distance", format="%.2f%%"),
+                "Distance HC": st.column_config.NumberColumn("Distance HC", format="%.2f%%"),
                 "Select": st.column_config.CheckboxColumn("Select", default=False)
             },
             num_rows="fixed"
