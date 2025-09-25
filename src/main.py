@@ -29,7 +29,7 @@ def main():
     )
 
     if not df_daily.empty:
-        st.success("✅ Dashboard data is ready.")
+        # st.success("✅ Dashboard data is ready.")
 
                
         # Now, the rest of the code should work as expected
@@ -59,7 +59,7 @@ def main():
         final_df['Sharpe Ratio'] = final_df['Sharpe Ratio'].round(2)
         
         # --- NEW: RISK-RETURN SCATTER PLOT ---
-        st.subheader("Risk-Return Profile of Followed Tickers")
+        st.subheader("Followed Tickers Overview")
 
         if not final_df.empty and 'Annualized Avg' in final_df.columns and 'Annualized Vol' in final_df.columns:
             # Create the scatter plot using Altair
@@ -76,7 +76,8 @@ def main():
         else:
             st.warning("Cannot generate risk-return plot. Ensure tickers are selected and data is loaded.")
 
-        # --- END OF NEW CODE ---
+        # --- Table ---
+        st.subheader("Summary Table")
         sorted_df = final_df.sort_values(by='Sharpe Ratio', ascending=False)
 
         display_df = sorted_df.copy()
@@ -114,6 +115,8 @@ def main():
                 st.warning("Please select at least one ticker.")
     else:
         st.info("No data found. Click 'Update Prices' to fetch data.")
+    st.markdown("Select tickers to simulate an equally-weighted portfolio.")
+    st.markdown("---")
 
     st.subheader("Tickers Management")
     tickers_df = load_followed_tickers()
