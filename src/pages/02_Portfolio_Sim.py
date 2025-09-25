@@ -102,7 +102,7 @@ def _get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dic
         if all_data_for_db:
             combined_df = pd.concat(all_data_for_db, ignore_index=True)
             save_prices_to_db(combined_df, DB_NAME)
-            st.success("✅ New data fetched and saved to database.")
+            # st.success("✅ New data fetched and saved to database.")
 
         return processed_prices
 

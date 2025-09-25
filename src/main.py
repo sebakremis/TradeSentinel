@@ -115,18 +115,8 @@ def main():
                 st.warning("Please select at least one ticker.")
     else:
         st.info("No data found. Click 'Update Prices' to fetch data.")
-    st.markdown("Select tickers to simulate an equally-weighted portfolio.")
-    st.markdown("---")
-    st.markdown("### Update Prices")
-    if st.button("Update Prices", key='update_button'):
-        if tickers_df.empty:
-            st.warning("⚠️ No tickers found to update.")
-        else:
-            with st.spinner("Fetching and updating all ticker data..."):
-                get_all_prices_cached.clear()
-                st.session_state.data_fetched = True
-            st.success("✅ Data fetch and processing complete.")
-            st.rerun()
+    st.markdown("Select tickers to simulate a $100 k **equally-weighted portfolio**.")
+    
             
     st.markdown("---")
     st.subheader("Tickers Management")
@@ -186,6 +176,18 @@ def main():
         else:
             st.warning("Please select a ticker to remove.")
         st.rerun()
+    
+    st.markdown("---")
+    st.markdown("### Update Prices")
+    if st.button("Update Prices", key='update_button'):
+        if tickers_df.empty:
+            st.warning("⚠️ No tickers found to update.")
+        else:
+            with st.spinner("Fetching and updating all ticker data..."):
+                get_all_prices_cached.clear()
+                st.session_state.data_fetched = True
+            st.success("✅ Data fetch and processing complete.")
+            st.rerun()
 
 if __name__ == "__main__":
     main()
