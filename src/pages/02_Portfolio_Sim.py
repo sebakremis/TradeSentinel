@@ -2,127 +2,137 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
-import os
-import signal
 import plotly.express as px
 import plotly.graph_objects as go
-from data_manager import ensure_prices
+import yfinance as yf
+import datetime as dt
 
-# Retrieve the data directly from session state
+# Import database and logging tools
+from src.database_manager import init_db, save_prices_to_db, load_prices_from_db
+from src.indicators import calculate_price_change # We can reuse this module
+from log_utils import info, warn, error
+
+# Initialize the database on startup
+init_db()
+
+# --- New: Centralized, Cached Data Fetcher for Portfolio Dashboard ---
+@st.cache_data(ttl=3600)
+def _get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dict:
+    """
+    Fetches historical data for portfolio tickers from the database first.
+    If not available, fetches from yfinance, saves to DB, and returns data.
+    """
+    db_data = load_prices_from_db()
+
+    # Check if all required data is in the database
+    has_all_data_in_db = True
+    for ticker in tickers:
+        if ticker not in db_data.index.get_level_values('Ticker'):
+            has_all_data_in_db = False
+            break
+
+    if has_all_data_in_db and not db_data.empty:
+        info("Using cached data from database.")
+        prices = {}
+        for ticker in tickers:
+            prices[ticker] = db_data.loc[db_data.index.get_level_values('Ticker') == ticker]
+        return prices
+    else:
+        info("Data not fully in database or cache cleared. Fetching from API...")
+        try:
+            raw_data = yf.download(
+                tickers=tickers,
+                period=period,
+                interval=interval,
+                group_by='ticker',
+                auto_adjust=True,
+                threads=True,
+                progress=False
+            )
+        except Exception as e:
+            st.error(f"Error fetching data from yfinance: {e}")
+            return {}
+
+        if raw_data.empty:
+            st.warning("No data returned from yfinance.")
+            return {}
+
+        # Process and save to database
+        all_data_for_db = []
+        processed_prices = {}
+        for ticker in tickers:
+            if (ticker, 'Close') in raw_data.columns:
+                df = raw_data[ticker].copy()
+                df['Ticker'] = ticker
+                processed_prices[ticker] = df
+                
+                # For database storage
+                df_for_db = df.reset_index().rename(columns={'index': 'Date'})
+                all_data_for_db.append(df_for_db)
+            else:
+                warn(f"No valid data found for {ticker}, skipping.")
+
+        if all_data_for_db:
+            combined_df = pd.concat(all_data_for_db, ignore_index=True)
+            save_prices_to_db(combined_df)
+            st.success("✅ New data fetched and saved to database.")
+
+        return processed_prices
+
+# --- Retrieve data from session state ---
 portfolio_tuples = st.session_state.get('portfolio', None)
-
-# --- Title ---
-st.title("📈 Simulated Portfolio Analysis")
-
- # --- Sidebar controls ---
-st.sidebar.title("Set portfolio to analyze:")   
-
-# Set table with simulated portfolio data
 if portfolio_tuples:
     sim_portfolio = pd.DataFrame(portfolio_tuples, columns=['Ticker', 'Quantity'])
 else:
-    sim_portfolio = pd.DataFrame(columns=['Ticker', 'Quantity'])    
-# Editable table for tickers and quantities
-portfolio_df = st.sidebar.data_editor(
-    sim_portfolio,
-    num_rows="dynamic",  # allow adding/removing rows
-    width="stretch"
-)    
-# --- Period & Interval selection with dynamic filtering ---
+    sim_portfolio = pd.DataFrame(columns=['Ticker', 'Quantity'])
 
-# Period selectbox (widget sets its own default via index)
-period_input = st.sidebar.selectbox(
-    "Period",
-    ["1d", "5d", "1mo", "3mo", "6mo", "1y", "ytd", "max"],
-    index=5,  # default to "1y"
-    key="active_period"
-)
+st.title("📈 Simulated Portfolio Analysis")
 
-# Allowed intervals mapping
-interval_map = {
-    "1d":  ["1m", "5m", "15m", "30m", "1h"],
-    "5d":  ["5m", "15m", "30m", "1h", "1d"],
-    "1mo": ["15m", "30m", "1h", "1d", "1wk"],
-    "3mo": ["15m", "30m", "1h", "1d", "1wk"],
-    "6mo": ["1d", "1wk", "1mo"],
-    "1y":  ["1d", "1wk", "1mo"],
-    "ytd": ["1d", "1wk", "1mo"],
-    "max": ["1d", "1wk", "1mo"]
-}
+# --- Sidebar controls ---
+st.sidebar.title("Set portfolio to analyze:")
+portfolio_df = st.sidebar.data_editor(sim_portfolio, num_rows="dynamic", width="stretch")
 
+period_input = st.sidebar.selectbox("Period", ["1d", "5d", "1mo", "3mo", "6mo", "1y", "ytd", "max"], index=5, key="active_period")
+interval_map = { "1d": ["1m", "5m", "15m", "30m", "1h"], "5d": ["5m", "15m", "30m", "1h", "1d"], "1mo": ["15m", "30m", "1h", "1d", "1wk"], "3mo": ["15m", "30m", "1h", "1d", "1wk"], "6mo": ["1d", "1wk", "1mo"], "1y": ["1d", "1wk", "1mo"], "ytd": ["1d", "1wk", "1mo"], "max": ["1d", "1wk", "1mo"] }
 interval_options = interval_map[period_input]
-
-# Interval selectbox (widget sets its own default via index)
-default_interval_index = (
-    interval_options.index("30m") if period_input == "1d"
-    else interval_options.index("1d")
-)
-
-interval_input = st.sidebar.selectbox(
-    "Interval",
-    interval_options,
-    index=default_interval_index,
-    key="active_interval"
-)
-
-# --- Refresh button ---
+default_interval_index = interval_options.index("30m") if period_input == "1d" else interval_options.index("1d")
+interval_input = st.sidebar.selectbox("Interval", interval_options, index=default_interval_index, key="active_interval")
 refresh = st.sidebar.button("Refresh Data")
-
-# --- Static hint under the button (styled with italics) ---
-# st.sidebar.markdown(
-#    "💡 If you need **intraday** price data, choose an interval shorter than 1 day."
-# )
 
 # --- On refresh, validate and commit parameters ---
 if refresh:
-    tickers_input = (
-        portfolio_df["Ticker"].dropna().astype(str).str.strip().tolist()
-    )
+    tickers_input = portfolio_df["Ticker"].dropna().astype(str).str.strip().tolist()
     quantities_input = portfolio_df["Quantity"]
-
     invalid_tickers = [t for t in tickers_input if not t or not t.replace('.', '').isalnum()]
     invalid_quantities = [q for q in quantities_input if pd.isna(q) or not isinstance(q, (int, float))]
-
-    if invalid_tickers:
-        st.sidebar.error(f"Invalid tickers: {', '.join(invalid_tickers)}")
-    if invalid_quantities:
-        st.sidebar.info(
-            "Please fill in all quantities with numeric values, "
-            "then press **Enter** to apply changes."
-        )
     if invalid_tickers or invalid_quantities:
+        st.sidebar.error("Invalid input. Please correct and try again.")
         st.stop()
-
-    # Commit validated parameters to session_state
     st.session_state.active_tickers = tickers_input
-    st.session_state.active_quantities = dict(
-        zip(tickers_input, pd.Series(quantities_input).fillna(0).astype(int))
-    )
-    # Fetch and store data
-    with st.spinner("Fetching market data..."):
-        prices = ensure_prices(
-            st.session_state.active_tickers,
-            period=st.session_state.active_period,
-            interval=st.session_state.active_interval,
-        )
-        st.session_state.data = prices
+    st.session_state.active_quantities = dict(zip(tickers_input, pd.Series(quantities_input).fillna(0).astype(int)))
+    
+    # Clear cache to force a fresh data fetch from API/DB
+    _get_portfolio_data_cached.clear()
+    st.rerun()
 
 # --- Main content area ---
-# --- Use stored parameters for display ---
-if "active_tickers" in st.session_state:
-    tickers = st.session_state.active_tickers
-    quantities = st.session_state.active_quantities
-    period = st.session_state.active_period
-    interval = st.session_state.active_interval
-else:
+if "active_tickers" not in st.session_state:
     st.info("Set your portfolio parameters and click **Refresh Data** to load the dashboard.")
     st.stop()
 
-# --- Data Fetch ---
-if refresh or "data" not in st.session_state:
-    with st.spinner("Fetching market data..."):
-        prices = ensure_prices(tickers, period=period, interval=interval)
-        st.session_state.data = prices
+tickers = st.session_state.active_tickers
+quantities = st.session_state.active_quantities
+period = st.session_state.active_period
+interval = st.session_state.active_interval
+
+# Use the new, cached function to load data
+with st.spinner("Loading market data..."):
+    prices = _get_portfolio_data_cached(tickers, period=period, interval=interval)
+    st.session_state.data = prices
+
+if not prices:
+    st.error("Could not load data for the selected portfolio. Please check tickers and try again.")
+    st.stop()
 
 # --- PnL Calculation (per ticker snapshot) ---
 pnl_data = []
@@ -233,13 +243,22 @@ if pnl_data:
         if df is not None and not df.empty:
             try:
                 tmp = df.copy()
+
+                # The crucial fix: Ensure the index is a datetime object before creating the 'Time' column.
+                # This handles cases where data might have been loaded from a CSV/DB as a string.
+                if not isinstance(tmp.index, pd.DatetimeIndex):
+                    tmp.index = pd.to_datetime(tmp.index)
+                
                 qty = quantities.get(ticker, 0)
                 tmp["Quantity"] = qty
                 tmp["Price"] = tmp["Close"]
                 tmp["Position Value ($)"] = tmp["Price"] * tmp["Quantity"]
                 tmp["PnL"] = (tmp["Price"] - tmp["Price"].iloc[0]) * tmp["Quantity"]
                 tmp["Ticker"] = ticker
+                
+                # The 'Time' column is now guaranteed to be of type datetime64
                 tmp["Time"] = tmp.index
+                
                 pnl_time_data.append(
                     tmp[["Time", "Ticker", "Quantity", "Price", "Position Value ($)", "PnL"]]
                 )
@@ -247,7 +266,9 @@ if pnl_data:
                 st.warning(f"{ticker}: Error building time series — {e}")
 
     if pnl_time_data:
+        # `combined_df` is now safe to use for charting as its 'Time' column is consistent.
         combined_df = pd.concat(pnl_time_data, ignore_index=True)
+        
         chart = (
             alt.Chart(combined_df)
             .mark_line()
