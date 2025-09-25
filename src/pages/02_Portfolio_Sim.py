@@ -13,13 +13,24 @@ from src.indicators import calculate_price_change # We can reuse this module
 from log_utils import info, warn, error
 
 # Initialize the database on startup
-
 DB_NAME = 'portfolio_data.db'
-
 init_db(DB_NAME)
 
-
 # --- New: Centralized, Cached Data Fetcher for Portfolio Dashboard ---
+# New function to fetch sector data for a single ticker
+@st.cache_data(ttl=86400) # Cache sector data for 24 hours
+def _get_sector(ticker: str) -> str:
+    """Fetch sector for a ticker using yfinance, with caching."""
+    try:
+        yf_t = yf.Ticker(ticker)
+        # Using yf_t.info is a simpler and more reliable approach
+        info_dict = yf_t.info or {}
+        sector = info_dict.get("sector", "Unknown")
+    except Exception as e:
+        warn(f"Could not fetch sector for {ticker}: {e}")
+        sector = "Unknown"
+    return sector
+
 @st.cache_data(ttl=3600)
 def _get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dict:
     """
@@ -40,7 +51,6 @@ def _get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dic
 
         # Check if all required tickers are present in the database
         has_all_data_in_db = all(ticker in db_data.index.get_level_values('Ticker') for ticker in tickers)
-
 
     if has_all_data_in_db and not db_data.empty:
         info("Using cached data from database.")
@@ -76,10 +86,15 @@ def _get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dic
         is_multi_ticker = isinstance(raw_data.columns, pd.MultiIndex)
         
         for ticker in tickers:
+            # Add sector information here!
+            # We call the new function to fetch the sector and add it to the DataFrame
+            sector = _get_sector(ticker)
+
             if is_multi_ticker:
                 if (ticker, 'Close') in raw_data.columns:
                     df = raw_data[ticker].copy()
                     df['Ticker'] = ticker
+                    df['Sector'] = sector # Add sector column
                     processed_prices[ticker] = df
                     
                     # For database storage, reset index and rename
@@ -91,6 +106,7 @@ def _get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dic
                 if 'Close' in raw_data.columns:
                     df = raw_data.copy()
                     df['Ticker'] = ticker
+                    df['Sector'] = sector # Add sector column
                     processed_prices[ticker] = df
                     
                     # For database storage, reset index and rename
