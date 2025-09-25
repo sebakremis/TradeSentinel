@@ -18,26 +18,34 @@ def main():
     ema_fast_period = 20
     ema_slow_period = 50
     
-    # The data is now loaded from the database via the cached function
-    df_daily = load_all_prices()
-    
+    tickers_df = load_followed_tickers()
+    followed_tickers = tickers_df['Ticker'].tolist() if not tickers_df.empty else []
+
+    df_daily = get_all_prices_cached(
+        followed_tickers, 
+        period="1y",
+        interval="1d"
+    )
+
     if not df_daily.empty:
         st.success("✅ Dashboard data is ready.")
 
-        # Ensure 'Date' is a column for calculations
-        if 'Date' not in df_daily.columns:
-            df_daily = df_daily.reset_index(names=['Date', 'Ticker'])
-            
+        # --- REMOVE THIS BLOCK ---
+        # The previous get_all_prices_cached function already returns a DataFrame
+        # with 'Date' and 'Ticker' as columns, so this line is now redundant.
+        # if 'Date' not in df_daily.columns:
+        #     df_daily = df_daily.reset_index(names=['Date', 'Ticker'])
+        # -------------------------
+        
+        # Now, the rest of the code should work as expected
         df_daily = calculate_price_change(df_daily)
         df_daily = trend(df_daily, fast_n=ema_fast_period, slow_n=ema_slow_period)
         df_daily = ema(df_daily, ema_fast_period)
         df_daily = highest_close(df_daily)
         df_daily = distance_highest_close(df_daily)
         
-        # Create a copy for the final display
         final_df = df_daily.groupby('Ticker').tail(1).copy()
         
-        # Ensure required columns exist and are formatted
         expected_columns = ['Ticker', 'Close', 'Change %', 'Trend', 'HighestClose', 'Distance']
         for col in expected_columns:
             if col not in final_df.columns:
@@ -55,9 +63,8 @@ def main():
         
         sorted_df = final_df.sort_values(by='Distance', ascending=True)
 
-        # Refactored to use st.data_editor for interactive selection
         display_df = sorted_df.copy()
-        display_df['Select'] = False # Add a new 'Select' column for checkboxes
+        display_df['Select'] = False
 
         edited_df = st.data_editor(
             display_df,
@@ -106,11 +113,7 @@ def main():
                 st.warning("⚠️ No tickers found to update.")
             else:
                 with st.spinner("Fetching and updating all ticker data..."):
-                    # This line is the key change. Clearing the cache forces
-                    # get_all_prices_cached to re-fetch from the API and update the database.
                     get_all_prices_cached.clear()
-                    # A subsequent call to load_all_prices() will use the new data
-                    # This is implicitly handled by the rerun, so we don't need to call it again here.
                     st.session_state.data_fetched = True
                 st.success("✅ Data fetch and processing complete.")
                 st.rerun()

@@ -1,46 +1,66 @@
 # src/database_manager.py
 import sqlite3
 import pandas as pd
-from src.config import DB_PATH # Import the correct path variable
+import os
+from log_utils import info, warn, error
+from src.config import DATA_DIR
 
-def init_db():
-    """Initializes the database and creates the 'prices' table if it doesn't exist."""
-    # Ensure the data directory exists before trying to create the database file
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH) # Use the correct DB_PATH
+def init_db(db_name: str):
+    """Initializes a new SQLite database if it doesn't exist."""
+    db_path = f"{DATA_DIR}/{db_name}"
+    os.makedirs(DATA_DIR, exist_ok=True)
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS prices (
             Ticker TEXT,
             Date TEXT,
+            Time TEXT,
             Open REAL,
             High REAL,
             Low REAL,
             Close REAL,
             Volume INTEGER,
-            PRIMARY KEY (Ticker, Date)
+            PRIMARY KEY (Ticker, Date, Time)
         )
     """)
     conn.commit()
     conn.close()
+    info(f"Database {db_path} initialized.")
 
-def save_prices_to_db(df: pd.DataFrame):
-    """Saves a DataFrame of prices to the database."""
-    conn = sqlite3.connect(DB_PATH)
-    df.to_sql('prices', conn, if_exists='replace', index=False)
+def save_prices_to_db(df: pd.DataFrame, db_name: str):
+    """Saves price data to the specified database."""
+    db_path = f"{DATA_DIR}/{db_name}"
+    conn = sqlite3.connect(db_path)
+    df.to_sql("prices", conn, if_exists="replace", index=False)
     conn.close()
+    info(f"Data saved to database {db_path}")
 
-def load_prices_from_db():
-    """Loads all price data from the database into a DataFrame."""
-    conn = sqlite3.connect(DB_PATH)
+def load_prices_from_db(db_name: str) -> pd.DataFrame:
+    """Loads all prices from the specified database."""
+    db_path = f"{DATA_DIR}/{db_name}"
+    if not os.path.exists(db_path):
+        warn(f"Database file not found at {db_path}.")
+        return pd.DataFrame()
+
     try:
+        conn = sqlite3.connect(db_path)
         df = pd.read_sql_query("SELECT * FROM prices", conn)
-        if not df.empty:
-            df['Date'] = pd.to_datetime(df['Date'])
-            df.set_index(['Date', 'Ticker'], inplace=True)
-            return df
-        return pd.DataFrame()
-    except pd.io.sql.DatabaseError:
-        return pd.DataFrame()
-    finally:
         conn.close()
+
+        if 'Time' in df.columns:
+            df["Date"] = pd.to_datetime(df["Date"].astype(str) + " " + df["Time"].astype(str), errors='coerce')
+            df.drop(columns=["Time"], inplace=True)
+        else:
+            df["Date"] = pd.to_datetime(df["Date"], errors='coerce')
+
+        df.dropna(subset=['Date'], inplace=True)
+        return df
+
+    except Exception as e:
+        error(f"Error loading data from database {db_name}: {e}")
+        return pd.DataFrame()
+
+def load_all_prices() -> pd.DataFrame:
+    """Convenience function to load prices from the main dashboard database."""
+    return load_prices_from_db("main_dashboard.db")

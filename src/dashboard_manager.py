@@ -1,70 +1,87 @@
 # src/dashboard_manager.py
-import pandas as pd
 import streamlit as st
-from src.data_manager import get_multiple_market_data
-from src.tickers_manager import load_followed_tickers
-from src.database_manager import init_db, save_prices_to_db, load_prices_from_db
+import pandas as pd
+import yfinance as yf
 
-# Initialize the database on application startup
-init_db()
+# Import the logging utility functions
+from log_utils import info, warn, error
 
-def fetch_and_store_prices(tickers):
-    """
-    Fetches data from the external API, stores it in the database, 
-    and returns a combined DataFrame.
-    """
-    daily_data = get_multiple_market_data(tickers, interval='1d', period='1y')
-    
-    if daily_data.empty:
-        st.warning("⚠️ Could not fetch data for all tickers.")
+from src.database_manager import save_prices_to_db, load_prices_from_db
+from src.config import MAIN_DB_NAME, DATA_DIR
+
+# The database name is now a constant imported from database_manager
+DB_NAME = MAIN_DB_NAME
+
+def load_all_prices() -> pd.DataFrame:
+    """A wrapper to load data from the main database."""
+    return load_prices_from_db(MAIN_DB_NAME)
+
+@st.cache_data(ttl=3600)
+def get_all_prices_cached(tickers: list, period: str, interval: str) -> pd.DataFrame:
+    """Fetches and caches all ticker data from yfinance and returns a single DataFrame."""
+    info(f"Fetching data for {len(tickers)} tickers...")
+    try:
+        data = yf.download(
+            tickers=tickers,
+            period=period,
+            interval=interval,
+            group_by='ticker',
+            auto_adjust=True,
+            threads=True,
+            progress=False
+        )
+    except Exception as e:
+        error(f"Error fetching data from yfinance: {e}")
         return pd.DataFrame()
 
-    all_daily_dfs = []
-    for ticker in tickers:
-        if (ticker, 'Close') in daily_data.columns:
-            df_daily = daily_data[ticker].copy()
-            df_daily['Ticker'] = ticker
-            all_daily_dfs.append(df_daily)
-            
-    df_daily_combined = pd.concat(all_daily_dfs).sort_index() if all_daily_dfs else pd.DataFrame()
-    
-    # Reset index to save it to the database table
-    df_daily_combined.reset_index(inplace=True)
-    df_daily_combined.rename(columns={'index': 'Date'}, inplace=True)
-
-    # Store the fetched data in the database
-    save_prices_to_db(df_daily_combined)
-    
-    return df_daily_combined
-
-@st.cache_data(ttl=3600)  # Cache the data for 1 hour
-def get_all_prices_cached(tickers):
-    """
-    Tries to load data from the database first. If the database is empty,
-    it fetches new data from the API and populates the database.
-    """
-    # 1. Try to load data from the database
-    df_daily_combined = load_prices_from_db()
-    
-    # 2. If the database is empty, fetch new data from the API
-    if df_daily_combined.empty:
-        df_daily_combined = fetch_and_store_prices(tickers)
-    
-    return df_daily_combined
-
-def load_all_prices():
-    """
-    Loads followed tickers and then retrieves cached data.
-    """
-    tickers_df = load_followed_tickers()
-    if tickers_df.empty:
+    if data.empty:
+        warn("No data returned from yfinance.")
         return pd.DataFrame()
     
-    tickers = tickers_df['Ticker'].tolist()
+    df_list = []
     
-    df_daily = get_all_prices_cached(tickers)
+    # We will now standardize the column creation AFTER the data is in a list of DataFrames
+    if isinstance(data.columns, pd.MultiIndex):
+        # Multi-ticker case
+        for ticker in tickers:
+            if ticker in data.columns.get_level_values(0):
+                df = data[ticker].copy().reset_index()
+                df['Ticker'] = ticker
+                df_list.append(df)
+    else:
+        # Single-ticker case
+        df = data.copy().reset_index()
+        df['Ticker'] = tickers[0]
+        df_list.append(df)
     
-    return df_daily             
+    if not df_list:
+        warn("No data processed from fetched results. Returning an empty DataFrame.")
+        return pd.DataFrame()
+
+    combined_df = pd.concat(df_list, ignore_index=True)
+
+    # **Crucial Fix:** Standardize the 'Date' or 'index' column to 'Datetime'
+    if 'Date' in combined_df.columns:
+        combined_df.rename(columns={'Date': 'Datetime'}, inplace=True)
+    elif 'index' in combined_df.columns:
+        combined_df.rename(columns={'index': 'Datetime'}, inplace=True)
+    
+    # Check if a 'Datetime' column now exists before proceeding
+    if 'Datetime' in combined_df.columns:
+        combined_df['Date'] = combined_df['Datetime'].dt.date
+        combined_df['Time'] = combined_df['Datetime'].dt.time
+        combined_df.drop(columns=['Datetime'], inplace=True)
+    else:
+        # This case should now be impossible, but it's a good fail-safe
+        error("The 'Datetime' column was not found after renaming. Data processing failed.")
+        return pd.DataFrame()
+
+    # Save the finalized DataFrame to the main dashboard database
+    save_prices_to_db(combined_df, MAIN_DB_NAME)
+    info("✅ Data fetched and saved to database.")
+
+    # Return the combined DataFrame for use in the dashboard
+    return combined_df          
 
 
 

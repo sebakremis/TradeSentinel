@@ -13,7 +13,11 @@ from src.indicators import calculate_price_change # We can reuse this module
 from log_utils import info, warn, error
 
 # Initialize the database on startup
-init_db()
+
+DB_NAME = 'portfolio_data.db'
+
+init_db(DB_NAME)
+
 
 # --- New: Centralized, Cached Data Fetcher for Portfolio Dashboard ---
 @st.cache_data(ttl=3600)
@@ -22,20 +26,27 @@ def _get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dic
     Fetches historical data for portfolio tickers from the database first.
     If not available, fetches from yfinance, saves to DB, and returns data.
     """
-    db_data = load_prices_from_db()
+    # Load data from the dedicated portfolio database
+    db_data = load_prices_from_db(DB_NAME)
 
-    # Check if all required data is in the database
-    has_all_data_in_db = True
-    for ticker in tickers:
-        if ticker not in db_data.index.get_level_values('Ticker'):
-            has_all_data_in_db = False
-            break
+    # Check for the existence of Ticker and Date columns in the loaded data
+    if "Ticker" not in db_data.columns or "Date" not in db_data.columns:
+        warn("Database data is not in the expected format. Proceeding with yfinance fetch.")
+        has_all_data_in_db = False
+    else:
+        # Correctly set the index to be a MultiIndex of Date and Ticker
+        db_data['Date'] = pd.to_datetime(db_data['Date'])
+        db_data = db_data.set_index(['Ticker', 'Date']).sort_index()
+
+        # Check if all required tickers are present in the database
+        has_all_data_in_db = all(ticker in db_data.index.get_level_values('Ticker') for ticker in tickers)
+
 
     if has_all_data_in_db and not db_data.empty:
         info("Using cached data from database.")
         prices = {}
         for ticker in tickers:
-            prices[ticker] = db_data.loc[db_data.index.get_level_values('Ticker') == ticker]
+            prices[ticker] = db_data.loc[ticker].copy()
         return prices
     else:
         info("Data not fully in database or cache cleared. Fetching from API...")
@@ -60,21 +71,37 @@ def _get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dic
         # Process and save to database
         all_data_for_db = []
         processed_prices = {}
+        
+        # Determine if the data has a MultiIndex (multiple tickers) or a regular index (single ticker)
+        is_multi_ticker = isinstance(raw_data.columns, pd.MultiIndex)
+        
         for ticker in tickers:
-            if (ticker, 'Close') in raw_data.columns:
-                df = raw_data[ticker].copy()
-                df['Ticker'] = ticker
-                processed_prices[ticker] = df
-                
-                # For database storage
-                df_for_db = df.reset_index().rename(columns={'index': 'Date'})
-                all_data_for_db.append(df_for_db)
-            else:
-                warn(f"No valid data found for {ticker}, skipping.")
+            if is_multi_ticker:
+                if (ticker, 'Close') in raw_data.columns:
+                    df = raw_data[ticker].copy()
+                    df['Ticker'] = ticker
+                    processed_prices[ticker] = df
+                    
+                    # For database storage, reset index and rename
+                    df_for_db = df.reset_index().rename(columns={'index': 'Date'})
+                    all_data_for_db.append(df_for_db)
+                else:
+                    warn(f"No valid data found for {ticker}, skipping.")
+            else: # Single ticker case
+                if 'Close' in raw_data.columns:
+                    df = raw_data.copy()
+                    df['Ticker'] = ticker
+                    processed_prices[ticker] = df
+                    
+                    # For database storage, reset index and rename
+                    df_for_db = df.reset_index().rename(columns={'index': 'Date'})
+                    all_data_for_db.append(df_for_db)
+                else:
+                    warn(f"No valid data found for {ticker}, skipping.")
 
         if all_data_for_db:
             combined_df = pd.concat(all_data_for_db, ignore_index=True)
-            save_prices_to_db(combined_df)
+            save_prices_to_db(combined_df, DB_NAME)
             st.success("✅ New data fetched and saved to database.")
 
         return processed_prices
@@ -190,10 +217,7 @@ if pnl_data:
         hide_index=True
     )
 
-
-
-
-    # --- Portfolio Summary + Pie Chart ---
+# --- Portfolio Summary + Pie Chart ---
     total_pnl = df_pnl["PnL ($)"].sum()
     total_value = df_pnl["Position Value ($)"].sum()
     total_pct = (total_pnl / total_value) * 100 if total_value else 0.0
@@ -210,8 +234,8 @@ if pnl_data:
         pie_df = df_pnl[["Ticker", "Position Value ($)"]].copy()
         total_value = pie_df["Position Value ($)"].sum()
     
-        if not pie_df.empty and total_value > 0:          
-    
+        if not pie_df.empty and total_value > 0: 
+            
             # Calculate percentage for labels
             pie_df["Percentage"] = (pie_df["Position Value ($)"] / total_value) * 100
     
@@ -220,7 +244,7 @@ if pnl_data:
                 names="Ticker",
                 values="Position Value ($)",
                 title=" ",
-                hole=0.3  # optional: donut style
+                hole=0.3
             )
     
             # Show ticker + percentage inside each slice
@@ -233,10 +257,7 @@ if pnl_data:
         else:
             st.info("No data available for pie chart.")
 
-
-    
-    
-    # --- Portfolio PnL Over Time ---
+# --- Portfolio PnL Over Time ---
     st.subheader("📉 Portfolio PnL Over Time")
     pnl_time_data = []
     for ticker, df in st.session_state.data.items():
@@ -282,7 +303,7 @@ if pnl_data:
         st.altair_chart(chart)
 
 
-        # --- Portfolio Allocation by Sector ---
+# --- Portfolio Allocation by Sector ---
         st.subheader("📊 Portfolio Allocation by Sector")
         
         latest_data = []
@@ -324,13 +345,13 @@ if pnl_data:
                         hole=0.3,
                         textinfo="percent+label",
                         textposition="inside",
-                        hoverinfo="skip"  # ✅ disables hover entirely
+                        hoverinfo="skip"
                     )
                 ]
             )
         
             fig_sector.update_layout(
-                title="",   # no undefined title
+                title="",
                 showlegend=False,
                 title_x=0.3,
                 margin=dict(l=10, r=10, t=60, b=10)
@@ -349,10 +370,7 @@ if pnl_data:
         else:
             st.info("No data available for sector allocation chart.")
 
-
-
-      
-        # --- Advanced Metrics Section ---
+# --- Advanced Metrics Section ---
         from metrics import (
             calculate_var, calculate_cvar, sharpe_ratio, sortino_ratio,
             calmar_ratio, max_drawdown, correlation_matrix, win_loss_stats
@@ -401,9 +419,8 @@ if pnl_data:
         # Display with conditional formatting
         st.dataframe(
             corr_df.style.background_gradient(cmap="coolwarm", vmin=-1, vmax=1)
-)
-  
-                
+        )
+ 
         # --- Editable Table: Interactive PnL Table with CSV Export ---
 
         st.subheader("🔍 Explore & Export PnL Data")
@@ -449,10 +466,9 @@ if pnl_data:
             # Sort so most recent entries appear first
             df_display = filtered_df.sort_values("Time", ascending=False).copy()
 
-
-           # Split into Date and Time columns
+            # Split into Date and Time columns
             df_display["Date"] = df_display["Time"].dt.strftime("%Y-%m-%d")
-            df_display["Time"] = df_display["Time"].dt.strftime("%H:%M:%S")  # overwrite with clean 'Time'
+            df_display["Time"] = df_display["Time"].dt.strftime("%H:%M:%S")
             
             # Reorder so Date/Time appear first
             cols = ["Date", "Time"] + [c for c in df_display.columns if c not in ["Date", "Time"]]
@@ -463,26 +479,18 @@ if pnl_data:
                 if col in df_display.columns:
                     df_display[col] = df_display[col].astype(float).round(2)
 
-
-            # --- Round numeric columns to 2 decimals ---
-            for col in ["Price", "Position Value ($)", "PnL"]:
-                if col in df_display.columns:
-                    df_display[col] = df_display[col].astype(float).round(2)
-            
             # --- Display with formatted view (but keep numeric for CSV) ---
             st.dataframe(
                 df_display.style.format({
-                    "Quantity": "{:,.0f}",          # commas, no decimals
-                    "Price": "{:,.2f}",             # commas + 2 decimals
-                    "PnL": "{:,.2f}",               # commas + 2 decimals
-                    "Position Value ($)": "{:,.2f}" # commas + 2 decimals
+                    "Quantity": "{:,.0f}",
+                    "Price": "{:,.2f}",
+                    "PnL": "{:,.2f}",
+                    "Position Value ($)": "{:,.2f}"
                 }),
                 width="stretch",
                 hide_index=True
             )
-
-
-       
+            
             # CSV export
             tickers_str = "_".join(tickers_selected) if tickers_selected else "All"
             filename = f"pnl_data_{tickers_str}_{date_range[0]}_{date_range[1]}.csv"
@@ -495,9 +503,6 @@ if pnl_data:
             )
         else:
             st.info("No valid data to display. Try refreshing or adjusting tickers/period.")
-        
-        # --- end of block ---
-
 
 # Credits
 st.markdown("---")
