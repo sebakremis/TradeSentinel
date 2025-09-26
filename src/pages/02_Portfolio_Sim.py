@@ -9,7 +9,7 @@ import datetime as dt
 
 # Import database and logging tools
 from src.database_manager import init_db, save_prices_to_db, load_prices_from_db
-from src.indicators import calculate_price_change # We can reuse this module
+from src.indicators import calculate_price_change # reused function
 from log_utils import info, warn, error
 
 # Initialize the database on startup
