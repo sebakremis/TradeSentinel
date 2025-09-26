@@ -123,7 +123,7 @@ def setup_sidebar_controls():
 
     # --- FIXED INTERVAL AND LIMITED PERIODS ---
     FIXED_INTERVAL = "1d"
-    PERIOD_OPTIONS = ["1mo", "3mo", "6mo", "1y", "ytd", "max"]
+    PERIOD_OPTIONS = ["1mo", "3mo", "6mo", "1y", "ytd"]
     
     # Period Selection (Use '1y' as the default index)
     period_input = st.sidebar.selectbox(
