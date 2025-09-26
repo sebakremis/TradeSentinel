@@ -520,5 +520,5 @@ st.markdown(
 )
 st.caption("Built using Streamlit and Python.")
 # Use st.switch_page for proper navigation
-if st.button("Go back to Market View"):
+if st.button("Go back to Main Dashboard"):
     st.switch_page("main.py")

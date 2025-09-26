@@ -14,7 +14,7 @@ from src.sim_portfolio import calculate_portfolio
 
 def main():
     st.set_page_config(layout="wide")
-    st.title("📊 TradeSentinel: Market View")
+    st.title("📊 TradeSentinel: Main Dashboard")
 
     ema_fast_period = 20
     ema_slow_period = 50
