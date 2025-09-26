@@ -2,12 +2,11 @@
 import streamlit as st
 import pandas as pd
 import yfinance as yf
-
-# Import the logging utility functions
 from log_utils import info, warn, error
 
 from src.database_manager import save_prices_to_db, load_prices_from_db
 from src.config import MAIN_DB_NAME, DATA_DIR
+from src.indicators import calculate_price_change, ema, trend, highest_close, distance_highest_close, annualized_metrics
 
 # The database name is now a constant imported from database_manager
 DB_NAME = MAIN_DB_NAME
@@ -84,6 +83,17 @@ def get_all_prices_cached(tickers: list, period: str, interval: str) -> pd.DataF
     return combined_df          
 
 
+@st.cache_data(show_spinner="Calculating indicators...")
+def calculate_all_indicators(df_daily, fast_n, slow_n)-> pd.DataFrame:
+    # Apply all calculation functions here
+    df_daily = calculate_price_change(df_daily)
+    df_daily = trend(df_daily, fast_n, slow_n)
+    df_daily = ema(df_daily, fast_n)
+    df_daily = highest_close(df_daily)
+    df_daily = distance_highest_close(df_daily)
+    df_daily = annualized_metrics(df_daily, n_days=200)
+    
+    return df_daily
 
 
 
