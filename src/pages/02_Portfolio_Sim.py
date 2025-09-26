@@ -8,9 +8,11 @@ import yfinance as yf
 import datetime as dt
 
 # Import database and logging tools
+# We keep load_prices_from_db imported even if not used in the cached function
 from src.database_manager import init_db, save_prices_to_db, load_prices_from_db
 from src.indicators import calculate_price_change # reused function
 from log_utils import info, warn, error
+# Import metrics functions
 from metrics import (
     calculate_var, calculate_cvar, sharpe_ratio, sortino_ratio,
     calmar_ratio, max_drawdown, correlation_matrix, win_loss_stats
@@ -21,14 +23,13 @@ from metrics import (
 DB_NAME = 'portfolio_data.db'
 init_db(DB_NAME)
 
-# --- Cached Data Fetchers ---
+# --- Cached Data Fetchers (Modified to fix the period bug) ---
 
 @st.cache_data(ttl=86400) # Cache sector data for 24 hours
 def _get_sector(ticker: str) -> str:
     """Fetch sector for a ticker using yfinance, with caching."""
     try:
         yf_t = yf.Ticker(ticker)
-        # Using yf_t.info is a simpler and more reliable approach
         info_dict = yf_t.info or {}
         sector = info_dict.get("sector", "Unknown")
     except Exception as e:
@@ -39,44 +40,17 @@ def _get_sector(ticker: str) -> str:
 @st.cache_data(ttl=3600)
 def _get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dict:
     """
-    Fetches historical data for portfolio tickers from the database first.
-    If not available, fetches from yfinance, saves to DB, and returns data.
+    Fetches historical data for portfolio tickers from yfinance.
+    Streamlit cache key is based on (tickers, period, interval).
+    Data is saved to the internal database for long-term storage.
+    
+    The complex database pre-check is removed to ensure the Streamlit
+    cache key (which includes 'period') works correctly to get fresh data
+    for a new period.
     """
-    # Load data from the dedicated portfolio database
-    db_data = load_prices_from_db(DB_NAME)
-
-    # Check for the existence of Ticker and Date columns in the loaded data
-    if "Ticker" not in db_data.columns or "Date" not in db_data.columns:
-        warn("Database data is not in the expected format. Proceeding with yfinance fetch.")
-        has_all_data_in_db = False
-    else:
-        # Correctly set the index to be a MultiIndex of Date and Ticker
-        db_data['Date'] = pd.to_datetime(db_data['Date'])
-        # Handle potential duplicates before setting index
-        db_data = db_data.drop_duplicates(subset=['Ticker', 'Date'], keep='last')
-        db_data = db_data.set_index(['Ticker', 'Date']).sort_index()
-
-        # Check if all required tickers are present in the database
-        # This check is good, but doesn't check for required period/interval.
-        # Given the current data load/save structure, clearing the cache on refresh
-        # is the most robust way to ensure the *right* data is used.
-        has_all_data_in_db = all(ticker in db_data.index.get_level_values('Ticker') for ticker in tickers)
-
-    if has_all_data_in_db and not db_data.empty:
-        info("Using cached data from database.")
-        prices = {}
-        for ticker in tickers:
-            # Check if ticker data is present before attempting to loc
-            if ticker in db_data.index.get_level_values('Ticker'):
-                prices[ticker] = db_data.loc[ticker].copy()
-            else:
-                warn(f"Ticker {ticker} expected in DB but not found. Will fetch.")
-                has_all_data_in_db = False # Force API fetch if any ticker is missing
-                break
-        if has_all_data_in_db:
-            return prices
-
-    info("Data not fully in database or cache cleared. Fetching from API...")
+    
+    info(f"Fetching data from API for period={period}, interval={interval}...")
+    
     try:
         raw_data = yf.download(
             tickers=tickers,
@@ -103,7 +77,6 @@ def _get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dic
     is_multi_ticker = isinstance(raw_data.columns, pd.MultiIndex)
     
     for ticker in tickers:
-        # Add sector information here!
         sector = _get_sector(ticker)
 
         df = None
@@ -115,7 +88,6 @@ def _get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dic
                 df = raw_data.copy()
 
         if df is not None and 'Close' in df.columns:
-            # Ensure index is datetime before manipulating dates
             if not isinstance(df.index, pd.DatetimeIndex):
                 df.index = pd.to_datetime(df.index)
 
@@ -124,7 +96,6 @@ def _get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dic
             processed_prices[ticker] = df
             
             # For database storage, reset index and rename
-            # Use ISO format string for robust date storage
             df_for_db = df.reset_index(names=['Date'])
             df_for_db['Date'] = df_for_db['Date'].dt.strftime('%Y-%m-%d %H:%M:%S')
             all_data_for_db.append(df_for_db)
@@ -134,11 +105,10 @@ def _get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dic
     if all_data_for_db:
         combined_df = pd.concat(all_data_for_db, ignore_index=True)
         save_prices_to_db(combined_df, DB_NAME)
-        # st.success("✅ New data fetched and saved to database.")
 
     return processed_prices
 
-# --- Core Logic Functions (Refactored from the main script body) ---
+# --- Core Logic Functions (setup_sidebar_controls is unchanged from previous fix) ---
 
 def setup_sidebar_controls():
     """Sets up the sidebar controls for portfolio definition and parameters."""
@@ -151,12 +121,8 @@ def setup_sidebar_controls():
     st.sidebar.title("Set portfolio to analyze:")
     portfolio_df = st.sidebar.data_editor(sim_portfolio, num_rows="dynamic", width="stretch")
 
-    # --- MODIFICATION START ---
-    
-    # Set the fixed interval
+    # --- FIXED INTERVAL AND LIMITED PERIODS ---
     FIXED_INTERVAL = "1d"
-    
-    # Set the limited period options
     PERIOD_OPTIONS = ["1mo", "3mo", "6mo", "1y", "ytd", "max"]
     
     # Period Selection (Use '1y' as the default index)
@@ -171,7 +137,7 @@ def setup_sidebar_controls():
     st.sidebar.markdown(f"**Interval:** `{FIXED_INTERVAL}` (Daily)")
     interval_input = FIXED_INTERVAL
     
-    # --- MODIFICATION END ---
+    # ----------------------------------------
     
     refresh = st.sidebar.button("Refresh Data")
     
@@ -183,15 +149,13 @@ def setup_sidebar_controls():
         # Validation logic
         invalid_tickers = [t for t in tickers_input if not t or not t.replace('.', '').isalnum()]
         
-        # Ensure quantities are numeric and non-negative (assuming a long-only or neutral position sim)
         quantities_clean = []
         invalid_quantities = []
         for q in quantities_input:
-            # Allow NaN for empty rows, but will fillna(0) later
             if pd.isna(q):
                 quantities_clean.append(0) 
             elif isinstance(q, (int, float)) and q >= 0:
-                quantities_clean.append(int(q)) # Convert to int for quantities
+                quantities_clean.append(int(q))
             else:
                 invalid_quantities.append(q)
 
@@ -203,11 +167,13 @@ def setup_sidebar_controls():
         st.session_state.active_tickers = tickers_input
         st.session_state.active_quantities = dict(zip(tickers_input, quantities_clean))
         st.session_state.active_period = period_input
-        st.session_state.active_interval = interval_input
+        st.session_state.active_interval = interval_input # Commits the fixed interval
         
         # Clear cache to force a fresh data fetch from API/DB
         _get_portfolio_data_cached.clear()
         st.rerun()
+
+# --- Utility and Display Functions (All unchanged from previous refactor) ---
 
 def calculate_pnl_data(prices: dict, quantities: dict) -> pd.DataFrame:
     """Calculates PnL and position snapshot data per ticker."""
@@ -215,11 +181,9 @@ def calculate_pnl_data(prices: dict, quantities: dict) -> pd.DataFrame:
     for ticker, df in prices.items():
         if df is not None and not df.empty:
             try:
-                # Ensure start and end values are scalars
                 start = df["Close"].iloc[0]
                 end = df["Close"].iloc[-1]
                 
-                # Use .item() to safely extract scalar from numpy/pandas series if present
                 if hasattr(start, "item"): start = start.item()
                 if hasattr(end, "item"): end = end.item()
 
@@ -228,12 +192,11 @@ def calculate_pnl_data(prices: dict, quantities: dict) -> pd.DataFrame:
                 position_value = end * qty
                 pct = ((end - start) / start) * 100 if start != 0 else 0.0
                 
-                # Get sector from the DataFrame (added in _get_portfolio_data_cached)
                 sector = df["Sector"].iloc[0] if "Sector" in df.columns else "Unknown"
 
                 pnl_data.append({
                     "Ticker": ticker,
-                    "Sector": sector, # Include Sector here for later use
+                    "Sector": sector,
                     "Quantity": qty,
                     "Start Price": start,
                     "End Price": end,
@@ -266,7 +229,7 @@ def display_per_ticker_pnl(df_pnl: pd.DataFrame):
             "Change (%)": "{:,.2f}",
             "Position Value ($)": "{:,.2f}"
         })
-        .hide(subset=["Sector"], axis=1), # Hide sector from this view
+        .hide(subset=["Sector"], axis=1),
         width="stretch",
         hide_index=True
     )
@@ -314,7 +277,6 @@ def prepare_pnl_time_series(prices: dict, quantities: dict) -> pd.DataFrame:
             try:
                 tmp = df.copy()
 
-                # Ensure the index is a datetime object
                 if not isinstance(tmp.index, pd.DatetimeIndex):
                     tmp.index = pd.to_datetime(tmp.index)
                 
@@ -322,10 +284,9 @@ def prepare_pnl_time_series(prices: dict, quantities: dict) -> pd.DataFrame:
                 tmp["Quantity"] = qty
                 tmp["Price"] = tmp["Close"]
                 tmp["Position Value ($)"] = tmp["Price"] * tmp["Quantity"]
-                # PnL from the start of the selected period
                 tmp["PnL"] = (tmp["Price"] - tmp["Price"].iloc[0]) * tmp["Quantity"]
                 tmp["Ticker"] = ticker
-                tmp["Time"] = tmp.index # 'Time' column is now guaranteed datetime
+                tmp["Time"] = tmp.index
                 
                 pnl_time_data.append(
                     tmp[["Time", "Ticker", "Quantity", "Price", "Position Value ($)", "PnL"]]
@@ -351,7 +312,7 @@ def display_pnl_over_time(combined_df: pd.DataFrame):
                 tooltip=["Time:T", "Ticker:N", alt.Tooltip("PnL:Q", format="$,.2f")]
             )
             .properties(width=700, height=400, title="Portfolio PnL by Ticker")
-            .interactive() # Add interactivity for zoom/pan
+            .interactive()
         )
         st.altair_chart(chart, use_container_width=True)
     else:
@@ -362,7 +323,6 @@ def display_sector_allocation(df_pnl: pd.DataFrame):
     """Displays the portfolio allocation by sector using a pie chart and table."""
     st.subheader("📊 Portfolio Allocation by Sector")
     
-    # Aggregate by sector (df_pnl already contains 'Sector' and 'Position Value ($)')
     sector_alloc = (
         df_pnl.groupby("Sector")
         .agg({
@@ -370,7 +330,7 @@ def display_sector_allocation(df_pnl: pd.DataFrame):
             "Ticker": lambda s: ", ".join(sorted(set(s)))
         })
         .reset_index()
-        .rename(columns={"Position Value ($)": "PositionValue"}) # Rename for clarity
+        .rename(columns={"Position Value ($)": "PositionValue"})
     )
     
     if not sector_alloc.empty and sector_alloc["PositionValue"].sum() > 0:
@@ -398,7 +358,6 @@ def display_sector_allocation(df_pnl: pd.DataFrame):
         
         st.plotly_chart(fig_sector, use_container_width=True)
         
-        # Display the simplified table below (Sector + Ticker, no index, formatted value)
         st.dataframe(
             sector_alloc[["Sector", "PositionValue", "Ticker"]]
             .rename(columns={"PositionValue": "Position Value ($)"})
@@ -417,7 +376,6 @@ def display_advanced_metrics(combined_df: pd.DataFrame):
         st.info("No data available to calculate advanced metrics.")
         return
 
-    # Portfolio returns (daily or per interval)
     portfolio_values = combined_df.groupby("Time")["Position Value ($)"].sum()
     portfolio_returns = portfolio_values.pct_change().dropna()
     
@@ -435,7 +393,6 @@ def display_advanced_metrics(combined_df: pd.DataFrame):
     calmar = calmar_ratio(portfolio_returns)
     mdd = max_drawdown(cum_returns)
 
-    # Display metrics in columns
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("VaR (95%)", f"{var_95:.2%}")
@@ -449,13 +406,9 @@ def display_advanced_metrics(combined_df: pd.DataFrame):
         
     st.subheader("📈 Asset Correlation Matrix")
 
-    # Pivot to get one column per asset
     price_wide = combined_df.pivot(index="Time", columns="Ticker", values="Price")
+    corr_df = correlation_matrix(price_wide).round(4)
 
-    # Compute correlation matrix and round
-    corr_df = correlation_matrix(price_wide).round(4) # Rounding to 4 is cleaner for display
-
-    # Display with conditional formatting
     st.dataframe(
         corr_df.style.background_gradient(cmap="coolwarm", vmin=-1, vmax=1).format("{:,.4f}")
     )
@@ -475,8 +428,8 @@ def display_export_table(combined_df: pd.DataFrame):
         default=sorted(combined_df["Ticker"].unique().tolist()),
     )
     
-    date_min = combined_df["Time"].min().normalize().date() # Use normalize() to get pure date for min
-    date_max = combined_df["Time"].max().normalize().date() # Use normalize() to get pure date for max
+    date_min = combined_df["Time"].min().normalize().date()
+    date_max = combined_df["Time"].max().normalize().date()
     
     date_range = st.date_input(
         "Select Date Range",
@@ -485,12 +438,10 @@ def display_export_table(combined_df: pd.DataFrame):
         max_value=date_max,
     )
     
-    # Ensure date_range has two elements before filtering
     if len(date_range) != 2:
         st.warning("Please select a valid date range.")
         return
 
-    # Filter the DataFrame
     filtered_df = combined_df[
         combined_df["Ticker"].isin(tickers_selected)
         & (combined_df["Time"].dt.date >= date_range[0])
@@ -499,26 +450,20 @@ def display_export_table(combined_df: pd.DataFrame):
     
     if not filtered_df.empty:
         
-        # Sort so most recent entries appear first
         df_display = filtered_df.sort_values("Time", ascending=False).copy()
 
-        # Split into Date and Time columns
         df_display["Date"] = df_display["Time"].dt.strftime("%Y-%m-%d")
-        df_display["Time"] = df_display["Time"].dt.strftime("%H:%M:%S")
+        df_display["Time_of_Day"] = df_display["Time"].dt.strftime("%H:%M:%S")
         
-        # Remove original datetime column
         df_display = df_display.drop(columns=["Time"], errors='ignore')
 
-        # Reorder so Date/Ticker appear first
-        cols_order = ["Date", "Ticker", "Quantity", "Price", "Position Value ($)", "PnL"]
-        df_display = df_display[cols_order].reset_index(drop=True)
+        cols_order = ["Date", "Time_of_Day", "Ticker", "Quantity", "Price", "Position Value ($)", "PnL"]
+        df_display = df_display[[c for c in cols_order if c in df_display.columns]].reset_index(drop=True)
         
-        # --- Round numeric columns to 2 decimals for export and display ---
         for col in ["Price", "Position Value ($)", "PnL"]:
             if col in df_display.columns:
                 df_display[col] = df_display[col].astype(float).round(2)
 
-        # --- Display with formatted view ---
         st.dataframe(
             df_display.style.format({
                 "Quantity": "{:,.0f}",
@@ -553,7 +498,6 @@ def main():
     # 1. Setup Sidebar and Control Flow
     setup_sidebar_controls()
     
-    # Stop execution if parameters haven't been finalized by the Refresh button
     if "active_tickers" not in st.session_state:
         st.info("Set your portfolio parameters and click **Refresh Data** to load the dashboard.")
         st.stop()
@@ -565,9 +509,9 @@ def main():
     interval = st.session_state.active_interval
 
     # 2. Load Data
-    with st.spinner(f"Loading market data for {len(tickers)} tickers over {period} @ {interval}..."):
+    with st.spinner(f"Loading daily market data for {len(tickers)} tickers over {period}..."):
         prices = _get_portfolio_data_cached(tickers, period=period, interval=interval)
-        st.session_state.data = prices # Save fetched data to session state
+        st.session_state.data = prices
     
     if not prices:
         st.error("Could not load data for the selected portfolio. Please check tickers and try again.")
@@ -581,30 +525,23 @@ def main():
 
     # --- Display Sections ---
 
-    # Per-Ticker Snapshot
     display_per_ticker_pnl(df_pnl)
     st.markdown("---")
 
-    # Portfolio Summary & Pie Chart
     display_portfolio_summary(df_pnl)
     st.markdown("---")
 
-    # Time Series Data Preparation (used by PnL Over Time and Advanced Metrics)
     combined_df = prepare_pnl_time_series(prices, quantities)
 
-    # Portfolio PnL Over Time
     display_pnl_over_time(combined_df)
     st.markdown("---")
 
-    # Sector Allocation
     display_sector_allocation(df_pnl)
     st.markdown("---")
 
-    # Advanced Metrics
     display_advanced_metrics(combined_df)
     st.markdown("---")
 
-    # Export Table
     display_export_table(combined_df)
 
     # Credits and Navigation
@@ -614,7 +551,6 @@ def main():
         unsafe_allow_html=True
     )
     st.caption("Built using Streamlit and Python.")
-    # Use st.switch_page for proper navigation
     if st.button("Go back to Main Dashboard"):
         st.switch_page("main.py")
 
