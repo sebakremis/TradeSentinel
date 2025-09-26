@@ -6,13 +6,40 @@ import altair as alt
 
 from src.dashboard_manager import load_all_prices, get_all_prices_cached, calculate_all_indicators
 from src.tickers_manager import load_followed_tickers, add_ticker, remove_ticker, TickerValidationError
-
 from src.sim_portfolio import calculate_portfolio
 
 # Global constants
 EMA_FAST_PERIOD = 20
 EMA_SLOW_PERIOD = 50
 DISPLAY_COLUMNS = ['Ticker', 'Close', 'Change %', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio', 'Trend', 'Highest Close', 'Distance HC' ] 
+
+# --- UI Callback Functions ---
+# Function to be used as the button callback
+def handle_add_ticker_click():
+    # Retrieve the ticker value from session state
+    new_ticker = st.session_state.add_ticker_input.upper().strip()
+        
+    if not new_ticker:
+        st.warning("Please enter a ticker symbol to add.")
+        return # Do not proceed or rerun
+        
+    try:
+        # 1. Attempt to add the ticker
+        add_ticker(new_ticker) 
+            
+        # 2. On success, clear the input value in state
+        st.session_state['add_ticker_input'] = ""
+        st.success(f"✅ Added ticker {new_ticker}")
+
+        # 3. Rerun the script to reflect the new ticker list and clear messages
+        st.rerun() 
+            
+    except TickerValidationError as e:
+        st.error(f"❌ {e}")
+        
+    except Exception as e:
+        st.error(f"❌ An unexpected error occurred: {e}")
+
 
 def main():
     st.set_page_config(layout="wide")
@@ -132,35 +159,33 @@ def main():
     else:
         st.info("No followed tickers. Please add tickers to follow.")
     
-    # Buttons section  
-    new_ticker = st.text_input("Enter Ticker Symbol to Add", max_chars=5, key='add_ticker_input').upper().strip()
-    if st.button("Add Ticker", key='add_button'):
-        if new_ticker:
-            try:
-                add_ticker(new_ticker)
-                st.success(f"✅ Added ticker {new_ticker}")
-                st.session_state['add_ticker_input'] = ""
-            except TickerValidationError as e:
-                st.error(f"❌ {e}")
-            except Exception as e:
-                st.error(f"❌ An unexpected error occurred: {e}")
-            st.rerun()
-        else:
-            st.warning("Please enter a ticker symbol to add.")
-
-    ticker_list_to_remove = tickers_df['Ticker'].tolist()
-    rem_ticker_select = st.selectbox("Select Ticker Symbol to Remove", options=ticker_list_to_remove, key='rem_ticker_select')
+    # Buttons section for adding/removing tickers
+    add_column, remove_column = st.columns(2)
+    with add_column: 
+        # The text input is defined with its key
+        st.text_input("Enter Ticker Symbol to Add", max_chars=5, key='add_ticker_input')
         
-    if st.button("Remove Selected Ticker", key='remove_button'):
-        if rem_ticker_select:
-            try:
-                remove_ticker(rem_ticker_select)
-                st.success(f"✅ Removed ticker {rem_ticker_select}")
-            except Exception as e:
-                st.error(f"❌ An error occurred while removing ticker: {e}")
-        else:
-            st.warning("Please select a ticker to remove.")
-        st.rerun()
+        # The button uses the on_click callback
+        st.button(
+            "Add Ticker", 
+            key='add_button',
+            on_click=handle_add_ticker_click
+        )
+
+    with remove_column:
+        ticker_list_to_remove = tickers_df['Ticker'].tolist()
+        rem_ticker_select = st.selectbox("Select Ticker Symbol to Remove", options=ticker_list_to_remove, key='rem_ticker_select')
+            
+        if st.button("Remove Selected Ticker", key='remove_button'):
+            if rem_ticker_select:
+                try:
+                    remove_ticker(rem_ticker_select)
+                    # st.success(f"✅ Removed ticker {rem_ticker_select}")
+                except Exception as e:
+                    st.error(f"❌ An error occurred while removing ticker: {e}")
+            else:
+                st.warning("Please select a ticker to remove.")
+            st.rerun()
     
     st.markdown("---")
     st.markdown("### Update Prices")
