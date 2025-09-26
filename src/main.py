@@ -4,8 +4,8 @@ import pandas as pd
 import numpy as np
 import altair as alt
 
-from src.dashboard_manager import load_all_prices, get_all_prices_cached, calculate_all_indicators
-from src.tickers_manager import load_followed_tickers, add_ticker, remove_ticker, TickerValidationError
+from src.dashboard_manager import get_all_prices_cached, calculate_all_indicators
+from src.tickers_manager import load_followed_tickers, add_ticker, TickerValidationError
 from src.sim_portfolio import calculate_portfolio
 
 # Global constants
@@ -14,14 +14,14 @@ EMA_SLOW_PERIOD = 50
 DISPLAY_COLUMNS = ['Ticker', 'Close', 'Change %', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio', 'Trend', 'Highest Close', 'Distance HC' ] 
 
 # --- UI Callback Functions ---
-# Function to be used as the button callback
 def handle_add_ticker_click():
+    """Callback function to handle adding a new ticker symbol."""
     # Retrieve the ticker value from session state
     new_ticker = st.session_state.add_ticker_input.upper().strip()
         
     if not new_ticker:
         st.warning("Please enter a ticker symbol to add.")
-        return # Do not proceed or rerun
+        return 
         
     try:
         # 1. Attempt to add the ticker
@@ -40,11 +40,41 @@ def handle_add_ticker_click():
     except Exception as e:
         st.error(f"❌ An unexpected error occurred: {e}")
 
+# --- Helper Function for Data Formatting (NEW) ---
+def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Applies rounding and ensures selected columns are present for display.
+    Expects a DataFrame with aggregated financial indicators (one row per ticker).
+    """
+    df = final_df.copy()
 
+    # Ensure all DISPLAY_COLUMNS are present, filling missing with NaN
+    for col in DISPLAY_COLUMNS:
+        if col not in df.columns:
+            df[col] = np.nan
+    
+    # Select only the display columns
+    df = df[DISPLAY_COLUMNS]
+
+    # Apply rounding
+    if 'Close' in df.columns:
+        df['Close'] = df['Close'].round(2)
+    if 'Highest Close' in df.columns:
+        df['Highest Close'] = df['Highest Close'].round(2)
+    
+    # Rounding percentage/ratio columns (assuming they are floats)
+    for col in ['Distance HC', 'Change %', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']:
+        if col in df.columns:
+            df[col] = df[col].round(2)
+            
+    return df
+
+
+# --- Main Function ---
 def main():
     st.set_page_config(layout="wide")
     st.title("📊 TradeSentinel: Main Dashboard")
-  
+    
     tickers_df = load_followed_tickers()
     followed_tickers = tickers_df['Ticker'].tolist() if not tickers_df.empty else []
 
@@ -55,26 +85,15 @@ def main():
     )
 
     if not df_daily.empty:
-
+        # 1. Calculate indicators
         df_daily = calculate_all_indicators(df_daily, EMA_FAST_PERIOD, EMA_SLOW_PERIOD)
         
-        final_df = df_daily.groupby('Ticker').tail(1).copy()
+        # 2. Get the latest snapshot (one row per ticker)
+        final_df_unformatted = df_daily.groupby('Ticker').tail(1).copy()
         
-        # Ensure all DISPLAY_COLUMNS are present
-        for col in DISPLAY_COLUMNS:
-            if col not in final_df.columns:
-                final_df[col] = np.nan
+        # 3. Format the data for display using the new helper function
+        final_df = _format_final_df(final_df_unformatted)
         
-        
-        final_df = final_df[DISPLAY_COLUMNS].copy()
-        
-        final_df['Close'] = final_df['Close'].round(2)
-        final_df['Highest Close'] = final_df['Highest Close'].round(2)
-        final_df['Distance HC'] = final_df['Distance HC'].round(2)
-        final_df['Change %'] = final_df['Change %'].round(2)
-        final_df['Avg Return'] = final_df['Avg Return'].round(2)
-        final_df['Annualized Vol'] = final_df['Annualized Vol'].round(2)
-        final_df['Sharpe Ratio'] = final_df['Sharpe Ratio'].round(2)
         
         # --- RISK-RETURN SCATTER PLOT ---
         st.subheader("Followed Tickers Overview")
@@ -135,7 +154,7 @@ def main():
         st.info("No data found. Click 'Update Prices' to fetch data.")
     st.markdown("Select tickers to simulate a $100 k **equally-weighted portfolio**.")
     
-            
+    
     st.markdown("---")
     st.subheader("Tickers Management")
     tickers_df = load_followed_tickers()
@@ -180,7 +199,7 @@ def main():
             if rem_ticker_select:
                 try:
                     remove_ticker(rem_ticker_select)
-                    # st.success(f"✅ Removed ticker {rem_ticker_select}")
+                    st.success(f"✅ Removed ticker {rem_ticker_select}") # Added success message
                 except Exception as e:
                     st.error(f"❌ An error occurred while removing ticker: {e}")
             else:
@@ -201,17 +220,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
