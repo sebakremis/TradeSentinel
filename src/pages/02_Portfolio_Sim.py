@@ -133,7 +133,7 @@ def setup_sidebar_controls():
         display_period = period_input
 
     st.sidebar.markdown(f"**Lookback period:** `{display_period}`")
-    st.sidebar.markdown(f"**Fixed Interval:** `{FIXED_INTERVAL}` (Daily prices)")
+    st.sidebar.markdown(f"**Fixed Interval:** `{FIXED_INTERVAL}`")
     interval_input = FIXED_INTERVAL
     
     refresh = st.sidebar.button("Refresh Data")
