@@ -12,7 +12,7 @@ from src.sim_portfolio import calculate_portfolio
 # Global constants
 EMA_FAST_PERIOD = 20
 EMA_SLOW_PERIOD = 50
-DISPLAY_COLUMNS = ['Ticker', 'Close', 'Change %', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio', 'Trend', 'Highest Close', 'Distance HC' ] 
+DISPLAY_COLUMNS = DISPLAY_COLUMNS = ['Ticker', 'Close', 'Change %', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio', 'Trend', 'Highest Close', 'Lowest Close', 'Distance HC' ]
 
 # ----------------------------------------------------------------------
 # --- UI Callback Functions ---

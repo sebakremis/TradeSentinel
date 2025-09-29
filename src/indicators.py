@@ -208,3 +208,58 @@ def calculate_annualized_metrics(df: pd.DataFrame) -> pd.DataFrame:
     final_metrics_df = pd.merge(latest_dates, annual_metrics_df, on='Ticker')
     
     return final_metrics_df
+
+def calculate_extreme_closes(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculates the Highest and Lowest Closing Price for the entire lookback period 
+    and merges the results onto every row of the input DataFrame (per Ticker).
+
+    Args:
+        df (pd.DataFrame): The full historical daily DataFrame, including 'Ticker' and 'Close'.
+
+    Returns:
+        pd.DataFrame: The original DataFrame with the new 'Highest Close' and 'Lowest Close' columns.
+    """
+    
+    # Calculate Highest/Lowest Close for the entire lookback period per Ticker
+    extreme_prices = df.groupby('Ticker')['Close'].agg(
+        highest_close='max',
+        lowest_close='min'
+    ).reset_index()
+    
+    # Merge these values back onto the main DataFrame using 'Ticker'
+    df = pd.merge(
+        df,
+        extreme_prices,
+        on='Ticker',
+        how='left'
+    )
+    
+    # Rename columns to match desired output
+    df.rename(columns={
+        'highest_close': 'Highest Close',
+        'lowest_close': 'Lowest Close'
+    }, inplace=True)
+    
+    return df
+
+def calculate_distance_highest_close(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculates the percentage distance from the current price to the Highest Close.
+    
+    NOTE: Assumes 'Highest Close' has already been calculated and merged onto df.
+
+    Args:
+        df (pd.DataFrame): The full historical daily DataFrame, with 'Close' and 'Highest Close'.
+
+    Returns:
+        pd.DataFrame: The original DataFrame with the new 'Distance HC' column.
+    """
+    
+    # Formula: (Current Close - Highest Close) / Highest Close * 100
+    # The result will be negative or zero.
+    df['Distance HC'] = (
+        (df['Close'] - df['Highest Close']) / df['Highest Close']
+    ) * 100
+    
+    return df

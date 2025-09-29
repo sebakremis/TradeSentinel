@@ -6,7 +6,7 @@ from log_utils import info, warn, error
 
 from src.database_manager import save_prices_to_db, load_prices_from_db
 from src.config import MAIN_DB_NAME, DATA_DIR
-from src.indicators import calculate_price_change, ema, trend, highest_close, distance_highest_close, calculate_annualized_metrics
+from src.indicators import calculate_price_change, ema, trend, calculate_annualized_metrics, calculate_extreme_closes, calculate_distance_highest_close
 
 # The database name is now a constant imported from database_manager
 DB_NAME = MAIN_DB_NAME
@@ -96,8 +96,11 @@ def calculate_all_indicators(df_daily, fast_n, slow_n)-> pd.DataFrame:
     df_daily = calculate_price_change(df_daily)
     df_daily = trend(df_daily, fast_n, slow_n)
     df_daily = ema(df_daily, fast_n)
-    df_daily = highest_close(df_daily)
-    df_daily = distance_highest_close(df_daily)
+    
+    # 🚨 UPDATED: Call the new extreme price function
+    df_daily = calculate_extreme_closes(df_daily) 
+    # 🚨 UPDATED: Call the new distance function
+    df_daily = calculate_distance_highest_close(df_daily) 
 
     # 3. Calculate Annualized Metrics (uses the full data slice per ticker)
     # The 'Ticker' column is crucial here for the groupby in the metrics function.
@@ -106,7 +109,7 @@ def calculate_all_indicators(df_daily, fast_n, slow_n)-> pd.DataFrame:
     # 4. Merge the new performance metrics back into the main DataFrame
     # Note: Annual metrics are calculated on the whole period, so they only exist
     # for the last observation (the snapshot).
-     # Use the 'Date' from the annual_metrics_df to join onto the main daily data
+    # Use the 'Date' from the annual_metrics_df to join onto the main daily data
     # (Since annual_metrics_df only contains the final, latest date per ticker).
     df_daily = pd.merge(
         df_daily, 
