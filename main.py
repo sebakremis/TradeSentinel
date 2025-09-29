@@ -222,17 +222,17 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         hide_index=True,
         width='stretch',
         column_config={
-            "Ticker": st.column_config.TextColumn("Ticker"),
+            "Ticker": st.column_config.TextColumn("Ticker", width="small"),
             "Sector": st.column_config.TextColumn("Sector"),
             "Close": st.column_config.NumberColumn("Last Price", format="%.2f"),
             # NEW COLUMN CONFIGURATION FOR DIVIDEND:
             "Dividend": st.column_config.NumberColumn("Dividend Payout", help="Total dividends received during the lookback period.", format="$%.2f"),
             # Set the display name to "Daily Change":
-            "Change %": st.column_config.NumberColumn("Daily Change", format="%.2f%%"),
+            "Change %": st.column_config.NumberColumn("Daily Change", format="%.2f%%", width="small"),
             "Avg Return": st.column_config.NumberColumn("Avg Return", format="%.2f%%"),
             "Annualized Vol": st.column_config.NumberColumn("Annualized Vol", format="%.2f%%"),
             "Sharpe Ratio": st.column_config.NumberColumn("Sharpe Ratio", format="%.2f%%"),
-            "Trend": st.column_config.TextColumn("Trend"),
+            "Trend": st.column_config.TextColumn("Trend", width="small"),
             "Highest Close": st.column_config.NumberColumn("Highest Close", format="%.2f"),
             "Select": st.column_config.CheckboxColumn("Select", default=False)
         },
