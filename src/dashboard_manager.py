@@ -2,6 +2,8 @@
 import streamlit as st
 import pandas as pd
 import yfinance as yf
+# New imports for concurrent processing
+from concurrent.futures import ThreadPoolExecutor, as_completed 
 from log_utils import info, warn, error
 
 from src.database_manager import save_prices_to_db, load_prices_from_db
@@ -16,8 +18,8 @@ def load_all_prices() -> pd.DataFrame:
     return load_prices_from_db(MAIN_DB_NAME)
 
 @st.cache_data(ttl=3600)
-# 🚨 UPDATED SIGNATURE: make period, start, and end optional
-def get_all_prices_cached(tickers: list, interval: str, period: str = None, start: str = None, end: str = None) -> pd.DataFrame:
+# UPDATED SIGNATURE: make period, start, and end optional
+def get_all_prices_cached(tickers: list, interval: str, cache_version_key=None, period: str = None, start: str = None, end: str = None) -> pd.DataFrame:
     """
     Fetches and caches all ticker data from yfinance and returns a single DataFrame.
     
@@ -29,12 +31,13 @@ def get_all_prices_cached(tickers: list, interval: str, period: str = None, star
         warn("No tickers provided for fetching.")
         return pd.DataFrame()
 
-    # 🚨 START OF LOGIC TO DETERMINE YFINANCE ARGUMENTS
+    # START OF LOGIC TO DETERMINE YFINANCE ARGUMENTS
     yfinance_kwargs = {
         'tickers': tickers,
         'interval': interval,
         'group_by': 'ticker',
-        'auto_adjust': True,
+        # Keep auto_adjust=False to maintain raw data columns just in case
+        'auto_adjust': False, 
         'threads': True,
         'progress': False
     }
@@ -53,10 +56,10 @@ def get_all_prices_cached(tickers: list, interval: str, period: str = None, star
         # Default fallback (e.g., if no time constraint was specified)
         warn("No period or start date specified. Defaulting to '1y' period.")
         yfinance_kwargs['period'] = '1y'
-    # 🚨 END OF LOGIC TO DETERMINE YFINANCE ARGUMENTS
+    # END OF LOGIC TO DETERMINE YFINANCE ARGUMENTS
 
     try:
-        # 🚨 Use the dynamically created yfinance_kwargs dictionary
+        # Use the dynamically created yfinance_kwargs dictionary to fetch price data
         data = yf.download(**yfinance_kwargs)
     except Exception as e:
         error(f"Error fetching data from yfinance: {e}")
@@ -79,7 +82,6 @@ def get_all_prices_cached(tickers: list, interval: str, period: str = None, star
                 df_list.append(df)
     else:
         # Single-ticker case
-        # This occurs if only one ticker was requested
         df = data.copy().reset_index()
         df['Ticker'] = tickers[0]
         df_list.append(df)
@@ -90,7 +92,7 @@ def get_all_prices_cached(tickers: list, interval: str, period: str = None, star
 
     combined_df = pd.concat(df_list, ignore_index=True)
 
-    # **Crucial Fix:** Standardize the 'Date' or 'index' column to 'Datetime'
+    # Crucial Fix: Standardize the 'Date' or 'index' column to 'Datetime'
     if 'Date' in combined_df.columns:
         combined_df.rename(columns={'Date': 'Datetime'}, inplace=True)
     elif 'index' in combined_df.columns:
@@ -102,13 +104,90 @@ def get_all_prices_cached(tickers: list, interval: str, period: str = None, star
         combined_df['Time'] = combined_df['Datetime'].dt.time
         combined_df.drop(columns=['Datetime'], inplace=True)
         
-        # Ensure only the 'Close' column from the auto_adjust data is kept
+        # FIX: Preserve the adjusted close price and ensure only one 'Close' column exists.
         if 'Adj Close' in combined_df.columns:
-            combined_df.rename(columns={'Adj Close': 'Close'}, inplace=True)
-        
-        # Drop other unnecessary columns often returned by yfinance
-        combined_df.drop(columns=[col for col in ['Open', 'High', 'Low', 'Volume'] if col in combined_df.columns], inplace=True, errors='ignore')
+            # 1. Temporarily store the adjusted price.
+            combined_df['Close_Adjusted_Temp'] = combined_df['Adj Close']
+            
+            # 2. Drop all redundant price columns returned by yfinance (raw Close, Adj Close, etc.)
+            cols_to_drop = ['Open', 'High', 'Low', 'Volume', 'Close', 'Adj Close']
+            combined_df.drop(columns=[col for col in cols_to_drop if col in combined_df.columns], inplace=True, errors='ignore')
+            
+            # 3. Rename the temporary column to the required 'Close' column.
+            combined_df.rename(columns={'Close_Adjusted_Temp': 'Close'}, inplace=True)
 
+        # --- NEW ROBUST DIVIDEND FETCHING LOGIC (Optimized for Speed) ---
+        info(f"Fetching dividend history separately for {len(tickers)} tickers in parallel...")
+        dividend_dfs = []
+        
+        def fetch_ticker_actions(ticker):
+            """Helper function to fetch actions for a single ticker."""
+            try:
+                # Fetch full historical actions (Dividends and Splits)
+                actions_df = yf.Ticker(ticker).actions
+                
+                # Filter for only positive dividend events
+                if 'Dividends' in actions_df.columns and not actions_df.empty:
+                    dividends_only = actions_df[['Dividends']].loc[actions_df['Dividends'] > 0]
+                    dividends_only = dividends_only.reset_index()
+                    dividends_only.rename(columns={'Date': 'Dividend_Date'}, inplace=True)
+                    dividends_only['Ticker'] = ticker
+                    return dividends_only
+            except Exception as e:
+                warn(f"Could not fetch actions for {ticker} concurrently: {e}")
+            return None
+        
+        # Use ThreadPoolExecutor to fetch data concurrently
+        with ThreadPoolExecutor(max_workers=min(10, len(tickers))) as executor:
+            # Submit all fetch tasks
+            futures = [executor.submit(fetch_ticker_actions, ticker) for ticker in tickers]
+            
+            # Process results as they complete
+            for future in as_completed(futures):
+                result_df = future.result()
+                if result_df is not None:
+                    dividend_dfs.append(result_df)
+
+        if dividend_dfs:
+            dividends_combined = pd.concat(dividend_dfs, ignore_index=True)
+            # Standardize Dividend_Date to match main data's 'Date' format (date object)
+            dividends_combined['Date'] = dividends_combined['Dividend_Date'].dt.date
+            dividends_combined.drop(columns=['Dividend_Date'], inplace=True)
+            
+            # Merge dividends into the main combined_df using Ticker and Date
+            combined_df = pd.merge(
+                combined_df, 
+                dividends_combined[['Ticker', 'Date', 'Dividends']], 
+                on=['Ticker', 'Date'], 
+                how='left'
+            )
+            info("Successfully merged dividend data.")
+        else:
+            info("No dividend data found via Ticker().actions for selected tickers.")
+
+        # FINAL DIVIDEND CLEANUP
+        # Ensure the 'Dividends' column exists (it might not if no data was merged)
+        if 'Dividends' not in combined_df.columns:
+             combined_df['Dividends'] = 0.0
+             warn("No dividend data found in any format. Initializing 'Dividends' to 0.0.")
+        
+        # Fill NaNs (where no dividend was paid on a given day) with 0.
+        combined_df['Dividends'] = combined_df['Dividends'].fillna(0).astype(float)
+        
+        # Log status
+        dividend_sum = combined_df['Dividends'].sum()
+        if dividend_sum == 0.0 and not combined_df.empty:
+            warn(f"Total summed dividends across ALL data is 0.0. Please verify the period/tickers pay dividends.")
+        else:
+            info(f"SUCCESS: Total dividend payments detected: {dividend_sum:.2f}")
+        # --- END OF NEW ROBUST DIVIDEND FETCHING LOGIC ---
+
+
+        # Drop any remaining unnecessary columns (Open, High, Low, Volume)
+        # Note: 'Close' must exist at this point.
+        combined_df.drop(columns=[col for col in ['Open', 'High', 'Low', 'Volume'] if col in combined_df.columns and col != 'Dividends'], inplace=True, errors='ignore')
+
+        
     else:
         # This case should now be impossible, but it's a good fail-safe
         error("The 'Datetime' column was not found after renaming. Data processing failed.")
@@ -116,7 +195,7 @@ def get_all_prices_cached(tickers: list, interval: str, period: str = None, star
 
     # Save the finalized DataFrame to the main dashboard database
     save_prices_to_db(combined_df, MAIN_DB_NAME)
-    info("✅ Data fetched and saved to database.")
+    info("SUCCESS: Data fetched and saved to database.")
 
     # Return the combined DataFrame for use in the dashboard
     return combined_df          
@@ -136,9 +215,9 @@ def calculate_all_indicators(df_daily, fast_n, slow_n)-> pd.DataFrame:
     df_daily = trend(df_daily, fast_n, slow_n)
     df_daily = ema(df_daily, fast_n)
     
-    # 🚨 UPDATED: Call the new extreme price function
+    # UPDATED: Call the new extreme price function
     df_daily = calculate_extreme_closes(df_daily) 
-    # 🚨 UPDATED: Call the new distance function
+    # UPDATED: Call the new distance function
     df_daily = calculate_distance_highest_close(df_daily) 
 
     # 3. Calculate Annualized Metrics (uses the full data slice per ticker)
@@ -159,11 +238,3 @@ def calculate_all_indicators(df_daily, fast_n, slow_n)-> pd.DataFrame:
     
     # 5. Return the enriched DataFrame
     return df_daily
-
-
-
-
-
-
-
-
