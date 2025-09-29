@@ -1,26 +1,44 @@
 # src/sim_portfolio.py
 import pandas as pd
 
-def calculate_portfolio(selected_tickers, df, portfolio_size):
+def calculate_portfolio(selected_tickers, df_full_data, portfolio_size):
     """
-    Calculates an equally weighted portfolio for the selected tickers
-    and returns a list of (Ticker, Shares) tuples.
+    Calculates an equally weighted portfolio for the selected tickers,
+    using the first available price from the lookback period to determine shares.
+    
+    Args:
+        selected_tickers (list): List of ticker symbols selected by the user.
+        df_full_data (pd.DataFrame): The full historical daily DataFrame (df_daily) 
+                                     containing 'Ticker' and 'Close' prices.
+        portfolio_size (float/int): The total amount of investment capital.
+        
+    Returns:
+        list: A list of (Ticker, Shares) tuples.
     """
     if not selected_tickers:
         return []
 
-    # Filter the DataFrame to include only the selected tickers
-    portfolio_df = df[df['Ticker'].isin(selected_tickers)].copy()
+    # 1. Filter the DataFrame to include only the selected tickers
+    portfolio_df = df_full_data[df_full_data['Ticker'].isin(selected_tickers)].copy()
+
+    # 2. Get the *first* price for each ticker in the lookback period
+    # Group by Ticker and select the first 'Close' price (which corresponds to 
+    # the oldest date fetched for the selected period).
+    first_prices = portfolio_df.groupby('Ticker')['Close'].first().reset_index(name='Starting_Price')
     
-    # Calculate investment per ticker
-    num_tickers = len(portfolio_df)
+    # Check if we have prices for all selected tickers (should match num_tickers)
+    if first_prices.empty:
+         return []
+    
+    # 3. Calculate investment per ticker
+    num_tickers = len(first_prices)
     investment_per_ticker = portfolio_size / num_tickers
     
-    # Calculate shares for each ticker
-    portfolio_df['Shares'] = round(investment_per_ticker / portfolio_df['Close'])
+    # 4. Calculate shares for each ticker
+    first_prices['Shares'] = round(investment_per_ticker / first_prices['Starting_Price'])
     
-    # Create the list of (Ticker, Shares) tuples
-    portfolio_list = list(zip(portfolio_df['Ticker'], portfolio_df['Shares']))
+    # 5. Create the list of (Ticker, Shares) tuples
+    portfolio_list = list(zip(first_prices['Ticker'], first_prices['Shares']))
     
     return portfolio_list
 

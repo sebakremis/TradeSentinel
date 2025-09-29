@@ -70,10 +70,10 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
             
     return df
 
-def _load_and_process_data(Period= "1d") -> (pd.DataFrame, list):
+def _load_and_process_data(Period= "1d") -> (pd.DataFrame, pd.DataFrame, list): # 🚨 NEW: Added df_daily to return
     """
     Loads followed tickers, fetches price data, applies indicators, 
-    and returns the final formatted DataFrame snapshot.
+    and returns the final formatted DataFrame snapshot AND the full daily data.
     """
     tickers_df = load_followed_tickers()
     followed_tickers = tickers_df['Ticker'].tolist() if not tickers_df.empty else []
@@ -85,10 +85,12 @@ def _load_and_process_data(Period= "1d") -> (pd.DataFrame, list):
     )
 
     if df_daily.empty:
-        return pd.DataFrame(), followed_tickers # Return empty DF and list
+        # 🚨 NEW: Return two empty DataFrames
+        return pd.DataFrame(), pd.DataFrame(), followed_tickers 
 
-    # 1. Calculate indicators
-    df_daily = calculate_all_indicators(df_daily, EMA_FAST_PERIOD, EMA_SLOW_PERIOD)
+    # 1. Calculate indicators (operates on the full df_daily)
+    # Ensure this function also returns the full, enriched df_daily
+    df_daily = calculate_all_indicators(df_daily, EMA_FAST_PERIOD, EMA_SLOW_PERIOD) 
     
     # 2. Get the latest snapshot (one row per ticker)
     final_df_unformatted = df_daily.groupby('Ticker').tail(1).copy()
@@ -96,7 +98,8 @@ def _load_and_process_data(Period= "1d") -> (pd.DataFrame, list):
     # 3. Format the data for display
     final_df = _format_final_df(final_df_unformatted)
     
-    return final_df, followed_tickers
+    # 🚨 NEW: Return both the snapshot (final_df) and the full daily data (df_daily)
+    return final_df, df_daily, followed_tickers 
 
 
 # ----------------------------------------------------------------------
@@ -123,9 +126,10 @@ def _render_overview_section(final_df: pd.DataFrame):
         st.warning("Cannot generate risk-return plot. Ensure tickers are selected and data is loaded.")
 
 
-def _render_summary_table_and_portfolio(final_df: pd.DataFrame):
+def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.DataFrame):
     """Renders the summary table and portfolio simulation controls."""
     st.subheader("Summary Table")
+
     
     if final_df.empty:
         st.info("No data available to display in the summary table.")
@@ -161,7 +165,8 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame):
     if st.button("Simulate Portfolio", disabled=not selected_tickers):
         if selected_tickers:
             total_investment = 100000
-            portfolio_tuples = calculate_portfolio(selected_tickers, final_df, total_investment)
+            # 🚨 NEW: Pass the full daily data to the calculation function
+            portfolio_tuples = calculate_portfolio(selected_tickers, df_daily, total_investment)
             st.session_state['portfolio'] = portfolio_tuples
             st.switch_page("pages/02_Portfolio_Sim.py")
         else:
@@ -254,12 +259,12 @@ def main():
     # Pass the selected period to the data processing function
     
     # Load and process all data required for the main display
-    final_df, followed_tickers = _load_and_process_data(Period=selected_period)
+    final_df, df_daily, followed_tickers = _load_and_process_data(Period=selected_period) # 🚨 NEW: Capture df_daily as well
 
     if not final_df.empty:
         # Render the display sections if data is present
         _render_overview_section(final_df)
-        _render_summary_table_and_portfolio(final_df)
+        _render_summary_table_and_portfolio(final_df, df_daily) # 🚨 NEW: Pass df_daily to the summary table function
     else:
         st.info("No data found. Add a ticker using the management controls below and click 'Update Prices' to fetch data.")
         
