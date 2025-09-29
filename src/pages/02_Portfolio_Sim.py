@@ -1,6 +1,6 @@
-# pages/02_Portfolio_Sim.py
 import streamlit as st
 import pandas as pd
+import datetime # Import required for date inputs
 
 from src.portfolio_calculations import calculate_pnl_data, prepare_pnl_time_series
 from src.data_fetching import get_portfolio_data_cached
@@ -64,16 +64,76 @@ def setup_sidebar_controls():
 
     # --- Fixed Parameters and Period Selection ---
     FIXED_INTERVAL = "1d"
-    PERIOD_OPTIONS = ["1mo", "3mo", "6mo", "ytd", "1y", "2y", "5y"]
+    AVAILABLE_PERIODS = ["1mo", "3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
+
+    # Get the period from the main dashboard's session state (initial/default)
+    initial_period_arg = st.session_state.get('main_dashboard_period_arg', '1y') 
     
-    period_input = st.sidebar.selectbox(
-        "Lookback Period", 
-        PERIOD_OPTIONS, 
-        index=PERIOD_OPTIONS.index("1y"), 
-        key="active_period_input"
+    # Determine which value should be selected by default in the selectbox
+    if '|' in initial_period_arg:
+        default_select_value = "Custom Date"
+    elif initial_period_arg in AVAILABLE_PERIODS:
+        default_select_value = initial_period_arg
+    else:
+        default_select_value = "1y" # Final fallback
+
+    # st.sidebar.subheader("Lookback Period")
+    
+    # Selectbox allows overriding the period passed from the main dashboard
+    selected_override = st.sidebar.selectbox(
+        "Modify lookback period", 
+        options=AVAILABLE_PERIODS, 
+        index=AVAILABLE_PERIODS.index(default_select_value),
+        key='portfolio_period_override_select'
     )
 
-    st.sidebar.markdown(f"**Interval:** `{FIXED_INTERVAL}` (Daily)")
+    period_input = selected_override # Start with the selected value
+    
+    # Handle Custom Date Selection
+    if selected_override == "Custom Date":
+        today = pd.Timestamp.now().normalize().date()
+        
+        # Initialize default dates for the custom picker based on initial_period_arg
+        default_end_date = today
+        default_start_date = today - pd.DateOffset(years=1)
+        
+        if '|' in initial_period_arg:
+            try:
+                # Try to use the date range passed from main.py as the default
+                default_start_str, default_end_str = initial_period_arg.split('|')
+                default_start_date = pd.to_datetime(default_start_str).date()
+                default_end_date = pd.to_datetime(default_end_str).date()
+            except Exception:
+                # If parsing fails, stick to 1-year default
+                pass
+
+        custom_start_date = st.sidebar.date_input(
+            "Start Date", 
+            value=default_start_date,
+            max_value=default_end_date,
+            key='custom_start_date_sim'
+        )
+        
+        custom_end_date = st.sidebar.date_input(
+            "End Date", 
+            value=default_end_date,
+            min_value=custom_start_date, 
+            max_value=today,
+            key='custom_end_date_sim'
+        )
+
+        # Set the period_input to the custom date string format
+        period_input = f"{custom_start_date}|{custom_end_date}"
+
+    # Display the final period argument being used
+    if '|' in period_input:
+        start_date, end_date = period_input.split('|')
+        display_period = f"Custom: {start_date} to {end_date}"
+    else:
+        display_period = period_input
+
+    st.sidebar.markdown(f"**Lookback period:** `{display_period}`")
+    st.sidebar.markdown(f"**Fixed Interval:** `{FIXED_INTERVAL}` (Daily prices)")
     interval_input = FIXED_INTERVAL
     
     refresh = st.sidebar.button("Refresh Data")
@@ -82,7 +142,6 @@ def setup_sidebar_controls():
     if refresh:
         
         # Defensive Data Cleaning: Convert the entire DataFrame to strings first.
-        # This prevents TypeErrors from unexpected Streamlit/Pandas types.
         temp_df = portfolio_df.astype(str).copy()
         temp_df['Ticker'] = temp_df['Ticker'].str.strip()
         temp_df['Quantity'] = temp_df['Quantity'].str.strip()
@@ -101,14 +160,13 @@ def setup_sidebar_controls():
         invalid_tickers = [t for t in tickers_input if not t or not t.replace('.', '').isalnum()]
         
         # Robust Quantity Conversion and Validation
-        # Coerce the string column to numeric, setting any non-numeric value (like 'nan', 'abc', or empty string) to NaN
         quantities_numeric = pd.to_numeric(clean_df["Quantity"], errors='coerce')
 
         invalid_quantities_found = False
         quantities_clean = []
         
         for q in quantities_numeric:
-            # Check 1: Must be a valid number (i.e., not NaN after coercion)
+            # Check 1: Must be a valid number
             if pd.isna(q):
                 invalid_quantities_found = True
                 break
@@ -118,8 +176,7 @@ def setup_sidebar_controls():
                 invalid_quantities_found = True
                 break
 
-            # Check 3: Must be a whole number (i.e., accept 100.0, reject 100.5)
-            # Use a small tolerance for floating point comparison for robustness
+            # Check 3: Must be a whole number 
             if abs(q - round(q)) < 1e-9: 
                 quantities_clean.append(int(round(q))) 
             else:
@@ -134,6 +191,7 @@ def setup_sidebar_controls():
         # Final commitment and rerun logic
         st.session_state.active_tickers = tickers_input
         st.session_state.active_quantities = dict(zip(tickers_input, quantities_clean))
+        # 🚨 Use the dynamically calculated period_input
         st.session_state.active_period = period_input
         st.session_state.active_interval = interval_input
         
@@ -166,12 +224,29 @@ def main():
     # Retrieve finalized parameters
     tickers = st.session_state.active_tickers
     quantities = st.session_state.active_quantities
-    period = st.session_state.active_period
+    period_arg = st.session_state.active_period # Renamed to period_arg for clarity
     interval = st.session_state.active_interval
 
+    # 🚨 FIX: Determine yfinance arguments based on the period_arg format
+    fetch_kwargs = {'interval': interval}
+    display_period = period_arg # Default display
+
+    if '|' in period_arg:
+        # Custom Date format found (e.g., '2025-09-10|2025-09-29')
+        start_date, end_date = period_arg.split('|')
+        fetch_kwargs['start'] = start_date
+        fetch_kwargs['end'] = end_date
+        # Display nicely for the user
+        display_period = f"Custom: {start_date} to {end_date}"
+    else:
+        # Preset Period format (e.g., '1y')
+        fetch_kwargs['period'] = period_arg
+        display_period = period_arg
+
     # 2. Load Data
-    with st.spinner(f"Loading daily market data for {len(tickers)} tickers over {period}..."):
-        prices = get_portfolio_data_cached(tickers, period=period, interval=interval)
+    with st.spinner(f"Loading daily market data for {len(tickers)} tickers over {display_period}..."):
+        # 🚨 Pass the dynamically created arguments using the ** operator
+        prices = get_portfolio_data_cached(tickers, **fetch_kwargs)
         st.session_state.data = prices
     
     if not prices:

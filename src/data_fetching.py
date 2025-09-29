@@ -19,29 +19,50 @@ def _get_sector(ticker: str) -> str:
     return sector
 
 @st.cache_data(ttl=3600)
-def get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dict:
+# 🚨 UPDATED SIGNATURE: Add 'start' and 'end' as optional keyword arguments
+def get_portfolio_data_cached(tickers: list, interval: str, period: str = None, start: str = None, end: str = None) -> dict:
     """
     Fetches historical data for portfolio tickers from yfinance.
-    Streamlit cache key is based on (tickers, period, interval).
-    Data is saved to the internal database for long-term storage.
     
-    The complex database pre-check is removed to ensure the Streamlit
-    cache key (which includes 'period') works correctly to get fresh data
-    for a new period.
+    It accepts either a 'period' string OR 'start' and 'end' date strings.
+    
+    Returns:
+        dict: A dictionary of DataFrames, keyed by ticker symbol.
     """
     
-    info(f"Fetching data from API for period={period}, interval={interval}...")
+    # 🚨 DYNAMIC KWARGS FOR yf.download
+    # Base arguments for yfinance
+    yf_kwargs = {
+        'tickers': tickers,
+        'interval': interval,
+        'group_by': 'ticker',
+        'auto_adjust': True,
+        'threads': True,
+        'progress': False
+    }
+
+    # Add time constraints based on provided arguments
+    if period:
+        # Scenario 1: Preset period (e.g., '1y') is provided
+        yf_kwargs['period'] = period
+        info(f"Fetching data from API for period={period}, interval={interval}...")
+    elif start:
+        # Scenario 2: Custom date(s) are provided
+        yf_kwargs['start'] = start
+        if end:
+            yf_kwargs['end'] = end
+            info(f"Fetching data from API for start={start} to end={end}, interval={interval}...")
+        else:
+            info(f"Fetching data from API starting at={start}, interval={interval}...")
+    else:
+        # Fallback if no time constraint is given (shouldn't happen with our frontend logic)
+        yf_kwargs['period'] = '1y'
+        info(f"Fetching data from API for default period=1y, interval={interval}...")
+        
     
     try:
-        raw_data = yf.download(
-            tickers=tickers,
-            period=period,
-            interval=interval,
-            group_by='ticker',
-            auto_adjust=True,
-            threads=True,
-            progress=False
-        )
+        # 🚨 Use the dynamically created yf_kwargs dictionary
+        raw_data = yf.download(**yf_kwargs)
     except Exception as e:
         st.error(f"Error fetching data from yfinance: {e}")
         return {}
@@ -58,19 +79,30 @@ def get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dict
     is_multi_ticker = isinstance(raw_data.columns, pd.MultiIndex)
     
     for ticker in tickers:
-        sector = _get_sector(ticker)
+        sector = _get_sector(ticker) # Assuming _get_sector is defined elsewhere
 
         df = None
         if is_multi_ticker:
             if (ticker, 'Close') in raw_data.columns:
                 df = raw_data[ticker].copy()
         else: # Single ticker case
+            # Check if this is the ticker requested, as raw_data is not MultiIndex
             if 'Close' in raw_data.columns and len(tickers) == 1 and tickers[0] == ticker:
                 df = raw_data.copy()
 
         if df is not None and 'Close' in df.columns:
             if not isinstance(df.index, pd.DatetimeIndex):
                 df.index = pd.to_datetime(df.index)
+
+            # Ensure 'Adj Close' is used if 'Close' is missing (or use 'Close' if present)
+            # Since auto_adjust=True, we rely on the remaining 'Close' column being the adjusted price.
+            # However, yfinance sometimes renames 'Adj Close' to 'Close' or returns both.
+            if 'Close' not in df.columns and 'Adj Close' in df.columns:
+                 df.rename(columns={'Adj Close': 'Close'}, inplace=True)
+
+            # Drop other columns (Open, High, Low, Volume) to keep data clean
+            df.drop(columns=[col for col in ['Open', 'High', 'Low', 'Volume', 'Adj Close'] if col in df.columns], 
+                    inplace=True, errors='ignore')
 
             df['Ticker'] = ticker
             df['Sector'] = sector # Add sector column
@@ -85,6 +117,6 @@ def get_portfolio_data_cached(tickers: list, period: str, interval: str) -> dict
 
     if all_data_for_db:
         combined_df = pd.concat(all_data_for_db, ignore_index=True)
-        save_prices_to_db(combined_df, DB_NAME)
+        save_prices_to_db(combined_df, DB_NAME) # Assuming save_prices_to_db is defined elsewhere
 
     return processed_prices
