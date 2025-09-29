@@ -2,7 +2,7 @@
 import yfinance as yf
 import pandas as pd
 import streamlit as st
-from log_utils import info, warn
+from src.log_utils import info, warn
 from src.database_manager import save_prices_to_db
 DB_NAME = 'portfolio_data.db'
 

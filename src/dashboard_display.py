@@ -6,7 +6,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import datetime as dt
 
-from metrics import (
+from src.metrics import (
     calculate_var, calculate_cvar, sharpe_ratio, sortino_ratio,
     calmar_ratio, max_drawdown, correlation_matrix, win_loss_stats
 )

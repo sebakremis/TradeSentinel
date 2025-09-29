@@ -4,7 +4,8 @@ import pandas as pd
 import yfinance as yf
 # New imports for concurrent processing
 from concurrent.futures import ThreadPoolExecutor, as_completed 
-from log_utils import info, warn, error
+from src.log_utils import info, warn, error
+
 
 from src.database_manager import save_prices_to_db, load_prices_from_db
 from src.config import MAIN_DB_NAME, DATA_DIR

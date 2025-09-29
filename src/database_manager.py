@@ -2,7 +2,7 @@
 import sqlite3
 import pandas as pd
 import os
-from log_utils import info, warn, error
+from src.log_utils import info, warn, error
 from src.config import DATA_DIR
 
 def init_db(db_name: str):
