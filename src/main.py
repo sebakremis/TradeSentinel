@@ -13,7 +13,7 @@ from src.sim_portfolio import calculate_portfolio
 EMA_FAST_PERIOD = 20
 EMA_SLOW_PERIOD = 50
 # 🚨 ADDED 'Dividend' to the display columns
-DISPLAY_COLUMNS = ['Ticker', 'Sector', 'Start Price', 'Close', 'Dividend', 'Change %', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio', 'Trend', 'Highest Close', 'Lowest Close']
+DISPLAY_COLUMNS = ['Ticker', 'Sector', 'Start Price', 'Close', 'Highest Close', 'Lowest Close', 'Dividend', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio',  'Change %', 'Trend']
 
 # ----------------------------------------------------------------------
 # --- UI Callback Functions ---
@@ -220,7 +220,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         column_config={
             "Ticker": st.column_config.TextColumn("Ticker"),
             "Sector": st.column_config.TextColumn("Sector"),
-            "Close": st.column_config.NumberColumn("Close", format="%.2f"),
+            "Close": st.column_config.NumberColumn("Last Price", format="%.2f"),
             # NEW COLUMN CONFIGURATION FOR DIVIDEND:
             "Dividend": st.column_config.NumberColumn("Dividend Payout", help="Total dividends received during the lookback period.", format="$%.2f"),
             # Set the display name to "Daily Change":
