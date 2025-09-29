@@ -16,19 +16,48 @@ def load_all_prices() -> pd.DataFrame:
     return load_prices_from_db(MAIN_DB_NAME)
 
 @st.cache_data(ttl=3600)
-def get_all_prices_cached(tickers: list, period: str, interval: str) -> pd.DataFrame:
-    """Fetches and caches all ticker data from yfinance and returns a single DataFrame."""
+# 🚨 UPDATED SIGNATURE: make period, start, and end optional
+def get_all_prices_cached(tickers: list, interval: str, period: str = None, start: str = None, end: str = None) -> pd.DataFrame:
+    """
+    Fetches and caches all ticker data from yfinance and returns a single DataFrame.
+    
+    It accepts either a 'period' string OR 'start' and 'end' date strings.
+    """
     info(f"Fetching data for {len(tickers)} tickers...")
+
+    if not tickers:
+        warn("No tickers provided for fetching.")
+        return pd.DataFrame()
+
+    # 🚨 START OF LOGIC TO DETERMINE YFINANCE ARGUMENTS
+    yfinance_kwargs = {
+        'tickers': tickers,
+        'interval': interval,
+        'group_by': 'ticker',
+        'auto_adjust': True,
+        'threads': True,
+        'progress': False
+    }
+
+    if period and not start and not end:
+        # Scenario 1: Preset period (e.g., '1y') is provided
+        yfinance_kwargs['period'] = period
+    elif start:
+        # Scenario 2: Custom date(s) are provided
+        yfinance_kwargs['start'] = start
+        if end:
+            yfinance_kwargs['end'] = end
+        # Ensure 'period' is not passed if 'start' is used
+        yfinance_kwargs.pop('period', None)
+    else:
+        # Default fallback (e.g., if no time constraint was specified)
+        warn("No period or start date specified. Defaulting to '1y' period.")
+        yfinance_kwargs['period'] = '1y'
+    # 🚨 END OF LOGIC TO DETERMINE YFINANCE ARGUMENTS
+
     try:
-        data = yf.download(
-            tickers=tickers,
-            period=period,
-            interval=interval,
-            group_by='ticker',
-            auto_adjust=True,
-            threads=True,
-            progress=False
-        )
+        # 🚨 Use the dynamically created yfinance_kwargs dictionary
+        data = yf.download(**yfinance_kwargs)
     except Exception as e:
         error(f"Error fetching data from yfinance: {e}")
         return pd.DataFrame()
@@ -44,11 +73,13 @@ def get_all_prices_cached(tickers: list, period: str, interval: str) -> pd.DataF
         # Multi-ticker case
         for ticker in tickers:
             if ticker in data.columns.get_level_values(0):
+                # Ensure the column extraction logic is robust
                 df = data[ticker].copy().reset_index()
                 df['Ticker'] = ticker
                 df_list.append(df)
     else:
         # Single-ticker case
+        # This occurs if only one ticker was requested
         df = data.copy().reset_index()
         df['Ticker'] = tickers[0]
         df_list.append(df)
@@ -70,6 +101,14 @@ def get_all_prices_cached(tickers: list, period: str, interval: str) -> pd.DataF
         combined_df['Date'] = combined_df['Datetime'].dt.date
         combined_df['Time'] = combined_df['Datetime'].dt.time
         combined_df.drop(columns=['Datetime'], inplace=True)
+        
+        # Ensure only the 'Close' column from the auto_adjust data is kept
+        if 'Adj Close' in combined_df.columns:
+            combined_df.rename(columns={'Adj Close': 'Close'}, inplace=True)
+        
+        # Drop other unnecessary columns often returned by yfinance
+        combined_df.drop(columns=[col for col in ['Open', 'High', 'Low', 'Volume'] if col in combined_df.columns], inplace=True, errors='ignore')
+
     else:
         # This case should now be impossible, but it's a good fail-safe
         error("The 'Datetime' column was not found after renaming. Data processing failed.")

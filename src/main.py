@@ -70,22 +70,39 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
             
     return df
 
-def _load_and_process_data(Period= "1d") -> (pd.DataFrame, pd.DataFrame, list): # 🚨 NEW: Added df_daily to return
-    """
-    Loads followed tickers, fetches price data, applies indicators, 
-    and returns the final formatted DataFrame snapshot AND the full daily data.
-    """
+def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, list): 
+    
     tickers_df = load_followed_tickers()
     followed_tickers = tickers_df['Ticker'].tolist() if not tickers_df.empty else []
-
+    
+    # Determine which argument to pass to the data fetcher
+    fetch_kwargs = {}
+    
+    # 🚨 UPDATED LOGIC TO HANDLE START|END DATE STRING
+    if '|' in PeriodOrStart:
+        # Custom Start and End Dates were provided (e.g., '2024-01-01|2024-10-01')
+        start_date, end_date = PeriodOrStart.split('|')
+        fetch_kwargs['start'] = start_date
+        fetch_kwargs['end'] = end_date # New argument for end date
+        fetch_kwargs['period'] = None
+        
+    elif len(PeriodOrStart) > 5 and '-' in PeriodOrStart: 
+        # Only a Custom Start Date was provided (if we had kept the previous logic)
+        # This branch can technically be removed if 'Custom Date' always passes start|end
+        fetch_kwargs['start'] = PeriodOrStart
+        fetch_kwargs['period'] = None
+    else:
+        # Preset Period String ('1y', '3mo', etc.)
+        fetch_kwargs['period'] = PeriodOrStart
+        fetch_kwargs['start'] = None
+        
     df_daily = get_all_prices_cached(
         followed_tickers, 
-        period=Period,
-        interval="1d"
+        interval="1d",
+        **fetch_kwargs # Pass either 'period' or 'start' and 'end'
     )
-
+    
     if df_daily.empty:
-        # 🚨 NEW: Return two empty DataFrames
         return pd.DataFrame(), pd.DataFrame(), followed_tickers 
 
     # 1. Calculate indicators (operates on the full df_daily)
@@ -239,27 +256,59 @@ def main():
     st.title("📊 TradeSentinel: Main Dashboard")
 
     # --------------------------------------------------------------
-    # User Input for Data Period 
+    # User Input for Data Period (Revised Section for Start/End Date)
     # --------------------------------------------------------------
     
     # Define selectable periods (common Yahoo Finance periods)
-    AVAILABLE_PERIODS = ["1mo", "3mo", "6mo", "ytd", "1y", "2y", "5y"]
+    AVAILABLE_PERIODS = ["1mo", "3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
     
-    # Create the selectbox for the user to choose the period
+    # 1. Period Selection
     selected_period = st.selectbox(
         "Select Lookback Period for Analysis", 
         options=AVAILABLE_PERIODS, 
-        index=AVAILABLE_PERIODS.index("1y"), # Default to 1 year for richer analysis
+        index=AVAILABLE_PERIODS.index("1y"), # Default to 1 year
         key='data_period_select'
     )
     
+    # Initialize the argument to be passed to the data fetcher
+    period_arg = selected_period
+    
+    if selected_period == "Custom Date":
+        
+        # Define default values
+        today = pd.Timestamp.now().normalize()
+        default_start_date = today - pd.DateOffset(years=1)
+        
+        col1, col2 = st.columns(2)
+
+        with col1:
+            # 2a. Custom Start Date Selection
+            custom_start_date = st.date_input(
+                "Select Analysis **Start Date**", 
+                value=default_start_date,
+                max_value=today,
+                key='custom_start_date_select'
+            )
+        
+        with col2:
+            # 2b. Custom End Date Selection (Default to Today)
+            custom_end_date = st.date_input(
+                "Select Analysis **End Date**", 
+                value=today,
+                min_value=custom_start_date, # End date cannot be before start date
+                max_value=today,
+                key='custom_end_date_select'
+            )
+
+        # 🚨 CHANGE: Pack both dates into a tuple or list string to pass as the argument
+        # We will need to update _load_and_process_data to handle this specific format.
+        period_arg = f"{custom_start_date}|{custom_end_date}" 
+
     st.markdown("---") # Separator for cleaner UI
     
     # Load and process all data required for the main display
-    # Pass the selected period to the data processing function
-    
-    # Load and process all data required for the main display
-    final_df, df_daily, followed_tickers = _load_and_process_data(Period=selected_period) # 🚨 NEW: Capture df_daily as well
+    # Pass the custom period/date argument
+    final_df, df_daily, followed_tickers = _load_and_process_data(PeriodOrStart=period_arg)
 
     if not final_df.empty:
         # Render the display sections if data is present
