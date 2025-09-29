@@ -64,7 +64,7 @@ def setup_sidebar_controls():
 
     # --- Fixed Parameters and Period Selection ---
     FIXED_INTERVAL = "1d"
-    PERIOD_OPTIONS = ["1mo", "3mo", "6mo", "1y", "ytd", "max"]
+    PERIOD_OPTIONS = ["1mo", "3mo", "6mo", "ytd", "1y", "2y", "5y"]
     
     period_input = st.sidebar.selectbox(
         "Lookback Period", 

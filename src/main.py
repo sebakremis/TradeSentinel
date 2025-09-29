@@ -243,7 +243,7 @@ def main():
     # --------------------------------------------------------------
     
     # Define selectable periods (common Yahoo Finance periods)
-    AVAILABLE_PERIODS = ["1mo", "3mo", "6mo", "1y", "2y", "5y", "ytd"]
+    AVAILABLE_PERIODS = ["1mo", "3mo", "6mo", "ytd", "1y", "2y", "5y"]
     
     # Create the selectbox for the user to choose the period
     selected_period = st.selectbox(
