@@ -185,7 +185,7 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
 
 def _render_overview_section(final_df: pd.DataFrame):
     """Renders the risk-return scatter plot."""
-    st.subheader("Followed Tickers Overview")
+    st.subheader("Followed Tickers Risk-Return")
 
     if not final_df.empty and 'Avg Return' in final_df.columns and 'Annualized Vol' in final_df.columns:
         # Create the scatter plot using Altair
@@ -195,7 +195,7 @@ def _render_overview_section(final_df: pd.DataFrame):
             tooltip=['Ticker', 'Avg Return', 'Annualized Vol'],
             color=alt.Color('Ticker', legend=None)
         ).properties(
-            title='Risk vs. Return'
+            title=''
         ).interactive()
 
         st.altair_chart(chart, use_container_width=True)
@@ -234,7 +234,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "Sharpe Ratio": st.column_config.NumberColumn("Sharpe Ratio", format="%.2f%%"),
             "Trend": st.column_config.TextColumn("Trend", width="small"),
             "Highest Close": st.column_config.NumberColumn("Highest Close", format="%.2f"),
-            "Select": st.column_config.CheckboxColumn("Select", default=False)
+            "Select": st.column_config.CheckboxColumn("Select", default=False, width="small")
         },
         num_rows="fixed"
     )
@@ -320,7 +320,7 @@ def _render_ticker_management_section(followed_tickers: list):
 
 def main():
     st.set_page_config(layout="wide")
-    st.title("📊 TradeSentinel: Main Dashboard")
+    st.title("📊 TradeSentinel")
 
     # --------------------------------------------------------------
     # User Input for Data Period (Revised Section for Start/End Date)
@@ -331,7 +331,7 @@ def main():
     
     # 1. Period Selection
     selected_period = st.selectbox(
-        "Select Lookback Period for Analysis", 
+        "Lookback Period", 
         options=AVAILABLE_PERIODS, 
         index=AVAILABLE_PERIODS.index("1y"), # Default to 1 year
         key='data_period_select'
