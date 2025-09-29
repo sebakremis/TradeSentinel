@@ -6,7 +6,7 @@ from log_utils import info, warn, error
 
 from src.database_manager import save_prices_to_db, load_prices_from_db
 from src.config import MAIN_DB_NAME, DATA_DIR
-from src.indicators import calculate_price_change, ema, trend, highest_close, distance_highest_close, annualized_metrics
+from src.indicators import calculate_price_change, ema, trend, highest_close, distance_highest_close, calculate_annualized_metrics
 
 # The database name is now a constant imported from database_manager
 DB_NAME = MAIN_DB_NAME
@@ -86,13 +86,36 @@ def get_all_prices_cached(tickers: list, period: str, interval: str) -> pd.DataF
 @st.cache_data(show_spinner="Calculating indicators...")
 def calculate_all_indicators(df_daily, fast_n, slow_n)-> pd.DataFrame:
     # Apply all calculation functions here
+    # Ensure the DataFrame is sorted and indexed
+    df_daily = df_daily.sort_values(['Ticker', 'Date'])
+
+    # 1. Calculate Daily Return (Required for performance metrics)
+    df_daily['Daily Return'] = df_daily.groupby('Ticker')['Close'].pct_change(fill_method=None)
+
+    # 2. Calculate EMAs and Trend
     df_daily = calculate_price_change(df_daily)
     df_daily = trend(df_daily, fast_n, slow_n)
     df_daily = ema(df_daily, fast_n)
     df_daily = highest_close(df_daily)
     df_daily = distance_highest_close(df_daily)
-    df_daily = annualized_metrics(df_daily, n_days=200)
+
+    # 3. Calculate Annualized Metrics (uses the full data slice per ticker)
+    # The 'Ticker' column is crucial here for the groupby in the metrics function.
+    annual_metrics_df = calculate_annualized_metrics(df_daily[['Ticker', 'Date', 'Close', 'Daily Return']].copy())
     
+    # 4. Merge the new performance metrics back into the main DataFrame
+    # Note: Annual metrics are calculated on the whole period, so they only exist
+    # for the last observation (the snapshot).
+     # Use the 'Date' from the annual_metrics_df to join onto the main daily data
+    # (Since annual_metrics_df only contains the final, latest date per ticker).
+    df_daily = pd.merge(
+        df_daily, 
+        annual_metrics_df[['Ticker', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']],
+        on='Ticker',
+        how='left'
+    )
+    
+    # 5. Return the enriched DataFrame
     return df_daily
 
 

@@ -70,7 +70,7 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
             
     return df
 
-def _load_and_process_data():
+def _load_and_process_data(Period= "1d") -> (pd.DataFrame, list):
     """
     Loads followed tickers, fetches price data, applies indicators, 
     and returns the final formatted DataFrame snapshot.
@@ -80,7 +80,7 @@ def _load_and_process_data():
 
     df_daily = get_all_prices_cached(
         followed_tickers, 
-        period="1y",
+        period=Period,
         interval="1d"
     )
 
@@ -249,9 +249,29 @@ def _render_update_prices_section(tickers_df: pd.DataFrame):
 def main():
     st.set_page_config(layout="wide")
     st.title("📊 TradeSentinel: Main Dashboard")
+
+    # --------------------------------------------------------------
+    # User Input for Data Period 
+    # --------------------------------------------------------------
+    
+    # Define selectable periods (common Yahoo Finance periods)
+    AVAILABLE_PERIODS = ["5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "ytd"]
+    
+    # Create the selectbox for the user to choose the period
+    selected_period = st.selectbox(
+        "Select Lookback Period for Analysis", 
+        options=AVAILABLE_PERIODS, 
+        index=AVAILABLE_PERIODS.index("1y"), # Default to 1 year for richer analysis
+        key='data_period_select'
+    )
+    
+    st.markdown("---") # Separator for cleaner UI
     
     # Load and process all data required for the main display
-    final_df, followed_tickers = _load_and_process_data()
+    # Pass the selected period to the data processing function
+    
+    # Load and process all data required for the main display
+    final_df, followed_tickers = _load_and_process_data(Period=selected_period)
 
     if not final_df.empty:
         # Render the display sections if data is present

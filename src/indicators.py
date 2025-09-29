@@ -140,35 +140,71 @@ def distance_highest_close(df: pd.DataFrame) -> pd.DataFrame:
     
     return df
 
-def annualized_metrics(df: pd.DataFrame, col: str = 'Change %', n_days: int = 200) -> pd.DataFrame:
+ANNUAL_TRADING_DAYS = 252 # Standard constant for annualization
+
+def calculate_annualized_metrics(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Calculates the annualized average return, volatility, and Sharpe Ratio of a specified column.
+    Calculates the annualized average return, volatility, and Sharpe Ratio 
+    based on the entire lookback period of the input DataFrame (per ticker).
 
     Args:
-        df (pd.DataFrame): The input DataFrame, expected to have 'Ticker' and a 'Date' index.
-        col (str): The name of the column to calculate metrics for. Default is 'Change %'.
-        n_days (int): The number of days to use for the rolling window. Default is 200.
-
+        df (pd.DataFrame): The input DataFrame, containing daily data for multiple 
+                           tickers, with a 'Daily Return' column.
+                           
     Returns:
-        pd.DataFrame: The original DataFrame with the new 'Avg Return', 'Annualized Vol', 
-                      and 'Sharpe Ratio' columns.
+        pd.DataFrame: A DataFrame containing one row per ticker with the latest 
+                      calculated 'Avg Return', 'Annualized Vol', and 'Sharpe Ratio'.
     """
-    df_copy = df.copy()
-
-    # Define a simple, constant risk-free rate (e.g., 2% or 0.02)
-    # A more robust solution might fetch this rate from a financial data provider.
-    annualized_risk_free_rate = 0.02
-
-    # Calculate rolling annualized average return
-    df_copy['Avg Return'] = df_copy.groupby('Ticker')[col].transform(lambda x: x.rolling(window=n_days).mean()) * 252
-
-    # Calculate rolling annualized volatility
-    df_copy['Annualized Vol'] = df_copy.groupby('Ticker')[col].transform(lambda x: x.rolling(window=n_days).std()) * np.sqrt(252)
     
-    # Calculate rolling Sharpe Ratio
-    df_copy['Sharpe Ratio'] = (df_copy['Avg Return'] - annualized_risk_free_rate) / df_copy['Annualized Vol']
+    # 1. Define Annualization Constants
+    annualized_risk_free_rate = 0.02 # 2% assumed RFR
     
-    # Optional: Fill NaN values with 0 for cleaner output
-    df_copy = df_copy.fillna(0)
+    # 2. Define the aggregation logic for each Ticker
+    def aggregate_metrics(group):
+        """Calculates single-period annualized metrics for one ticker's data."""
+        returns = group['Daily Return'].dropna()
+        N = len(returns)
+        
+        if N < 5: # Need a minimum number of observations for meaningful stats
+            return pd.Series({'Avg Return': np.nan, 'Annualized Vol': np.nan, 'Sharpe Ratio': np.nan})
 
-    return df_copy
+        # --- A. Annualized Volatility (Risk) ---
+        # Volatility scales by the square root of time
+        daily_vol = returns.std()
+        annualized_vol = daily_vol * np.sqrt(ANNUAL_TRADING_DAYS)
+        
+        # --- B. Annualized Return (Geometric Compounded Return) ---
+        # Total compounded return = Product(1 + r_i) - 1
+        total_return = (1 + returns).prod() - 1 
+        
+        # Annualization factor: (Annual periods) / (Number of periods in the lookback)
+        annualization_factor = ANNUAL_TRADING_DAYS / N 
+        
+        # Geometric Annualized Return: (1 + R_total)^(Factor) - 1
+        # Use abs() to prevent issues with negative base and fractional exponent
+        annualized_return = (1 + total_return) ** annualization_factor - 1
+        
+        # --- C. Sharpe Ratio ---
+        sharpe_ratio = (annualized_return - annualized_risk_free_rate) / annualized_vol if annualized_vol != 0 else np.nan
+
+        return pd.Series({
+            # Store as percentage for easier formatting later (100 is applied in _format_final_df)
+            'Avg Return': annualized_return * 100,
+            'Annualized Vol': annualized_vol * 100,
+            'Sharpe Ratio': sharpe_ratio
+        })
+
+    # Ensure Daily Return is calculated before aggregation
+    if 'Daily Return' not in df.columns:
+        df['Daily Return'] = df.groupby('Ticker')['Close'].pct_change()
+
+    # Apply the aggregation logic
+    annual_metrics_df = df.groupby('Ticker').apply(aggregate_metrics, include_groups=False).reset_index()
+
+    # Get the latest date for each ticker for the final merge
+    latest_dates = df.groupby('Ticker').tail(1)[['Ticker', 'Date']].reset_index(drop=True)
+    
+    # Merge the calculated metrics onto the latest snapshot
+    final_metrics_df = pd.merge(latest_dates, annual_metrics_df, on='Ticker')
+    
+    return final_metrics_df
