@@ -225,23 +225,6 @@ def _render_ticker_management_section(followed_tickers: list):
             st.rerun()
 
 
-def _render_update_prices_section(tickers_df: pd.DataFrame):
-    """Renders the update prices button and logic."""
-    st.markdown("---")
-    st.markdown("### Update Prices")
-    if st.button("Update Prices", key='update_button'):
-        if tickers_df.empty:
-            st.warning("⚠️ No tickers found to update.")
-        else:
-            with st.spinner("Fetching and updating all ticker data..."):
-                # Clear all cached price data forcing a fresh download
-                get_all_prices_cached.clear()
-                # A simple flag to force a re-load, though st.rerun handles it primarily
-                st.session_state.data_fetched = True 
-            st.success("✅ Data fetch and processing complete.")
-            st.rerun()
-
-
 # ----------------------------------------------------------------------
 # --- Main Dashboard Function ---
 # ----------------------------------------------------------------------
@@ -255,7 +238,7 @@ def main():
     # --------------------------------------------------------------
     
     # Define selectable periods (common Yahoo Finance periods)
-    AVAILABLE_PERIODS = ["5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "ytd"]
+    AVAILABLE_PERIODS = ["1mo", "3mo", "6mo", "1y", "2y", "5y", "ytd"]
     
     # Create the selectbox for the user to choose the period
     selected_period = st.selectbox(
@@ -283,9 +266,7 @@ def main():
     # Tickers management and Update Prices are always visible
     _render_ticker_management_section(followed_tickers)
     
-    # Reload tickers_df to get the latest list for the Update Prices check
-    latest_tickers_df = load_followed_tickers()
-    _render_update_prices_section(latest_tickers_df)
+    
 
 
 if __name__ == "__main__":
