@@ -1,4 +1,5 @@
 import streamlit as st
+st.set_page_config(page_title="📊 TradeSentinel", layout="wide")
 import pandas as pd
 import numpy as np
 import altair as alt
@@ -8,6 +9,9 @@ import datetime # Import required for custom date handling
 from src.dashboard_manager import get_all_prices_cached, calculate_all_indicators
 from src.tickers_manager import load_followed_tickers, add_ticker, remove_ticker, TickerValidationError
 from src.sim_portfolio import calculate_portfolio
+
+
+
 
 # Global constants
 EMA_FAST_PERIOD = 20
