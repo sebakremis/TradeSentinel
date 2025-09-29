@@ -53,10 +53,10 @@ def display_portfolio_summary(df_pnl: pd.DataFrame):
     with col2:
         pie_df = df_pnl[["Ticker", "Position Value ($)"]].copy()
         total_value = pie_df["Position Value ($)"].sum()
-    
-        if not pie_df.empty and total_value > 0: 
+
+        if not pie_df.empty and total_value > 0:
             pie_df["Percentage"] = (pie_df["Position Value ($)"] / total_value) * 100
-    
+
             fig = px.pie(
                 pie_df,
                 names="Ticker",
@@ -66,8 +66,20 @@ def display_portfolio_summary(df_pnl: pd.DataFrame):
             )
             fig.update_traces(textposition="inside", textinfo="percent+label")
             fig.update_layout(showlegend=False, title_x=0.3)
-    
-            st.plotly_chart(fig, width="stretch")
+
+            # -------------------------------------------------------------------
+            # FIX: The 'width' argument is deprecated. Use 'use_container_width'
+            # within the config dictionary instead, or set the 'use_container_width' 
+            # argument of st.plotly_chart directly to True.
+            # -------------------------------------------------------------------
+            
+            # Option 1: Using the recommended 'use_container_width=True' argument
+            st.plotly_chart(fig, use_container_width=True) 
+            
+            # Option 2 (Alternative using config):
+            # config = {'displayModeBar': False} # You could add other config options here
+            # st.plotly_chart(fig, use_container_width=True, config=config)
+            
         else:
             st.info("No data available for portfolio value pie chart.")
 
