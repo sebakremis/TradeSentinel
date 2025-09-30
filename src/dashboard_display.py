@@ -277,3 +277,19 @@ def display_export_table(combined_df: pd.DataFrame):
         )
     else:
         st.info("No valid data to display. Try refreshing or adjusting tickers/date range.")
+
+
+
+def highlight_change(value):
+    """
+    Returns the CSS style string for background color based on the value.
+    Green for positive, Red for negative.
+    """
+    if pd.isna(value):
+        return ''
+    elif value > 0:
+        return 'color: green; font-weight: bold;'
+    elif value < 0:
+        return 'color: red; font-weight: bold;'
+    else:
+        return ''

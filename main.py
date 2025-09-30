@@ -9,7 +9,7 @@ import datetime # Import required for custom date handling
 from src.dashboard_manager import get_all_prices_cached, calculate_all_indicators
 from src.tickers_manager import load_followed_tickers, add_ticker, remove_ticker, TickerValidationError
 from src.sim_portfolio import calculate_portfolio
-
+from src.dashboard_display import highlight_change
 
 
 
@@ -17,7 +17,7 @@ from src.sim_portfolio import calculate_portfolio
 EMA_FAST_PERIOD = 20
 EMA_SLOW_PERIOD = 50
 # 🚨 ADDED 'Dividend' to the display columns
-DISPLAY_COLUMNS = ['Ticker', 'Sector', 'Start Price', 'Close', 'Highest Close', 'Lowest Close', 'Dividend', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio',  'Change %', 'Trend']
+DISPLAY_COLUMNS = ['Ticker', 'Sector', 'Change %', 'Start Price', 'Close', 'Dividend', 'Highest Close', 'Lowest Close', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
 
 # ----------------------------------------------------------------------
 # --- UI Callback Functions ---
@@ -75,8 +75,6 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
         df['Highest Close'] = df['Highest Close'].round(2)
     if 'Lowest Close' in df.columns:
         df['Lowest Close'] = df['Lowest Close'].round(2)
-        
-    # NEW: Round Dividend column
     if 'Dividend' in df.columns: 
         df['Dividend'] = df['Dividend'].round(2)
     
@@ -190,8 +188,8 @@ def _render_overview_section(final_df: pd.DataFrame):
     if not final_df.empty and 'Avg Return' in final_df.columns and 'Annualized Vol' in final_df.columns:
         # Create the scatter plot using Altair
         chart = alt.Chart(final_df).mark_point(size=100).encode(
-            x=alt.X('Annualized Vol', title='Annualized Volatility (%)'),
-            y=alt.Y('Avg Return', title='Annualized Average Return (%)'),
+            x=alt.X('Annualized Vol', title='Annualized Volatility (Vol%)'),
+            y=alt.Y('Avg Return', title='Annualized Average Return (AAR%)'),
             tooltip=['Ticker', 'Avg Return', 'Annualized Vol'],
             color=alt.Color('Ticker', legend=None)
         ).properties(
@@ -205,7 +203,7 @@ def _render_overview_section(final_df: pd.DataFrame):
 
 def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.DataFrame):
     """Renders the summary table and portfolio simulation controls."""
-    st.subheader("Summary Table")
+    st.subheader("Summary")
 
     
     if final_df.empty:
@@ -214,28 +212,36 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
 
     sorted_df = final_df.sort_values(by='Sharpe Ratio', ascending=False)
 
-    display_df = sorted_df.copy()
-    display_df['Select'] = False
+    # --- Apply Conditional Formatting using Pandas Styler ---
+    display_df_styled = sorted_df.copy()
+    display_df_styled['Select'] = False # This must be done on the DataFrame copy before styling
+    
+    # Apply the color function to the 'Change %' column
+    styled_table = display_df_styled.style.map(
+        highlight_change, 
+        subset=['Change %'] 
+    )
+
 
     edited_df = st.data_editor(
-        display_df,
+        styled_table,
         hide_index=True,
         width='stretch',
         column_config={
             "Ticker": st.column_config.TextColumn("Ticker", width="small"),
             "Sector": st.column_config.TextColumn("Sector"),
-            "Close": st.column_config.NumberColumn("Last Price", format="%.2f"),
-            # NEW COLUMN CONFIGURATION FOR DIVIDEND:
-            "Dividend": st.column_config.NumberColumn("Dividend Payout", help="Total dividends received during the lookback period.", format="$%.2f"),
-            # Set the display name to "Daily Change":
-            "Change %": st.column_config.NumberColumn("Daily Change", format="%.2f%%", width="small"),
-            "Avg Return": st.column_config.NumberColumn("Avg Return", format="%.2f%%"),
-            "Annualized Vol": st.column_config.NumberColumn("Annualized Vol", format="%.2f%%"),
-            "Sharpe Ratio": st.column_config.NumberColumn("Sharpe Ratio", format="%.2f%%"),
-            "Trend": st.column_config.TextColumn("Trend", width="small"),
-            "Highest Close": st.column_config.NumberColumn("Highest Close", format="%.2f"),
+            "Change %": st.column_config.NumberColumn("Daily Chg%", format="%.2f%%"),
+            "Start Price": st.column_config.NumberColumn("Start", format="$%.2f", width="small"),
+            "Close": st.column_config.NumberColumn("Last", format="$%.2f", width="small"),
+            "Dividend": st.column_config.NumberColumn("Div. Payout", help="Total dividends received during the lookback period.", format="$%.2f"),            
+            "Highest Close": st.column_config.NumberColumn("High", format="$%.2f",width="small"),
+            "Lowest Close": st.column_config.NumberColumn("Low", format="$%.2f", width="small"),           
+            "Avg Return": st.column_config.NumberColumn("AAR%", format="%.2f%%", width="small"),
+            "Annualized Vol": st.column_config.NumberColumn("Vol%", format="%.2f%%", width="small"),
+            "Sharpe Ratio": st.column_config.NumberColumn("Sharpe", format="%.2f%%", width="small"),                      
             "Select": st.column_config.CheckboxColumn("Select", default=False, width="small")
         },
+        disabled=['Change %'],
         num_rows="fixed"
     )
     
