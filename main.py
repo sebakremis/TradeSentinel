@@ -395,6 +395,15 @@ def main():
     # Tickers management and Update Prices are always visible
     _render_ticker_management_section(followed_tickers)
     
+    # Credits
+    st.markdown("---")
+    st.markdown(
+        "🔗 [View Source Code for original demo on GitHub](https://github.com/sebakremis/TradeSentinel)",
+        unsafe_allow_html=True
+    )
+    st.markdown("👤 Developed by [Sebastian Kremis](mailto:skremis@ucm.es)")
+    st.caption("Built using Streamlit and Python.")
+    
     
 
 if __name__ == "__main__":

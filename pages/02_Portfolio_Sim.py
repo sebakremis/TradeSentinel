@@ -283,9 +283,10 @@ def main():
     # Credits and Navigation
     st.markdown("---")
     st.markdown(
-        "🔗 [View Source Code on GitHub](https://github.com/sebakremis/TradeSentinel)",
+        "🔗 [View Source Code for original demo on GitHub](https://github.com/sebakremis/TradeSentinel)",
         unsafe_allow_html=True
     )
+    st.markdown("👤 Developed by [Sebastian Kremis](mailto:skremis@ucm.es)")
     st.caption("Built using Streamlit and Python.")
     if st.button("Go back to Main Dashboard"):
         st.switch_page("main.py")
