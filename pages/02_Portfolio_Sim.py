@@ -81,7 +81,7 @@ def setup_sidebar_controls():
     
     # Selectbox allows overriding the period passed from the main dashboard
     selected_override = st.sidebar.selectbox(
-        "Modify lookback period", 
+        "Lookback period", 
         options=AVAILABLE_PERIODS, 
         index=AVAILABLE_PERIODS.index(default_select_value),
         key='portfolio_period_override_select'
@@ -132,7 +132,7 @@ def setup_sidebar_controls():
     else:
         display_period = period_input
 
-    st.sidebar.markdown(f"**Lookback period:** `{display_period}`")
+    
     st.sidebar.markdown(f"**Fixed Interval:** `{FIXED_INTERVAL}`")
     interval_input = FIXED_INTERVAL
     
