@@ -449,7 +449,7 @@ def main():
     # Credits
     st.markdown("---")
     st.markdown(
-        "🔗 [View Source Code for original demo on GitHub](https://github.com/sebakremis/TradeSentinel)",
+        "🔗 [View Source Code for demo1 (legacy version) on GitHub](https://github.com/sebakremis/TradeSentinel-demo1)",
         unsafe_allow_html=True
     )
     st.markdown("👤 Developed by [Sebastian Kremis](mailto:skremis@ucm.es)")
