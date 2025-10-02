@@ -319,6 +319,55 @@ def _render_ticker_management_section(followed_tickers: list):
                 st.warning("Please select a ticker to remove.")
             st.rerun()
 
+def render_info_section():
+    st.sidebar.markdown("### ℹ️ Dashboard Guide")
+    
+    with st.sidebar.expander("How calculations are made", expanded=False):
+        st.subheader("Data Source & Lookback Period")
+        st.markdown(
+            """
+            The data is sourced via an external financial data API (typically Yahoo Finance). 
+            
+            - **Data Type:** Daily Adjusted Closing Prices (`Close`), along with Volume and Dividend events.
+            - **Caching:** Price data is **cached** (`@st.cache_data` within `get_all_prices_cached`) to improve performance and avoid excessive API calls. The cache is updated when the lookback period changes or the list of required columns is modified.
+            """
+        )
+
+        st.subheader("Summary Table Column Methodology")
+        
+        st.markdown("**1. Close (Last Price)**")
+        st.info("The latest Adjusted Close Price from the fetched data, rounded to 2 decimal places.")
+        
+        st.markdown("**2. Start Price**")
+        st.info("The Adjusted Close Price on the **first day** of the selected Lookback Period. Used as the base for all period-related returns.")
+        st.code("df_daily.groupby('Ticker')['Close'].first()")
+
+        st.markdown("**3. Change %**")
+        st.info("The percentage difference between the **Close Price** and the **Start Price**.")
+        st.code("((Close - Start Price) / Start Price) * 100")
+        
+        st.markdown("**4. Dividend (Div. Payout)**")
+        st.info("The **Total Sum of Dividends** paid out per share for the stock over the entire Lookback Period.")
+        st.code("df_daily.groupby('Ticker')['Dividends'].sum().fillna(0)")
+
+        st.markdown("**5. Highest Close / Lowest Close**")
+        st.info("The highest/lowest Adjusted Close Price recorded during the Lookback Period.")
+        
+        st.markdown("**6. Avg Return (AAR%) / Annualized Vol (Vol%)**")
+        st.info("These metrics are calculated using the daily logarithmic returns over the Lookback Period and are then **annualized** for comparison (assumes 252 trading days/year).")
+        
+        st.markdown("**7. Sharpe Ratio**")
+        st.info("Calculated as the **Annualized Average Return** (AAR%) divided by the **Annualized Volatility** (Vol%). This is a key measure of risk-adjusted return (assumes a risk-free rate of 0% for simplicity in this demo).")
+        st.code("Sharpe Ratio = Avg Return / Annualized Volatility")
+
+    with st.sidebar.expander("How to use the dashboard", expanded=False):
+        st.markdown("""
+        1. **Choose Lookback Period** for analysis (e.g., '1y' or 'Custom Date').
+        2. **View Historical Risk-Return** chart for followed tickers.             
+        3. **View Metrics summary** table.
+        4. **Select Tickers** in the table and click **Simulate Portfolio** to analyze an equally-weighted $100k portfolio.
+        5. **Manage Tickers**: Add or remove tickers to follow below.
+        """)
 
 # ----------------------------------------------------------------------
 # --- Main Dashboard Function ---
@@ -327,6 +376,8 @@ def _render_ticker_management_section(followed_tickers: list):
 def main():
     st.set_page_config(layout="wide")
     st.title("📊 TradeSentinel-demo2")
+    # Guide section in sidebar
+    render_info_section()
 
     # --------------------------------------------------------------
     # User Input for Data Period (Revised Section for Start/End Date)
