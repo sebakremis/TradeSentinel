@@ -183,7 +183,7 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
 
 def _render_overview_section(final_df: pd.DataFrame):
     """Renders the risk-return scatter plot."""
-    st.subheader("Followed Tickers Risk-Return")
+    st.subheader("Historical Risk-Return")
 
     if not final_df.empty and 'Avg Return' in final_df.columns and 'Annualized Vol' in final_df.columns:
         # Create the scatter plot using Altair
@@ -326,7 +326,7 @@ def _render_ticker_management_section(followed_tickers: list):
 
 def main():
     st.set_page_config(layout="wide")
-    st.title("📊 TradeSentinel")
+    st.title("📊 TradeSentinel-demo2")
 
     # --------------------------------------------------------------
     # User Input for Data Period (Revised Section for Start/End Date)
