@@ -13,9 +13,6 @@ from src.dashboard_display import highlight_change
 from src.indicators import annualized_risk_free_rate
 
 
-# Global constants
-EMA_FAST_PERIOD = 20
-EMA_SLOW_PERIOD = 50
 # 🚨 ADDED 'Dividend' to the display columns
 DISPLAY_COLUMNS = ['Ticker', 'Sector', 'Start Price', 'Close', 'Dividend', 'Highest Close', 'Lowest Close', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
 
