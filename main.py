@@ -17,7 +17,7 @@ from src.dashboard_display import highlight_change
 EMA_FAST_PERIOD = 20
 EMA_SLOW_PERIOD = 50
 # 🚨 ADDED 'Dividend' to the display columns
-DISPLAY_COLUMNS = ['Ticker', 'Sector', 'Change %', 'Start Price', 'Close', 'Dividend', 'Highest Close', 'Lowest Close', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
+DISPLAY_COLUMNS = ['Ticker', 'Sector', 'Start Price', 'Close', 'Dividend', 'Highest Close', 'Lowest Close', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
 
 # ----------------------------------------------------------------------
 # --- UI Callback Functions ---
@@ -79,7 +79,7 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
         df['Dividend'] = df['Dividend'].round(2)
     
     # Rounding percentage/ratio columns
-    for col in ['Change %', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']:
+    for col in ['Avg Return', 'Annualized Vol', 'Sharpe Ratio']:
         if col in df.columns:
             df[col] = df[col].round(2)
             
@@ -110,7 +110,7 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
         fetch_kwargs['period'] = PeriodOrStart
         fetch_kwargs['start'] = None
         
-    # 🚨 FIX: Add a cache-buster parameter based on the expected columns.
+    # Add a cache-buster parameter based on the expected columns.
     # This forces Streamlit to re-run the cached function `get_all_prices_cached`
     # whenever the set of required display columns changes, preventing database schema conflicts.
     cache_version_key = len(DISPLAY_COLUMNS) 
@@ -127,7 +127,7 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
         return pd.DataFrame(), pd.DataFrame(), followed_tickers 
 
     # 1. Calculate indicators (operates on the full df_daily)
-    df_daily = calculate_all_indicators(df_daily, EMA_FAST_PERIOD, EMA_SLOW_PERIOD) 
+    df_daily = calculate_all_indicators(df_daily) 
     
     # 2. Get the latest snapshot (one row per ticker)
     final_df_unformatted = df_daily.groupby('Ticker').tail(1).copy()
@@ -216,10 +216,10 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
     display_df_styled = sorted_df.copy()
     display_df_styled['Select'] = False # This must be done on the DataFrame copy before styling
     
-    # Apply the color function to the 'Change %' column
+    # Apply the color function to the 'Avg Return' column
     styled_table = display_df_styled.style.map(
         highlight_change, 
-        subset=['Change %'] 
+        subset=['Avg Return'] 
     )
 
 
@@ -230,8 +230,9 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         column_config={
             "Ticker": st.column_config.TextColumn("Ticker", width="small"),
             "Sector": st.column_config.TextColumn("Sector"),
-            "Change %": st.column_config.NumberColumn("Daily Chg%", format="%.2f%%"),
-            "Start Price": st.column_config.NumberColumn("Start", format="$%.2f", width="small"),
+            # "Change %": st.column_config.NumberColumn("Daily Chg%", format="%.2f%%"),
+            # "Trading Days": st.column_config.NumberColumn("Days", help="Number of trading days in the selected lookback period.", width="small"),
+            "Start Price": st.column_config.NumberColumn("First", format="$%.2f", width="small"),
             "Close": st.column_config.NumberColumn("Last", format="$%.2f", width="small"),
             "Dividend": st.column_config.NumberColumn("Div. Payout", help="Total dividends received during the lookback period.", format="$%.2f"),            
             "Highest Close": st.column_config.NumberColumn("High", format="$%.2f",width="small"),

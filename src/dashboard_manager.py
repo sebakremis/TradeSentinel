@@ -9,7 +9,7 @@ from src.log_utils import info, warn, error
 
 from src.database_manager import save_prices_to_db, load_prices_from_db
 from src.config import MAIN_DB_NAME, DATA_DIR
-from src.indicators import calculate_price_change, ema, trend, calculate_annualized_metrics, calculate_extreme_closes, calculate_distance_highest_close
+from src.indicators import calculate_annualized_metrics, calculate_extreme_closes
 
 # The database name is now a constant imported from database_manager
 DB_NAME = MAIN_DB_NAME
@@ -117,8 +117,8 @@ def get_all_prices_cached(tickers: list, interval: str, cache_version_key=None, 
             # 3. Rename the temporary column to the required 'Close' column.
             combined_df.rename(columns={'Close_Adjusted_Temp': 'Close'}, inplace=True)
 
-        # --- NEW ROBUST DIVIDEND FETCHING LOGIC (Optimized for Speed) ---
-        info(f"Fetching dividend history separately for {len(tickers)} tickers in parallel...")
+        # --- DIVIDEND FETCHING LOGIC (Optimized for Speed) ---
+        # info(f"Fetching dividend history separately for {len(tickers)} tickers in parallel...")
         dividend_dfs = []
         
         def fetch_ticker_actions(ticker):
@@ -181,9 +181,7 @@ def get_all_prices_cached(tickers: list, interval: str, cache_version_key=None, 
             warn(f"Total summed dividends across ALL data is 0.0. Please verify the period/tickers pay dividends.")
         else:
             info(f"SUCCESS: Total dividend payments detected: {dividend_sum:.2f}")
-        # --- END OF NEW ROBUST DIVIDEND FETCHING LOGIC ---
-
-
+        
         # Drop any remaining unnecessary columns (Open, High, Low, Volume)
         # Note: 'Close' must exist at this point.
         combined_df.drop(columns=[col for col in ['Open', 'High', 'Low', 'Volume'] if col in combined_df.columns and col != 'Dividends'], inplace=True, errors='ignore')
@@ -203,25 +201,30 @@ def get_all_prices_cached(tickers: list, interval: str, cache_version_key=None, 
 
 
 @st.cache_data(show_spinner="Calculating indicators...")
-def calculate_all_indicators(df_daily, fast_n, slow_n)-> pd.DataFrame:
+def calculate_all_indicators(df_daily)-> pd.DataFrame:
     # Apply all calculation functions here
     # Ensure the DataFrame is sorted and indexed
     df_daily = df_daily.sort_values(['Ticker', 'Date'])
 
-    # 1. Calculate Daily Return (Required for performance metrics)
+    # Calculate Daily Return (Required for performance metrics)
     df_daily['Daily Return'] = df_daily.groupby('Ticker')['Close'].pct_change(fill_method=None)
 
-    # 2. Calculate EMAs and Trend
-    df_daily = calculate_price_change(df_daily)
-    df_daily = trend(df_daily, fast_n, slow_n)
-    df_daily = ema(df_daily, fast_n)
+    # Calculate Indicators
+    # Commented out unused indicators for now
+    # df_daily = calculate_price_change(df_daily)
+    # df_daily = trend(df_daily, fast_n, slow_n)
+    # df_daily = ema(df_daily, fast_n)
     
-    # UPDATED: Call the new extreme price function
-    df_daily = calculate_extreme_closes(df_daily) 
-    # UPDATED: Call the new distance function
-    df_daily = calculate_distance_highest_close(df_daily) 
+    # Count of trading days
+    # df_daily['Trading Days'] = df_daily.groupby('Ticker').cumcount() + 1
+    
 
-    # 3. Calculate Annualized Metrics (uses the full data slice per ticker)
+
+    # Call the extreme price function
+    df_daily = calculate_extreme_closes(df_daily) 
+    
+
+    # Calculate Annualized Metrics (uses the full data slice per ticker)
     # The 'Ticker' column is crucial here for the groupby in the metrics function.
     annual_metrics_df = calculate_annualized_metrics(df_daily[['Ticker', 'Date', 'Close', 'Daily Return']].copy())
     
