@@ -10,7 +10,7 @@ from src.dashboard_manager import get_all_prices_cached, calculate_all_indicator
 from src.tickers_manager import load_followed_tickers, add_ticker, remove_ticker, TickerValidationError
 from src.sim_portfolio import calculate_portfolio
 from src.dashboard_display import highlight_change
-
+from src.indicators import annualized_risk_free_rate
 
 
 # Global constants
@@ -327,9 +327,9 @@ def render_info_section():
         st.subheader("Data Source & Lookback Period")
         st.markdown(
             """
-            The data is sourced via an external financial data API (typically Yahoo Finance). 
+            The data is sourced via an external financial data API (Yahoo Finance). 
             
-            - **Data Type:** Daily Adjusted Closing Prices (`Close`), along with Volume and Dividend events.
+            - **Data Type:** Daily Adjusted Closing Prices (`Close`), along with Sector and Dividend Payout.
             - **Caching:** Price data is **cached** (`@st.cache_data` within `get_all_prices_cached`) to improve performance and avoid excessive API calls. The cache is updated when the lookback period changes or the list of required columns is modified.
             """
         )
@@ -433,9 +433,25 @@ def main():
     # Load and process all data required for the main display
     # Pass the custom period/date argument
     final_df, df_daily, followed_tickers = _load_and_process_data(PeriodOrStart=period_arg)
-
+  
     # Save the period_arg into the session state
     st.session_state['main_dashboard_period_arg'] = period_arg 
+
+    # New Info section
+    if not df_daily.empty and 'Date' in df_daily.columns:
+        num_days = df_daily['Date'].nunique()
+        first_date = pd.to_datetime(df_daily['Date'].min())
+        last_date = pd.to_datetime(df_daily['Date'].max())
+    else:
+        num_days = 0
+        first_date, last_date = None, None
+
+    with st.expander("ℹ️ Trading Period Info", expanded=False):
+        st.write(f"**Trading Days:** {num_days}")
+        st.write(f"**First Price Date:** {first_date.strftime('%Y-%m-%d') if first_date else 'N/A'}")
+        st.write(f"**Last Price Date:** {last_date.strftime('%Y-%m-%d') if last_date else 'N/A'}")
+        st.write(f"**Annualized Risk Free rate:** {annualized_risk_free_rate*100:.2f}% (assumed risk-free rate for Sharpe Ratio calculation)")
+
 
     if not final_df.empty:
         # Render the display sections if data is present

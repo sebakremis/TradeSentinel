@@ -141,6 +141,8 @@ def distance_highest_close(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 ANNUAL_TRADING_DAYS = 252 # Standard constant for annualization
+annualized_risk_free_rate = 0.02 # 2% assumed RFR
+
 
 def calculate_annualized_metrics(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -157,7 +159,7 @@ def calculate_annualized_metrics(df: pd.DataFrame) -> pd.DataFrame:
     """
     
     # 1. Define Annualization Constants
-    annualized_risk_free_rate = 0.02 # 2% assumed RFR
+    
     
     # 2. Define the aggregation logic for each Ticker
     def aggregate_metrics(group):
