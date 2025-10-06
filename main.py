@@ -234,7 +234,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             # "Trading Days": st.column_config.NumberColumn("Days", help="Number of trading days in the selected lookback period.", width="small"),
             "Start Price": st.column_config.NumberColumn("First Price", format="$%.2f", width="small"),
             "Close": st.column_config.NumberColumn("Last Price", format="$%.2f", width="small"),
-            "Dividend": st.column_config.NumberColumn("Div. Payout", help="Total dividends received during the lookback period.", format="$%.2f"),            
+            "Dividend": st.column_config.NumberColumn("Div. Payout", help="Total dividends received during the lookback period.", format="$%.2f",width="small"),            
             "Highest Close": st.column_config.NumberColumn("Period High", format="$%.2f",width="small"),
             "Lowest Close": st.column_config.NumberColumn("Period Low", format="$%.2f", width="small"),           
             "Avg Return": st.column_config.NumberColumn("AAR%", format="%.2f%%", width="small"),
