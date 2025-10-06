@@ -199,12 +199,6 @@ def setup_sidebar_controls():
         clean_df['Quantity'] = quantities_clean
         st.session_state['portfolio'] = clean_df[['Ticker', 'Quantity']].values.tolist()
 
-        # Clear cache and rerun
-        try:
-            # If your cache function is in scope, clear it
-            _get_portfolio_data_cached.clear() 
-        except NameError:
-            pass # Ignore if not defined
         
         st.rerun()
 

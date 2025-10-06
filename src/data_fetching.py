@@ -79,7 +79,7 @@ def get_portfolio_data_cached(tickers: list, interval: str, period: str = None, 
     is_multi_ticker = isinstance(raw_data.columns, pd.MultiIndex)
     
     for ticker in tickers:
-        sector = _get_sector(ticker) # Assuming _get_sector is defined elsewhere
+        sector = _get_sector(ticker) 
 
         df = None
         if is_multi_ticker:
