@@ -64,7 +64,7 @@ def setup_sidebar_controls():
 
     # --- Fixed Parameters and Period Selection ---
     FIXED_INTERVAL = "1d"
-    AVAILABLE_PERIODS = ["1mo", "3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
+    AVAILABLE_PERIODS = ["3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
 
     # Get the period from the main dashboard's session state (initial/default)
     initial_period_arg = st.session_state.get('main_dashboard_period_arg', '1y') 

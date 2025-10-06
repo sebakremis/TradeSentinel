@@ -232,11 +232,11 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "Sector": st.column_config.TextColumn("Sector"),
             # "Change %": st.column_config.NumberColumn("Daily Chg%", format="%.2f%%"),
             # "Trading Days": st.column_config.NumberColumn("Days", help="Number of trading days in the selected lookback period.", width="small"),
-            "Start Price": st.column_config.NumberColumn("First", format="$%.2f", width="small"),
-            "Close": st.column_config.NumberColumn("Last", format="$%.2f", width="small"),
+            "Start Price": st.column_config.NumberColumn("First Price", format="$%.2f", width="small"),
+            "Close": st.column_config.NumberColumn("Last Price", format="$%.2f", width="small"),
             "Dividend": st.column_config.NumberColumn("Div. Payout", help="Total dividends received during the lookback period.", format="$%.2f"),            
-            "Highest Close": st.column_config.NumberColumn("High", format="$%.2f",width="small"),
-            "Lowest Close": st.column_config.NumberColumn("Low", format="$%.2f", width="small"),           
+            "Highest Close": st.column_config.NumberColumn("Period High", format="$%.2f",width="small"),
+            "Lowest Close": st.column_config.NumberColumn("Period Low", format="$%.2f", width="small"),           
             "Avg Return": st.column_config.NumberColumn("AAR%", format="%.2f%%", width="small"),
             "Annualized Vol": st.column_config.NumberColumn("Vol%", format="%.2f%%", width="small"),
             "Sharpe Ratio": st.column_config.NumberColumn("Sharpe", format="%.2f%%", width="small"),                      
@@ -321,7 +321,7 @@ def _render_ticker_management_section(followed_tickers: list):
             st.rerun()
 
 def render_info_section():
-    st.sidebar.markdown("### ℹ️ Dashboard Guide")
+    st.sidebar.markdown("### ℹ️ Guides")
     
     with st.sidebar.expander("How calculations are made", expanded=False):
         st.subheader("Data Source & Lookback Period")
@@ -341,15 +341,15 @@ def render_info_section():
         
         st.markdown("**2. Start Price**")
         st.info("The Adjusted Close Price on the **first day** of the selected Lookback Period. Used as the base for all period-related returns.")
-        st.code("df_daily.groupby('Ticker')['Close'].first()")
+        
 
         st.markdown("**3. Change %**")
         st.info("The percentage difference between the **Close Price** and the **Start Price**.")
-        st.code("((Close - Start Price) / Start Price) * 100")
+        
         
         st.markdown("**4. Dividend (Div. Payout)**")
         st.info("The **Total Sum of Dividends** paid out per share for the stock over the entire Lookback Period.")
-        st.code("df_daily.groupby('Ticker')['Dividends'].sum().fillna(0)")
+        
 
         st.markdown("**5. Highest Close / Lowest Close**")
         st.info("The highest/lowest Adjusted Close Price recorded during the Lookback Period.")
@@ -359,12 +359,12 @@ def render_info_section():
         
         st.markdown("**7. Sharpe Ratio**")
         st.info("Calculated as the **Annualized Average Return** (AAR%) divided by the **Annualized Volatility** (Vol%). This is a key measure of risk-adjusted return (assumes a risk-free rate of 0% for simplicity in this demo).")
-        st.code("Sharpe Ratio = Avg Return / Annualized Volatility")
+        
 
     with st.sidebar.expander("How to use the dashboard", expanded=False):
         st.markdown("""
         1. **Choose Lookback Period** for analysis (e.g., '1y' or 'Custom Date').
-        2. **View Historical Risk-Return** chart for followed tickers.             
+        2. **View Historical Risk-Return** chart for followed tickers.  
         3. **View Metrics summary** table.
         4. **Select Tickers** in the table and click **Simulate Portfolio** to analyze an equally-weighted $100k portfolio.
         5. **Manage Tickers**: Add or remove tickers to follow below.
@@ -385,7 +385,7 @@ def main():
     # --------------------------------------------------------------
     
     # Define selectable periods (common Yahoo Finance periods)
-    AVAILABLE_PERIODS = ["1mo", "3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
+    AVAILABLE_PERIODS = ["3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
     
     # 1. Period Selection
     selected_period = st.selectbox(
