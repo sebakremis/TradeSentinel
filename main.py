@@ -12,7 +12,7 @@ from src.sim_portfolio import calculate_portfolio
 from src.dashboard_display import highlight_change
 from src.indicators import annualized_risk_free_rate
 
-DISPLAY_COLUMNS = ['Ticker', 'Sector', 'MarketCap', 'Beta', 'EVToEBITDA', 'Start Price', 'Close', 'Dividend', 'Highest Close', 'Lowest Close', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
+DISPLAY_COLUMNS = ['Ticker', 'Sector', 'MarketCap', 'Beta', 'Start Price', 'Close', 'Dividend', 'Highest Close', 'Lowest Close', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
 
 # ----------------------------------------------------------------------
 # --- UI Callback Functions ---
@@ -57,6 +57,10 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     # Explicitly ensure 'Sector' column is a string type.
     if 'Sector' in df.columns:
         df['Sector'] = df['Sector'].fillna('N/A').astype(str) 
+    
+    if "MarketCap" in df.columns:
+        df["MarketCap"] = (df["MarketCap"] / 1_000_000_000).round(2)  # 2 decimal places
+        
 
     # Select only the display columns
     df = df[DISPLAY_COLUMNS]
@@ -213,9 +217,8 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         column_config={
             "Ticker": st.column_config.TextColumn("Ticker", width="small"),
             "Sector": st.column_config.TextColumn("Sector"),
-            "MarketCap": st.column_config.NumberColumn("Market Cap", format="$%.2f", width="small"),
+            "MarketCap": st.column_config.NumberColumn("Market Cap", format="$%.1f B", width="small"),
             "Beta": st.column_config.NumberColumn("Beta", format="%.2f", width="small"),
-            "EVToEBITDA": st.column_config.NumberColumn("EV/EBITDA", format="%.2f", width="small"),
             "Start Price": st.column_config.NumberColumn("First Price", format="$%.2f", width="small"),
             "Close": st.column_config.NumberColumn("Last Price", format="$%.2f", width="small"),
             "Dividend": st.column_config.NumberColumn("Div. Payout", help="Total dividends received during the lookback period.", format="$%.2f",width="small"),            

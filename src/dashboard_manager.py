@@ -120,7 +120,7 @@ def get_all_prices_cached(tickers: list, interval: str, cache_version_key=None, 
         # --- DIVIDEND AND VALUATION METRICS ---
         # info(f"Fetching dividend history separately for {len(tickers)} tickers in parallel...")
         dividend_dfs = []
-        valuation_data = []  # To store (market_cap, beta, ev_to_ebitda) tuples
+        valuation_data = []  
         
         def fetch_ticker_actions(ticker):
             """Helper function to fetch actions for a single ticker."""
@@ -138,19 +138,24 @@ def get_all_prices_cached(tickers: list, interval: str, cache_version_key=None, 
             except Exception as e:
                 warn(f"Could not fetch actions for {ticker} concurrently: {e}")
                 return None
-        
+    
         def fetch_valuations(ticker):
+            market_cap = None
+            beta = None
             try:
-                valuation_df = yf.Ticker(ticker).info
-               
-                market_cap = valuation_df['marketCap']
-                beta = valuation_df['beta']
-                ev_to_ebitda = valuation_df['enterpriseToEbitda']
-                return ticker, market_cap, beta, ev_to_ebitda
+                valuation_df = yf.Ticker(ticker).info                
+                if ticker=='SPY':
+                    market_cap = 0
+                    beta = 1
+                else:
+                    market_cap = valuation_df.get('marketCap')
+                    beta = valuation_df.get('beta')
+                                    
+                return ticker, market_cap, beta
 
             except Exception as e:
                 warn(f"Could not fetch valuations for {ticker}: {e}")
-                return None, None, None, None
+                return None, None, None
 
 
         # Use ThreadPoolExecutor to fetch data concurrently
@@ -167,9 +172,9 @@ def get_all_prices_cached(tickers: list, interval: str, cache_version_key=None, 
             
 
             for future in as_completed(futures_valuation):
-                ticker, market_cap, beta, ev_to_ebitda = future.result()
+                ticker, market_cap, beta = future.result()
                 if market_cap is not None:
-                    valuation_data.append((ticker, market_cap, beta, ev_to_ebitda))
+                    valuation_data.append((ticker, market_cap, beta))
 
 
         if dividend_dfs:
@@ -191,7 +196,7 @@ def get_all_prices_cached(tickers: list, interval: str, cache_version_key=None, 
 
         if valuation_data:
             # Create a DataFrame from the valuation data
-            valuation_df = pd.DataFrame(valuation_data, columns=['Ticker', 'MarketCap', 'Beta', 'EVToEBITDA'])
+            valuation_df = pd.DataFrame(valuation_data, columns=['Ticker', 'MarketCap', 'Beta'])
             
             
             # Merge valuation metrics into the main combined_df using Ticker
