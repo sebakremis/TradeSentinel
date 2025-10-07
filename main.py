@@ -12,8 +12,6 @@ from src.sim_portfolio import calculate_portfolio
 from src.dashboard_display import highlight_change
 from src.indicators import annualized_risk_free_rate
 
-
-# 🚨 ADDED 'Dividend' to the display columns
 DISPLAY_COLUMNS = ['Ticker', 'Sector', 'Start Price', 'Close', 'Dividend', 'Highest Close', 'Lowest Close', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
 
 # ----------------------------------------------------------------------
@@ -51,12 +49,12 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     """
     df = final_df.copy()
 
-    # 1. Ensure all DISPLAY_COLUMNS are present, filling missing with NaN
+    # Ensure all DISPLAY_COLUMNS are present, filling missing with NaN
     for col in DISPLAY_COLUMNS:
         if col not in df.columns:
             df[col] = np.nan
     
-    # 2. CRITICAL FIX: Explicitly ensure 'Sector' column is a string type.
+    # Explicitly ensure 'Sector' column is a string type.
     if 'Sector' in df.columns:
         df['Sector'] = df['Sector'].fillna('N/A').astype(str) 
 
@@ -90,7 +88,7 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
     # Determine which argument to pass to the data fetcher
     fetch_kwargs = {}
     
-    #  UPDATED LOGIC TO HANDLE START|END DATE STRING
+    #  LOGIC TO HANDLE START|END DATE STRING
     if '|' in PeriodOrStart:
         # Custom Start and End Dates were provided (e.g., '2024-01-01|2024-10-01')
         start_date, end_date = PeriodOrStart.split('|')
@@ -99,7 +97,7 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
         fetch_kwargs['period'] = None
         
     elif len(PeriodOrStart) > 5 and '-' in PeriodOrStart: 
-        # Only a Custom Start Date was provided (if we had kept the previous logic)
+        # Only a Custom Start Date was provided (e.g., '2023-01-01')
         fetch_kwargs['start'] = PeriodOrStart
         fetch_kwargs['period'] = None
     else:
@@ -116,7 +114,7 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
     df_daily = get_all_prices_cached(
         followed_tickers, 
         interval="1d",
-        cache_version_key=cache_version_key, # NEW PARAMETER to invalidate cache
+        cache_version_key=cache_version_key, # PARAMETER to invalidate cache
         **fetch_kwargs # Pass either 'period' or 'start' and 'end'
     )
     
@@ -377,10 +375,8 @@ def main():
     # Guide section in sidebar
     render_info_section()
 
-    # --------------------------------------------------------------
-    # User Input for Data Period (Revised Section for Start/End Date)
-    # --------------------------------------------------------------
-    
+    # User Input for Data Period
+        
     # Define selectable periods (common Yahoo Finance periods)
     AVAILABLE_PERIODS = ["3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
     
@@ -422,7 +418,7 @@ def main():
                 key='custom_end_date_select'
             )
 
-        # CHANGE: Pack both dates into a tuple or list string to pass as the argument
+        # Pack both dates into a tuple or list string to pass as the argument
         period_arg = f"{custom_start_date}|{custom_end_date}" 
 
     st.markdown("---") # Separator for cleaner UI
@@ -434,7 +430,7 @@ def main():
     # Save the period_arg into the session state
     st.session_state['main_dashboard_period_arg'] = period_arg 
 
-    # New Info section
+    # Info section
     if not df_daily.empty and 'Date' in df_daily.columns:
         num_days = df_daily['Date'].nunique()
         first_date = pd.to_datetime(df_daily['Date'].min())

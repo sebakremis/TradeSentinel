@@ -2,7 +2,7 @@
 import streamlit as st
 import pandas as pd
 import yfinance as yf
-# New imports for concurrent processing
+# Imports for concurrent processing
 from concurrent.futures import ThreadPoolExecutor, as_completed 
 from src.log_utils import info, warn, error
 
@@ -209,17 +209,7 @@ def calculate_all_indicators(df_daily)-> pd.DataFrame:
     # Calculate Daily Return (Required for performance metrics)
     df_daily['Daily Return'] = df_daily.groupby('Ticker')['Close'].pct_change(fill_method=None)
 
-    # Calculate Indicators
-    # Commented out unused indicators for now
-    # df_daily = calculate_price_change(df_daily)
-    # df_daily = trend(df_daily, fast_n, slow_n)
-    # df_daily = ema(df_daily, fast_n)
-    
-    # Count of trading days
-    # df_daily['Trading Days'] = df_daily.groupby('Ticker').cumcount() + 1
-    
-
-
+   
     # Call the extreme price function
     df_daily = calculate_extreme_closes(df_daily) 
     

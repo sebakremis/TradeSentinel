@@ -265,3 +265,5 @@ def calculate_distance_highest_close(df: pd.DataFrame) -> pd.DataFrame:
     ) * 100
     
     return df
+
+
