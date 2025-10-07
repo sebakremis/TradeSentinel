@@ -72,7 +72,7 @@ def get_all_prices_cached(tickers: list, interval: str, cache_version_key=None, 
     
     df_list = []
     
-    # We will now standardize the column creation AFTER the data is in a list of DataFrames
+    # Standardize the column creation AFTER the data is in a list of DataFrames
     if isinstance(data.columns, pd.MultiIndex):
         # Multi-ticker case
         for ticker in tickers:
@@ -117,15 +117,16 @@ def get_all_prices_cached(tickers: list, interval: str, cache_version_key=None, 
             # 3. Rename the temporary column to the required 'Close' column.
             combined_df.rename(columns={'Close_Adjusted_Temp': 'Close'}, inplace=True)
 
-        # --- DIVIDEND FETCHING LOGIC (Optimized for Speed) ---
+        # --- DIVIDEND AND VALUATION METRICS ---
         # info(f"Fetching dividend history separately for {len(tickers)} tickers in parallel...")
         dividend_dfs = []
+        valuation_data = []  # To store (market_cap, beta, ev_to_ebitda) tuples
         
         def fetch_ticker_actions(ticker):
             """Helper function to fetch actions for a single ticker."""
             try:
                 # Fetch full historical actions (Dividends and Splits)
-                actions_df = yf.Ticker(ticker).actions
+                actions_df = yf.Ticker(ticker).actions                
                 
                 # Filter for only positive dividend events
                 if 'Dividends' in actions_df.columns and not actions_df.empty:
@@ -136,18 +137,40 @@ def get_all_prices_cached(tickers: list, interval: str, cache_version_key=None, 
                     return dividends_only
             except Exception as e:
                 warn(f"Could not fetch actions for {ticker} concurrently: {e}")
-            return None
+                return None
         
+        def fetch_valuations(ticker):
+            try:
+                valuation_df = yf.Ticker(ticker).info
+               
+                market_cap = valuation_df['marketCap']
+                beta = valuation_df['beta']
+                ev_to_ebitda = valuation_df['enterpriseToEbitda']
+                return ticker, market_cap, beta, ev_to_ebitda
+
+            except Exception as e:
+                warn(f"Could not fetch valuations for {ticker}: {e}")
+                return None, None, None, None
+
+
         # Use ThreadPoolExecutor to fetch data concurrently
         with ThreadPoolExecutor(max_workers=min(10, len(tickers))) as executor:
             # Submit all fetch tasks
-            futures = [executor.submit(fetch_ticker_actions, ticker) for ticker in tickers]
+            futures_dividend = [executor.submit(fetch_ticker_actions, ticker) for ticker in tickers]
+            futures_valuation = [executor.submit(fetch_valuations, ticker) for ticker in tickers]
             
             # Process results as they complete
-            for future in as_completed(futures):
+            for future in as_completed(futures_dividend):
                 result_df = future.result()
                 if result_df is not None:
                     dividend_dfs.append(result_df)
+            
+
+            for future in as_completed(futures_valuation):
+                ticker, market_cap, beta, ev_to_ebitda = future.result()
+                if market_cap is not None:
+                    valuation_data.append((ticker, market_cap, beta, ev_to_ebitda))
+
 
         if dividend_dfs:
             dividends_combined = pd.concat(dividend_dfs, ignore_index=True)
@@ -165,6 +188,22 @@ def get_all_prices_cached(tickers: list, interval: str, cache_version_key=None, 
             info("Successfully merged dividend data.")
         else:
             info("No dividend data found via Ticker().actions for selected tickers.")
+
+        if valuation_data:
+            # Create a DataFrame from the valuation data
+            valuation_df = pd.DataFrame(valuation_data, columns=['Ticker', 'MarketCap', 'Beta', 'EVToEBITDA'])
+            
+            
+            # Merge valuation metrics into the main combined_df using Ticker
+            combined_df = pd.merge(
+                combined_df,
+                valuation_df,
+                on='Ticker',
+                how='left'
+            )
+            info("Successfully merged valuation metrics.")
+        else:
+            info("No valuation data found via Ticker().info for selected tickers.")
 
         # FINAL DIVIDEND CLEANUP
         # Ensure the 'Dividends' column exists (it might not if no data was merged)
@@ -202,18 +241,15 @@ def get_all_prices_cached(tickers: list, interval: str, cache_version_key=None, 
 
 @st.cache_data(show_spinner="Calculating indicators...")
 def calculate_all_indicators(df_daily)-> pd.DataFrame:
-    # Apply all calculation functions here
     # Ensure the DataFrame is sorted and indexed
     df_daily = df_daily.sort_values(['Ticker', 'Date'])
 
     # Calculate Daily Return (Required for performance metrics)
     df_daily['Daily Return'] = df_daily.groupby('Ticker')['Close'].pct_change(fill_method=None)
-
-   
+  
     # Call the extreme price function
     df_daily = calculate_extreme_closes(df_daily) 
     
-
     # Calculate Annualized Metrics (uses the full data slice per ticker)
     # The 'Ticker' column is crucial here for the groupby in the metrics function.
     annual_metrics_df = calculate_annualized_metrics(df_daily[['Ticker', 'Date', 'Close', 'Daily Return']].copy())

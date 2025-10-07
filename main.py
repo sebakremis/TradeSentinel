@@ -12,7 +12,7 @@ from src.sim_portfolio import calculate_portfolio
 from src.dashboard_display import highlight_change
 from src.indicators import annualized_risk_free_rate
 
-DISPLAY_COLUMNS = ['Ticker', 'Sector', 'Start Price', 'Close', 'Dividend', 'Highest Close', 'Lowest Close', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
+DISPLAY_COLUMNS = ['Ticker', 'Sector', 'MarketCap', 'Beta', 'EVToEBITDA', 'Start Price', 'Close', 'Dividend', 'Highest Close', 'Lowest Close', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
 
 # ----------------------------------------------------------------------
 # --- UI Callback Functions ---
@@ -62,19 +62,7 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     df = df[DISPLAY_COLUMNS]
 
     # Apply rounding
-    if 'Close' in df.columns:
-        df['Close'] = df['Close'].round(2)
-    if 'Start Price' in df.columns:
-        df['Start Price'] = df['Start Price'].round(2)
-    if 'Highest Close' in df.columns:
-        df['Highest Close'] = df['Highest Close'].round(2)
-    if 'Lowest Close' in df.columns:
-        df['Lowest Close'] = df['Lowest Close'].round(2)
-    if 'Dividend' in df.columns: 
-        df['Dividend'] = df['Dividend'].round(2)
-    
-    # Rounding percentage/ratio columns
-    for col in ['Avg Return', 'Annualized Vol', 'Sharpe Ratio']:
+    for col in ['Close', 'Start Price', 'Highest Close', 'Lowest Close', 'Dividend', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']:
         if col in df.columns:
             df[col] = df[col].round(2)
             
@@ -225,8 +213,9 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         column_config={
             "Ticker": st.column_config.TextColumn("Ticker", width="small"),
             "Sector": st.column_config.TextColumn("Sector"),
-            # "Change %": st.column_config.NumberColumn("Daily Chg%", format="%.2f%%"),
-            # "Trading Days": st.column_config.NumberColumn("Days", help="Number of trading days in the selected lookback period.", width="small"),
+            "MarketCap": st.column_config.NumberColumn("Market Cap", format="$%.2f", width="small"),
+            "Beta": st.column_config.NumberColumn("Beta", format="%.2f", width="small"),
+            "EVToEBITDA": st.column_config.NumberColumn("EV/EBITDA", format="%.2f", width="small"),
             "Start Price": st.column_config.NumberColumn("First Price", format="$%.2f", width="small"),
             "Close": st.column_config.NumberColumn("Last Price", format="$%.2f", width="small"),
             "Dividend": st.column_config.NumberColumn("Div. Payout", help="Total dividends received during the lookback period.", format="$%.2f",width="small"),            
