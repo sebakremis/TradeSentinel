@@ -270,6 +270,22 @@ def calculate_all_indicators(df_daily)-> pd.DataFrame:
         on='Ticker',
         how='left'
     )
+
+    # Calculate Price forecast ranges (1 month by default)
+    from src.price_forecast import project_price_range
+    forecast_df = project_price_range(
+        df_daily[['Ticker', 'Close', 'Avg Return', 'Annualized Vol']].drop_duplicates(subset=['Ticker']),
+        period_months=1,
+        n_sims=10000
+    )
+
+    # Merge forecast results back into the main DataFrame
+    df_daily = pd.merge(
+        df_daily,
+        forecast_df[['Ticker', 'Forecast Low', 'Forecast High']],
+        on='Ticker',
+        how='left'
+    )
     
     # 5. Return the enriched DataFrame
     return df_daily

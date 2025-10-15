@@ -12,7 +12,7 @@ from src.sim_portfolio import calculate_portfolio
 from src.dashboard_display import highlight_change
 from src.indicators import annualized_risk_free_rate
 
-DISPLAY_COLUMNS = ['Ticker', 'Sector', 'MarketCap', 'Beta', 'Start Price', 'Close', 'Dividend', 'Highest Close', 'Lowest Close', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
+DISPLAY_COLUMNS = ['Ticker', 'Sector', 'MarketCap', 'Beta', 'Start Price', 'Close', 'Dividend',  'Forecast Low', 'Forecast High', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
 
 # ----------------------------------------------------------------------
 # --- UI Callback Functions ---
@@ -66,7 +66,7 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     df = df[DISPLAY_COLUMNS]
 
     # Apply rounding
-    for col in ['Close', 'Start Price', 'Highest Close', 'Lowest Close', 'Dividend', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']:
+    for col in ['Close', 'Start Price', 'Forecast Low', 'Forecast High', 'Dividend', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']:
         if col in df.columns:
             df[col] = df[col].round(2)
             
@@ -219,13 +219,13 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "Sector": st.column_config.TextColumn("Sector"),
             "MarketCap": st.column_config.NumberColumn("Market Cap", format="$%.1f B", width="small"),
             "Beta": st.column_config.NumberColumn("Beta", format="%.2f", width="small"),
-            "Start Price": st.column_config.NumberColumn("First Price", format="$%.2f", width="small"),
-            "Close": st.column_config.NumberColumn("Last Price", format="$%.2f", width="small"),
-            "Dividend": st.column_config.NumberColumn("Div. Payout", help="Total dividends received during the lookback period.", format="$%.2f",width="small"),            
-            "Highest Close": st.column_config.NumberColumn("Period High", format="$%.2f",width="small"),
-            "Lowest Close": st.column_config.NumberColumn("Period Low", format="$%.2f", width="small"),           
-            "Avg Return": st.column_config.NumberColumn("AAR%", format="%.2f%%", width="small"),
-            "Annualized Vol": st.column_config.NumberColumn("Vol%", format="%.2f%%", width="small"),
+            "Start Price": st.column_config.NumberColumn("First", help="First price of the lookback period", format="$%.2f", width="small"),
+            "Close": st.column_config.NumberColumn("Last", help="Last price of the lookback period", format="$%.2f", width="small"),
+            "Dividend": st.column_config.NumberColumn("Dividends", help="Total dividends received during the lookback period.", format="$%.2f",width="small"),            
+            "Forecast Low": st.column_config.NumberColumn("Forecast Low", format="$%.2f", width="small"),
+            "Forecast High": st.column_config.NumberColumn("Forecast High", format="$%.2f",width="small"),                       
+            "Avg Return": st.column_config.NumberColumn("AAR%", help="Annualized Average return", format="%.2f%%", width="small"),
+            "Annualized Vol": st.column_config.NumberColumn("Vol%", help="Annualized Average volatility", format="%.2f%%", width="small"),
             "Sharpe Ratio": st.column_config.NumberColumn("Sharpe", format="%.2f%%", width="small"),                      
             "Select": st.column_config.CheckboxColumn("Select", default=False, width="small")
         },
@@ -323,28 +323,23 @@ def render_info_section():
 
         st.subheader("Summary Table Column Methodology")
         
-        st.markdown("**1. Close (Last Price)**")
-        st.info("The latest Adjusted Close Price from the fetched data, rounded to 2 decimal places.")
+        st.markdown("**1. First**")
+        st.info("The Adjusted Close Price on the **first day** of the selected Lookback Period. Used as the base for all period-related returns")
         
-        st.markdown("**2. Start Price**")
-        st.info("The Adjusted Close Price on the **first day** of the selected Lookback Period. Used as the base for all period-related returns.")
+        st.markdown("**2. Last**")
+        st.info("The latest Adjusted Close Price.")      
         
-
-        st.markdown("**3. Change %**")
-        st.info("The percentage difference between the **Close Price** and the **Start Price**.")
-        
-        
-        st.markdown("**4. Dividend (Div. Payout)**")
+        st.markdown("**3. Dividends**")
         st.info("The **Total Sum of Dividends** paid out per share for the stock over the entire Lookback Period.")
         
 
-        st.markdown("**5. Highest Close / Lowest Close**")
-        st.info("The highest/lowest Adjusted Close Price recorded during the Lookback Period.")
+        st.markdown("**4. Forecast High / Forecast Low**")
+        st.info("The max/min price forecast range based on MonteCarlo simulation for a 1 month time horizon.")
         
-        st.markdown("**6. Avg Return (AAR%) / Annualized Vol (Vol%)**")
+        st.markdown("**5. Avg Return (AAR%) / Annualized Vol (Vol%)**")
         st.info("These metrics are calculated using the daily logarithmic returns over the Lookback Period and are then **annualized** for comparison (assumes 252 trading days/year).")
         
-        st.markdown("**7. Sharpe Ratio**")
+        st.markdown("**6. Sharpe Ratio**")
         st.info("Calculated as the **Annualized Average Return** (AAR%) divided by the **Annualized Volatility** (Vol%). This is a key measure of risk-adjusted return (assumes a risk-free rate of 0% for simplicity in this demo).")
         
 
