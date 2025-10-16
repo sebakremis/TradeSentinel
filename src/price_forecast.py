@@ -13,7 +13,7 @@ def project_price_range(data, period_months=1, n_sims=10000):
     ----------
     data : pd.DataFrame
         DataFrame containing columns:
-        ['Ticker', 'Close', 'Avg Annualized Return', 'Annualized Volatility']
+        ['Ticker', 'Close', 'Avg Return', 'Annualized Vol']
     period_months : int
         Time horizon in months (default=1)
     n_sims : int
@@ -29,10 +29,13 @@ def project_price_range(data, period_months=1, n_sims=10000):
 
     t = period_months / 12  # converted to years
 
+
+
     for _, row in data.iterrows():
         S0 = row['Close']
         mu = row['Avg Return']/100  # Convert percentage to decimal
         sigma = row['Annualized Vol']/100
+        print(row['Ticker'], S0, mu, sigma)
 
         # Simulate end price using Geometric Brownian Motion
         Z = np.random.normal(0, 1, n_sims)

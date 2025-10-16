@@ -119,6 +119,19 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
     # 2. Get the latest snapshot (one row per ticker)
     final_df_unformatted = df_daily.groupby('Ticker').tail(1).copy()
 
+    # Calculate Forecast Low and Forecast High using Monte Carlo simulation (1 month by default)
+    from src.price_forecast import project_price_range
+    forecast_df = project_price_range(
+        final_df_unformatted[['Ticker', 'Close', 'Avg Return', 'Annualized Vol']].drop_duplicates(subset=['Ticker']),
+        period_months=1,
+        n_sims=10000
+    )
+    final_df_unformatted = final_df_unformatted.merge(
+        forecast_df[['Ticker', 'Forecast Low', 'Forecast High']],
+        on='Ticker',
+        how='left'
+    )
+
     # 2A: Calculate Start Price for each Ticker
     start_prices = df_daily.groupby('Ticker')['Close'].first().reset_index()
     start_prices.rename(columns={'Close': 'Start Price'}, inplace=True)
@@ -128,6 +141,7 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
         on='Ticker', 
         how='left'
     )
+    
     
     # 2B: Calculate Total Dividends for the Period
     if 'Dividends' in df_daily.columns:
