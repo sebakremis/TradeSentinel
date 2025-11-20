@@ -197,7 +197,7 @@ def _render_overview_section(final_df: pd.DataFrame):
             title=''
         ).interactive()
 
-        st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, width='stretch')
     else:
         st.warning("Cannot generate risk-return plot. Ensure tickers are selected and data is loaded.")
 

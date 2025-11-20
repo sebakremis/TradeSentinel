@@ -35,7 +35,6 @@ def project_price_range(data, period_months=1, n_sims=10000):
         S0 = row['Close']
         mu = row['Avg Return']/100  # Convert percentage to decimal
         sigma = row['Annualized Vol']/100
-        print(row['Ticker'], S0, mu, sigma)
 
         # Simulate end price using Geometric Brownian Motion
         Z = np.random.normal(0, 1, n_sims)
