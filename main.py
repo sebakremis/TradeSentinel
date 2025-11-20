@@ -11,6 +11,7 @@ from src.tickers_manager import load_followed_tickers, add_ticker, remove_ticker
 from src.sim_portfolio import calculate_portfolio
 from src.dashboard_display import highlight_change
 from src.indicators import annualized_risk_free_rate
+from src.price_forecast import project_price_range
 
 DISPLAY_COLUMNS = ['Ticker', 'Sector', 'MarketCap', 'Beta', 'Start Price', 'Close', 'Dividend',  'Forecast Low', 'Forecast High', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
 
@@ -72,109 +73,82 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
             
     return df
 
+
+@st.cache_data
+def _cached_forecast(df_snapshot: pd.DataFrame) -> pd.DataFrame:
+    return project_price_range(
+        df_snapshot[['Ticker', 'Close', 'Avg Return', 'Annualized Vol']].drop_duplicates(subset=['Ticker']),
+        period_months=1,
+        n_sims=10000
+    )
+
 def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, list): 
     
     tickers_df = load_followed_tickers()
     followed_tickers = tickers_df['Ticker'].tolist() if not tickers_df.empty else []
-    
-    # Determine which argument to pass to the data fetcher
+
     fetch_kwargs = {}
-    
-    #  LOGIC TO HANDLE START|END DATE STRING
+
     if '|' in PeriodOrStart:
-        # Custom Start and End Dates were provided (e.g., '2024-01-01|2024-10-01')
         start_date, end_date = PeriodOrStart.split('|')
         fetch_kwargs['start'] = start_date
-        fetch_kwargs['end'] = end_date # New argument for end date
+        fetch_kwargs['end'] = end_date
         fetch_kwargs['period'] = None
-        
-    elif len(PeriodOrStart) > 5 and '-' in PeriodOrStart: 
-        # Only a Custom Start Date was provided (e.g., '2023-01-01')
+    elif len(PeriodOrStart) > 5 and '-' in PeriodOrStart:
         fetch_kwargs['start'] = PeriodOrStart
         fetch_kwargs['period'] = None
     else:
-        # Preset Period String ('1y', '3mo', etc.)
         fetch_kwargs['period'] = PeriodOrStart
         fetch_kwargs['start'] = None
-        
-    # Add a cache-buster parameter based on the expected columns.
-    # This forces Streamlit to re-run the cached function `get_all_prices_cached`
-    # whenever the set of required display columns changes, preventing database schema conflicts.
-    cache_version_key = len(DISPLAY_COLUMNS) 
-        
-    # Fetch data (assumes df_daily includes a 'Dividends' column if dividends were paid)
-    df_daily = get_all_prices_cached(
-        followed_tickers, 
-        interval="1d",
-        cache_version_key=cache_version_key, # PARAMETER to invalidate cache
-        **fetch_kwargs # Pass either 'period' or 'start' and 'end'
-    )
-    
-    if df_daily.empty:
-        return pd.DataFrame(), pd.DataFrame(), followed_tickers 
 
-    # 1. Calculate indicators (operates on the full df_daily)
-    df_daily = calculate_all_indicators(df_daily) 
-    
-    # 2. Get the latest snapshot (one row per ticker)
+    cache_version_key = len(DISPLAY_COLUMNS)
+
+    df_daily = get_all_prices_cached(
+        followed_tickers,
+        interval="1d",
+        cache_version_key=cache_version_key,
+        **fetch_kwargs
+    )
+
+    if df_daily.empty:
+        return pd.DataFrame(), pd.DataFrame(), followed_tickers
+
+    df_daily = calculate_all_indicators(df_daily)
+
     final_df_unformatted = df_daily.groupby('Ticker').tail(1).copy()
 
-    # Calculate Forecast Low and Forecast High using Monte Carlo simulation (1 month by default)
-    from src.price_forecast import project_price_range
-    forecast_df = project_price_range(
-        final_df_unformatted[['Ticker', 'Close', 'Avg Return', 'Annualized Vol']].drop_duplicates(subset=['Ticker']),
-        period_months=1,
-        n_sims=10000
-    )
+    # ⏱️ Forecast con cache
+    forecast_df = _cached_forecast(final_df_unformatted)
     final_df_unformatted = final_df_unformatted.merge(
         forecast_df[['Ticker', 'Forecast Low', 'Forecast High']],
         on='Ticker',
         how='left'
     )
 
-    # 2A: Calculate Start Price for each Ticker
     start_prices = df_daily.groupby('Ticker')['Close'].first().reset_index()
     start_prices.rename(columns={'Close': 'Start Price'}, inplace=True)
+    final_df_unformatted = final_df_unformatted.merge(start_prices, on='Ticker', how='left')
 
-    final_df_unformatted = final_df_unformatted.merge(
-        start_prices, 
-        on='Ticker', 
-        how='left'
-    )
-    
-    
-    # 2B: Calculate Total Dividends for the Period
     if 'Dividends' in df_daily.columns:
         total_dividends = df_daily.groupby('Ticker')['Dividends'].sum().reset_index()
         total_dividends.rename(columns={'Dividends': 'Dividend'}, inplace=True)
-        
-        final_df_unformatted = final_df_unformatted.merge(
-            total_dividends, 
-            on='Ticker', 
-            how='left'
-        )
+        final_df_unformatted = final_df_unformatted.merge(total_dividends, on='Ticker', how='left')
         final_df_unformatted['Dividend'] = final_df_unformatted['Dividend'].fillna(0)
     else:
         final_df_unformatted['Dividend'] = 0
 
-
-    # Merge Sector information from the list of followed tickers
     if 'Sector' in tickers_df.columns and not final_df_unformatted.empty:
-        # Merge the Sector column from tickers_df onto the snapshot DataFrame
         final_df_unformatted = final_df_unformatted.merge(
-            tickers_df[['Ticker', 'Sector']], 
-            on='Ticker', 
+            tickers_df[['Ticker', 'Sector']],
+            on='Ticker',
             how='left'
         )
-        # Drop the potentially old/incorrect Sector column if it was generated by indicators
         if 'Sector_x' in final_df_unformatted.columns:
             final_df_unformatted['Sector'] = final_df_unformatted['Sector_y']
             final_df_unformatted.drop(columns=['Sector_x', 'Sector_y'], inplace=True)
-    
-    # 3. Format the data for display
+
     final_df = _format_final_df(final_df_unformatted)
-    
-    # Return both the snapshot (final_df) and the full daily data (df_daily)
+
     return final_df, df_daily, followed_tickers 
 
 
