@@ -346,7 +346,7 @@ def render_info_section():
 
 def main():
     st.set_page_config(layout="wide")
-    st.title("📊 TradeSentinel-demo2")
+    st.title("📊 TradeSentinel demo")
     # Guide section in sidebar
     render_info_section()
 
@@ -434,11 +434,11 @@ def main():
     # Credits
     st.markdown("---")
     st.markdown(
-        "🔗 [View Source Code for demo1 (legacy version) on GitHub](https://github.com/sebakremis/TradeSentinel-demo1)",
+        "🔗 [View Source Code on GitHub](https://github.com/sebakremis/TradeSentinel)",
         unsafe_allow_html=True
     )
-    st.markdown("👤 Developed by [Sebastian Kremis](mailto:skremis@ucm.es)")
-    st.caption("Built using Streamlit and Python.")
+    st.markdown("👤 Developed by Sebastian Kremis")
+    st.caption("Built using Streamlit and Python. NO investment advice. For educational/demo purposes only.")
     
     
 
