@@ -240,61 +240,6 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
 
     st.markdown("Select tickers to simulate a $100 k **equally-weighted portfolio**.")
 
-
-def _render_ticker_management_section(followed_tickers: list):
-    """Renders the ticker list display and the add/remove controls."""
-    st.markdown("---")
-    st.subheader("Tickers Management")
-    
-    # 1. Display Followed Tickers
-    st.markdown("**📝 Followed Tickers:**")
-    if followed_tickers:
-        num_cols = 5
-        cols = st.columns(num_cols)
-        
-        for i, ticker in enumerate(followed_tickers):
-            with cols[i % num_cols]:
-                # Create a colorful badge for each ticker
-                st.markdown(
-                    f"<div style='background-color: #36454F; padding: 5px; border-radius: 5px; text-align: center; margin: 2px;'>"
-                    f"<span style='color: #F5F5DC; font-weight: bold;'>{ticker}</span>"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
-    else:
-        st.info("No followed tickers. Please add tickers to follow.")
-    
-    # 2. Add/Remove Controls
-    add_column, remove_column = st.columns(2)
-    
-    # Add Ticker Controls
-    with add_column: 
-        st.text_input("Enter Ticker Symbol to Add", max_chars=5, key='add_ticker_input')
-        st.button(
-            "Add Ticker", 
-            key='add_button',
-            on_click=handle_add_ticker_click
-        )
-
-    # Remove Ticker Controls
-    with remove_column:
-        rem_ticker_select = st.selectbox(
-            "Select Ticker Symbol to Remove", 
-            options=followed_tickers, # Use the list passed from load_followed_tickers
-            key='rem_ticker_select'
-        )
-            
-        if st.button("Remove Selected Ticker", key='remove_button'):
-            if rem_ticker_select:
-                try:
-                    remove_ticker(rem_ticker_select)
-                    st.success(f"✅ Removed ticker {rem_ticker_select}")
-                except Exception as e:
-                    st.error(f"❌ An error occurred while removing ticker: {e}")
-            else:
-                st.warning("Please select a ticker to remove.")
-            st.rerun()
-
 def render_info_section():
     st.sidebar.markdown("### ℹ️ Guides")
     
@@ -426,11 +371,8 @@ def main():
         _render_overview_section(final_df)
         _render_summary_table_and_portfolio(final_df, df_daily) # Pass df_daily to the summary table function
     else:
-        st.info("No data found. Add a ticker using the management controls below and click 'Update Prices' to fetch data.")
+        st.info("No data found.")
         
-    # Tickers management and Update Prices are always visible
-    _render_ticker_management_section(followed_tickers)
-    
     # Credits
     st.markdown("---")
     st.markdown(
