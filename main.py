@@ -3,7 +3,7 @@ st.set_page_config(page_title="📊 TradeSentinel", layout="wide")
 import pandas as pd
 import numpy as np
 import altair as alt
-import datetime # Import required for custom date handling
+import datetime 
 
 # Import all necessary modules
 from src.dashboard_manager import get_all_prices_cached, calculate_all_indicators
