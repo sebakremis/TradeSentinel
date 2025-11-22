@@ -1,10 +1,11 @@
 # TradeSentinel
-
 ## 📌 Overview
-`TradeSentinel` is a Python-powered stock screener, providing portfolio simulations for insights into PnL, exposure, and risk metrics.
+`TradeSentinel` is a Python-powered stock screener, providing portfolio simulations for insights into PnL, exposure, and risk metrics.  
+
+This project was created as part of my practice for the **Master in Data Science, Big Data & Business Analytics at Universidad Complutense de Madrid**.  
+It also arises from a personal need to build my own **advanced stock screener**, since I was not fully satisfied with the existing tools available in the market.
 
 ## 📌 Disclaimer
-
 This project was developed strictly for **academic and educational purposes**.  
 It is intended to demonstrate portfolio analytics, risk metrics, and visualization techniques in Python.  
 
