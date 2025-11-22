@@ -67,19 +67,8 @@ def display_portfolio_summary(df_pnl: pd.DataFrame):
             fig.update_traces(textposition="inside", textinfo="percent+label")
             fig.update_layout(showlegend=False, title_x=0.3)
 
-            # -------------------------------------------------------------------
-            # FIX: The 'width' argument is deprecated. Use 'use_container_width'
-            # within the config dictionary instead, or set the 'use_container_width' 
-            # argument of st.plotly_chart directly to True.
-            # -------------------------------------------------------------------
-            
-            # Option 1: Using the recommended 'use_container_width=True' argument
-            st.plotly_chart(fig, use_container_width=True) 
-            
-            # Option 2 (Alternative using config):
-            # config = {'displayModeBar': False} # You could add other config options here
-            # st.plotly_chart(fig, use_container_width=True, config=config)
-            
+            st.plotly_chart(fig, width='stretch')
+ 
         else:
             st.info("No data available for portfolio value pie chart.")
 
@@ -103,7 +92,7 @@ def display_pnl_over_time(combined_df: pd.DataFrame):
             .properties(width=700, height=400, title="Portfolio PnL by Ticker")
             .interactive()
         )
-        st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, width='stretch')
     else:
         st.info("No time series data available for charting.")
 
@@ -145,7 +134,7 @@ def display_sector_allocation(df_pnl: pd.DataFrame):
             margin=dict(l=10, r=10, t=60, b=10)
         )
         
-        st.plotly_chart(fig_sector, use_container_width=True)
+        st.plotly_chart(fig_sector, width='stretch')
         
         st.dataframe(
             sector_alloc[["Sector", "PositionValue", "Ticker"]]
