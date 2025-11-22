@@ -16,10 +16,20 @@ Users are solely responsible for any decisions made based on the information pro
 ## 🚀 Features
 - **Live market data:** Fetches prices from APIs (Yahoo Finance).
 
-- **PnL tracking:** Calculates mark-to-market PnL by instrument, sector, or portfolio.
+- **PnL tracking:** Calculates mark-to-market PnL by instrument, sector, or portfolio.  
    * Note: For historical data, `TradeSentinel` uses adjusted close prices (via auto_adjust=True) to account for dividends and splits. This ensures that PnL calculations reflect total return and avoids artificial price drops on dividend dates.    
+
 - **Risk metrics:** Computes Value-at-Risk (VaR), exposure by asset class, and limit breaches.
+
 - **Interactive dashboard:** Built with Streamlit for intuitive visualization.
+
+- **Followed tickers (current implementation):**  
+   The app currently uses a **fixed list of S&P 500 tickers** with a **Sharpe ratio greater than 1** over the past one‑year period.  
+   This design ensures a consistent dataset for portfolio analysis.  
+
+- **Future enhancement:**  
+   Users will be able to **customize their own list of tickers**.  
+   Before enabling this feature, the database logic will be redesigned to support dynamic ticker selection.
 
 ## 🛠 Tech stack
 - **Python:** `pandas`, `numpy`, `altair`, `streamlit`, `plotly`
