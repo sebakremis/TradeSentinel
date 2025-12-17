@@ -48,11 +48,11 @@ def update_stock_database():
     
     for _, row in tickers_df.iterrows():
         ticker = row['Ticker']
-        stock_file = stocks_folder / f"{ticker}.parquet"
+        stock_prices_file = stocks_folder/f"prices/{ticker}.parquet"
         
         # Fetch historical data
-        if stock_file.exists():
-            existing_data = pd.read_parquet(stock_file)
+        if stock_prices_file.exists():
+            existing_data = pd.read_parquet(stock_prices_file)
             existing_data.index = pd.to_datetime(existing_data.index)
             if not existing_data.empty:
                 # Determine the last date in existing data
@@ -66,19 +66,19 @@ def update_stock_database():
                 if not new_data.empty:
                     updated_data = pd.concat([existing_data, new_data])
                     updated_data = updated_data[~updated_data.index.duplicated(keep='last')]
-                    updated_data.to_parquet(stock_file)
-                    print(f"Updated data for {ticker} saved to {stock_file}")
+                    updated_data.to_parquet(stock_prices_file)
+                    print(f"Updated data for {ticker} saved to {stock_prices_file}")
             else:
                 # If existing data is empty, fetch all available data
                 updated_data = fetch_ticker_data(ticker, period='5y')
-                updated_data.to_parquet(stock_file)
-                print(f"Updated data for {ticker} saved to {stock_file}")        
+                updated_data.to_parquet(stock_prices_file)
+                print(f"Updated data for {ticker} saved to {stock_prices_file}")        
 
         else:
             # If file does not exist, fetch all available data
             updated_data = fetch_ticker_data(ticker, period='5y')
-            updated_data.to_parquet(stock_file)
-            print(f"Updated data for {ticker} saved to {stock_file}")
+            updated_data.to_parquet(stock_prices_file)
+            print(f"Updated data for {ticker} saved to {stock_prices_file}")
         
         
     
