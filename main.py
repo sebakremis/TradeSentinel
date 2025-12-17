@@ -6,14 +6,14 @@ import altair as alt
 import datetime 
 
 # Import all necessary modules
-from src.dashboard_manager import get_all_prices_cached, calculate_all_indicators
+from src.dashboard_manager import get_all_prices_cached, calculate_all_indicators, get_stock_data
 from src.tickers_manager import load_followed_tickers, add_ticker, remove_ticker, TickerValidationError
 from src.sim_portfolio import calculate_portfolio
 from src.dashboard_display import highlight_change
 from src.indicators import annualized_risk_free_rate
 from src.price_forecast import project_price_range
 
-DISPLAY_COLUMNS = ['Ticker', 'Sector', 'MarketCap', 'Beta', 'Start Price', 'Close', 'Dividend',  'Forecast Low', 'Forecast High', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
+DISPLAY_COLUMNS = ['Ticker', 'Sector', 'marketCap', 'beta', 'Start Price', 'Close', 'Dividend',  'Forecast Low', 'Forecast High', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
 
 # ----------------------------------------------------------------------
 # --- UI Callback Functions ---
@@ -59,8 +59,8 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     if 'Sector' in df.columns:
         df['Sector'] = df['Sector'].fillna('N/A').astype(str) 
     
-    if "MarketCap" in df.columns:
-        df["MarketCap"] = (df["MarketCap"] / 1_000_000_000).round(2)  # 2 decimal places
+    if "marketCap" in df.columns:
+        df["marketCap"] = (df["marketCap"] / 1_000_000_000).round(2)  # 2 decimal places
         
 
     # Select only the display columns
@@ -103,10 +103,9 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
 
     cache_version_key = len(DISPLAY_COLUMNS)
 
-    df_daily = get_all_prices_cached(
+    df_daily = get_stock_data(
         followed_tickers,
         interval="1d",
-        cache_version_key=cache_version_key,
         **fetch_kwargs
     )
 
@@ -205,8 +204,8 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         column_config={
             "Ticker": st.column_config.TextColumn("Ticker", width="small"),
             "Sector": st.column_config.TextColumn("Sector"),
-            "MarketCap": st.column_config.NumberColumn("Market Cap", format="$%.1f B", width="small"),
-            "Beta": st.column_config.NumberColumn("Beta", format="%.2f", width="small"),
+            "marketCap": st.column_config.NumberColumn("marketCap", format="$%.1f B", width="small"),
+            "beta": st.column_config.NumberColumn("beta", format="%.2f", width="small"),
             "Start Price": st.column_config.NumberColumn("First", help="First price of the lookback period", format="$%.2f", width="small"),
             "Close": st.column_config.NumberColumn("Last", help="Last price of the lookback period", format="$%.2f", width="small"),
             "Dividend": st.column_config.NumberColumn("Dividends", help="Total dividends received during the lookback period.", format="$%.2f",width="small"),            

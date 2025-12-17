@@ -1,13 +1,7 @@
 # src/etl.py
 import pandas as pd
 import yfinance as yf
-from config import DATA_DIR
-
-# Define paths
-tickers_file = DATA_DIR / 'tickers_list.csv'
-stocks_folder = DATA_DIR / 'stocks'
-metadata_file = stocks_folder / 'metadata.csv'
-
+from config import DATA_DIR, stocks_folder, tickers_file, metadata_file
 
 def load_tickers_from_csv(filepath: str) -> pd.DataFrame:
     """
