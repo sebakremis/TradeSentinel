@@ -53,15 +53,34 @@ def update_stock_database():
         # Fetch historical data
         if stock_file.exists():
             existing_data = pd.read_parquet(stock_file)
-            last_date = existing_data.index.max().date()
-            new_data = fetch_ticker_data(ticker, start=str(last_date + pd.Timedelta(days=1)))
-            updated_data = pd.concat([existing_data, new_data]).drop_duplicates()
+            existing_data.index = pd.to_datetime(existing_data.index)
+            if not existing_data.empty:
+                # Determine the last date in existing data
+                last_date = existing_data.index.max().date()
+                new_start_date = pd.Timestamp(last_date) + pd.Timedelta(days=1)
+                # Check if new_start_date is in the future
+                if new_start_date >= pd.Timestamp.today().normalize():
+                    print(f"No new data for {ticker}.")
+                    continue            
+                new_data = fetch_ticker_data(ticker, start=new_start_date.strftime('%Y-%m-%d'))
+                if not new_data.empty:
+                    updated_data = pd.concat([existing_data, new_data])
+                    updated_data = updated_data[~updated_data.index.duplicated(keep='last')]
+                    updated_data.to_parquet(stock_file)
+                    print(f"Updated data for {ticker} saved to {stock_file}")
+            else:
+                # If existing data is empty, fetch all available data
+                updated_data = fetch_ticker_data(ticker, period='5y')
+                updated_data.to_parquet(stock_file)
+                print(f"Updated data for {ticker} saved to {stock_file}")        
+
         else:
+            # If file does not exist, fetch all available data
             updated_data = fetch_ticker_data(ticker, period='5y')
+            updated_data.to_parquet(stock_file)
+            print(f"Updated data for {ticker} saved to {stock_file}")
         
-        # Save updated data
-        updated_data.to_parquet(stock_file)
-        print(f"Updated data for {ticker} saved to {stock_file}")
+        
     
 if __name__ == "__main__":
     update_stock_database()    
