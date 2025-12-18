@@ -127,7 +127,7 @@ def correlation_matrix(price_df: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         Correlation matrix of returns.
     """
-    returns = price_df.pct_change().dropna()
+    returns = price_df.pct_change(fill_method=None)
     return returns.corr()
 
 def win_loss_stats(pnl_series: pd.Series) -> dict:

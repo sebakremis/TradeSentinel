@@ -299,10 +299,11 @@ def get_stock_data(tickers: list, interval: str, period: str = None, start: str 
     return df
 
 # test get_stock_data function
-def test_get_stock_data():
+if __name__ == "__main__":
     tickers= ['GOOG', 'MSFT']
     df = get_stock_data(tickers, interval='1d', period='1y')
     print(df.info())
+    print(df.head())
 
 
 

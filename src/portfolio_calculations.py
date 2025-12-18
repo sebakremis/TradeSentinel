@@ -1,5 +1,6 @@
 # src/portfolio_calculations.py
 import pandas as pd
+import streamlit as st
 
 def calculate_pnl_data(prices: dict, quantities: dict) -> pd.DataFrame:
     """Calculates PnL and position snapshot data per ticker."""
@@ -18,7 +19,7 @@ def calculate_pnl_data(prices: dict, quantities: dict) -> pd.DataFrame:
                 position_value = end * qty
                 pct = ((end - start) / start) * 100 if start != 0 else 0.0
                 
-                sector = df["Sector"].iloc[0] if "Sector" in df.columns else "Unknown"
+                sector = df["sector"].iloc[0] if "sector" in df.columns else "Unknown"
 
                 pnl_data.append({
                     "Ticker": ticker,

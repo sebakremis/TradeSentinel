@@ -120,3 +120,13 @@ def get_portfolio_data_cached(tickers: list, interval: str, period: str = None, 
         save_prices_to_db(combined_df, DB_NAME) # Assuming save_prices_to_db is defined elsewhere
 
     return processed_prices
+
+# test fetching
+if __name__ == "__main__":
+    tickers = ['AAPL', 'MSFT']
+    data = get_portfolio_data_cached(tickers, interval='1d', period='1mo')
+    # drop date index into column
+    data = {ticker: df.reset_index() for ticker, df in data.items()}
+    for ticker, df in data.items():
+        print(f"Data for {ticker}:")
+    print(df.info())

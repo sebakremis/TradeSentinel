@@ -3,7 +3,8 @@ import pandas as pd
 import datetime # Import required for date inputs
 
 from src.portfolio_calculations import calculate_pnl_data, prepare_pnl_time_series
-from src.data_fetching import get_portfolio_data_cached
+# from src.data_fetching import get_portfolio_data_cached
+from src.dashboard_manager import get_stock_data
 from src.dashboard_display import (
     display_per_ticker_pnl, display_portfolio_summary,
     display_pnl_over_time, display_sector_allocation,
@@ -239,8 +240,21 @@ def main():
 
     # 2. Load Data
     with st.spinner(f"Loading daily market data for {len(tickers)} tickers over {display_period}..."):
-        # 🚨 Pass the dynamically created arguments using the ** operator
-        prices = get_portfolio_data_cached(tickers, **fetch_kwargs)
+        # Pass the dynamically created arguments using the ** operator
+        prices_df = get_stock_data(tickers, **fetch_kwargs)
+        # set date as index and sort
+        prices_df.set_index('Date', inplace=True)
+        prices_df.sort_index(inplace=True)
+
+                
+
+        # Convert prices_df to dictionary (keys: tickers, values: DataFrames)
+        prices = {
+            ticker: prices_df[prices_df['Ticker'] == ticker].copy() if not prices_df[prices_df['Ticker'] == ticker].empty else pd.DataFrame()
+            for ticker in tickers
+        }
+        
+
         st.session_state.data = prices
     
     if not prices:
