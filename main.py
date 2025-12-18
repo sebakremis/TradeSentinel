@@ -73,7 +73,6 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
             
     return df
 
-
 @st.cache_data
 def _cached_forecast(df_snapshot: pd.DataFrame) -> pd.DataFrame:
     return project_price_range(
@@ -100,8 +99,7 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
     else:
         fetch_kwargs['period'] = PeriodOrStart
         fetch_kwargs['start'] = None
-
-    cache_version_key = len(DISPLAY_COLUMNS)
+    
 
     df_daily = get_stock_data(
         followed_tickers,
@@ -116,7 +114,7 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
 
     final_df_unformatted = df_daily.groupby('Ticker').tail(1).copy()
 
-    # Forecast with cache
+    # Forecast prices
     forecast_df = _cached_forecast(final_df_unformatted)
     final_df_unformatted = final_df_unformatted.merge(
         forecast_df[['Ticker', 'forecastLow', 'forecastHigh']],
@@ -195,7 +193,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         subset=['avgReturn'] 
     )
 
-
+    # --- Render Data Editor ---
     edited_df = st.data_editor(
         styled_table,
         hide_index=True,
@@ -252,7 +250,6 @@ def render_info_section():
             The data is sourced via an external financial data API (Yahoo Finance). 
             
             - **Data Type:** Daily Adjusted Closing Prices (`Close`), along with Sector and Dividend Payout.
-            - **Caching:** Price data is **cached** (`@st.cache_data` within `get_all_prices_cached`) to improve performance and avoid excessive API calls. The cache is updated when the lookback period changes or the list of required columns is modified.
             """
         )
 
@@ -293,7 +290,7 @@ def render_info_section():
 
 def main():
     st.set_page_config(layout="wide")
-    st.title("📊 TradeSentinel demo")
+    st.title("📊 TradeSentinel: Followed Tickers")
     # Guide section in sidebar
     render_info_section()
 
