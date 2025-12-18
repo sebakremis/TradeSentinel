@@ -292,3 +292,48 @@ def display_credits():
     )
     st.markdown("👤 Developed by Sebastian Kremis")
     st.caption("Built using Streamlit and Python. NO investment advice. For educational/demo purposes only.")
+
+def render_info_section():
+    """
+    Renders the informational sidebar section with guides on calculations and usage.
+    """  
+    with st.sidebar.expander("ℹ️ Guides", expanded=False):
+        st.subheader("How calculations are made")
+        st.subheader("Data Source & Lookback Period")
+        st.markdown(
+            """
+            The data is sourced via an external financial data API (Yahoo Finance). 
+            
+            - **Data Type:** Daily Adjusted Closing Prices (`Close`), along with Sector and Dividend Payout.
+            """
+        )
+
+        st.subheader("Summary Table Column Methodology")
+        
+        st.markdown("**1. First**")
+        st.info("The Adjusted Close Price on the **first day** of the selected Lookback Period. Used as the base for all period-related returns")
+        
+        st.markdown("**2. Last**")
+        st.info("The latest Adjusted Close Price.")      
+        
+        st.markdown("**3. Dividends**")
+        st.info("The **Total Sum of Dividends** paid out per share for the stock over the entire Lookback Period.")
+        
+
+        st.markdown("**4. Forecast High / Forecast Low**")
+        st.info("The max/min price forecast range based on MonteCarlo simulation for a 1 month time horizon.")
+        
+        st.markdown("**5. Avg Return (AAR%) / Annualized Vol (Vol%)**")
+        st.info("These metrics are calculated using the daily logarithmic returns over the Lookback Period and are then **annualized** for comparison (assumes 252 trading days/year).")
+        
+        st.markdown("**6. Sharpe Ratio**")
+        st.info("Calculated as the **Annualized Average Return** (AAR%) divided by the **Annualized Volatility** (Vol%). This is a key measure of risk-adjusted return (assumes a risk-free rate of 0% for simplicity in this demo).")
+        
+        st.subheader("How to use the dashboard")
+        st.markdown("""
+        1. **Choose Lookback Period** for analysis (e.g., '1y' or 'Custom Date').
+        2. **View Historical Risk-Return** chart for followed tickers.  
+        3. **View Metrics summary** table.
+        4. **Select Tickers** in the table and click **Simulate Portfolio** to analyze an equally-weighted $100k portfolio.
+        5. **Manage Tickers**: Add or remove tickers to follow below.
+        """)

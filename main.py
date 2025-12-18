@@ -4,21 +4,17 @@ import pandas as pd
 import numpy as np
 import altair as alt
 import datetime 
-
-# Import all necessary modules
 from src.dashboard_manager import calculate_all_indicators, get_stock_data
-from src.tickers_manager import load_tickers, add_ticker, confirm_follow_dialog, TickerValidationError
-from src.sim_portfolio import calculate_portfolio
-from src.dashboard_display import highlight_change, display_credits
+from src.tickers_manager import load_tickers, confirm_follow_dialog, TickerValidationError
+from src.dashboard_display import highlight_change, display_credits, render_info_section
 from src.indicators import annualized_risk_free_rate
-from src.price_forecast import project_price_range
 from src.config import DATA_DIR, all_tickers_file
-
-DISPLAY_COLUMNS = ['Ticker', 'sector', 'marketCap', 'beta', 'startPrice', 'close', 'divPayout',  'forecastLow', 'forecastHigh', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 # ----------------------------------------------------------------------
 # --- Data Helper Functions ---
 # ----------------------------------------------------------------------
+
+DISPLAY_COLUMNS = ['Ticker', 'sector', 'marketCap', 'beta', 'startPrice', 'close', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -31,36 +27,26 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
         if col not in df.columns:
             df[col] = np.nan
     
-    # Explicitly ensure 'sector' column is a string type.
-    if 'sector' in df.columns:
-        df['sector'] = df['sector'].fillna('N/A').astype(str) 
-    
+    # Convert marketCap to billions and round   
     if "marketCap" in df.columns:
         df["marketCap"] = (df["marketCap"] / 1_000_000_000).round(2)  # 2 decimal places
         
-
     # Select only the display columns
     df = df[DISPLAY_COLUMNS]
 
     # Apply rounding
-    for col in ['close', 'startPrice', 'forecastLow', 'forecastHigh', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
+    for col in ['close', 'startPrice', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
         if col in df.columns:
             df[col] = df[col].round(2)
             
     return df
 
-@st.cache_data
-def _cached_forecast(df_snapshot: pd.DataFrame) -> pd.DataFrame:
-    return project_price_range(
-        df_snapshot[['Ticker', 'close', 'avgReturn', 'annualizedVol']].drop_duplicates(subset=['Ticker']),
-        period_months=1,
-        n_sims=10000
-    )
+
 
 def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, list): 
     
     tickers_df = load_tickers(all_tickers_file)
-    followed_tickers = tickers_df['Ticker'].tolist() if not tickers_df.empty else []
+    all_tickers = tickers_df['Ticker'].tolist() if not tickers_df.empty else []
 
     fetch_kwargs = {}
 
@@ -78,25 +64,19 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
     
 
     df_daily = get_stock_data(
-        followed_tickers,
+        all_tickers,
         interval="1d",
         **fetch_kwargs
     )
 
     if df_daily.empty:
-        return pd.DataFrame(), pd.DataFrame(), followed_tickers
+        return pd.DataFrame(), pd.DataFrame(), all_tickers
 
     df_daily = calculate_all_indicators(df_daily)
 
     final_df_unformatted = df_daily.groupby('Ticker').tail(1).copy()
 
-    # Forecast prices
-    forecast_df = _cached_forecast(final_df_unformatted)
-    final_df_unformatted = final_df_unformatted.merge(
-        forecast_df[['Ticker', 'forecastLow', 'forecastHigh']],
-        on='Ticker',
-        how='left'
-    )
+
 
     start_prices = df_daily.groupby('Ticker')['close'].first().reset_index()
     start_prices.rename(columns={'close': 'startPrice'}, inplace=True)
@@ -121,7 +101,7 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
 
     final_df = _format_final_df(final_df_unformatted)
 
-    return final_df, df_daily, followed_tickers 
+    return final_df, df_daily, all_tickers 
 
 
 # ----------------------------------------------------------------------
@@ -161,9 +141,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "beta": st.column_config.NumberColumn("beta", format="%.2f", width="small"),
             "startPrice": st.column_config.NumberColumn("first", help="First price of the lookback period", format="$%.2f", width="small"),
             "close": st.column_config.NumberColumn("last", help="Last price of the lookback period", format="$%.2f", width="small"),
-            "divPayout": st.column_config.NumberColumn("divPayout", help="Total dividends received during the lookback period.", format="$%.2f",width="small"),            
-            "forecastLow": st.column_config.NumberColumn("forecastLow", format="$%.2f", width="small"),
-            "forecastHigh": st.column_config.NumberColumn("forecastHigh", format="$%.2f",width="small"),                       
+            "divPayout": st.column_config.NumberColumn("divPayout", help="Total dividends received during the lookback period.", format="$%.2f",width="small"),                       
             "avgReturn": st.column_config.NumberColumn("AAR%", help="Annualized Average return", format="%.2f%%", width="small"),
             "annualizedVol": st.column_config.NumberColumn("Vol%", help="Annualized Average volatility", format="%.2f%%", width="small"),
             "sharpeRatio": st.column_config.NumberColumn("sharpe", format="%.2f%%", width="small"),                      
@@ -183,50 +161,6 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         if st.button("Follow Selected Tickers", disabled=not selected_tickers):
             confirm_follow_dialog(selected_tickers)
 
-def render_info_section():
-    st.sidebar.markdown("### ℹ️ Guides")
-    
-    with st.sidebar.expander("How calculations are made", expanded=False):
-        st.subheader("Data Source & Lookback Period")
-        st.markdown(
-            """
-            The data is sourced via an external financial data API (Yahoo Finance). 
-            
-            - **Data Type:** Daily Adjusted Closing Prices (`Close`), along with Sector and Dividend Payout.
-            """
-        )
-
-        st.subheader("Summary Table Column Methodology")
-        
-        st.markdown("**1. First**")
-        st.info("The Adjusted Close Price on the **first day** of the selected Lookback Period. Used as the base for all period-related returns")
-        
-        st.markdown("**2. Last**")
-        st.info("The latest Adjusted Close Price.")      
-        
-        st.markdown("**3. Dividends**")
-        st.info("The **Total Sum of Dividends** paid out per share for the stock over the entire Lookback Period.")
-        
-
-        st.markdown("**4. Forecast High / Forecast Low**")
-        st.info("The max/min price forecast range based on MonteCarlo simulation for a 1 month time horizon.")
-        
-        st.markdown("**5. Avg Return (AAR%) / Annualized Vol (Vol%)**")
-        st.info("These metrics are calculated using the daily logarithmic returns over the Lookback Period and are then **annualized** for comparison (assumes 252 trading days/year).")
-        
-        st.markdown("**6. Sharpe Ratio**")
-        st.info("Calculated as the **Annualized Average Return** (AAR%) divided by the **Annualized Volatility** (Vol%). This is a key measure of risk-adjusted return (assumes a risk-free rate of 0% for simplicity in this demo).")
-        
-
-    with st.sidebar.expander("How to use the dashboard", expanded=False):
-        st.markdown("""
-        1. **Choose Lookback Period** for analysis (e.g., '1y' or 'Custom Date').
-        2. **View Historical Risk-Return** chart for followed tickers.  
-        3. **View Metrics summary** table.
-        4. **Select Tickers** in the table and click **Simulate Portfolio** to analyze an equally-weighted $100k portfolio.
-        5. **Manage Tickers**: Add or remove tickers to follow below.
-        """)
-
 # ----------------------------------------------------------------------
 # --- Main Dashboard Function ---
 # ----------------------------------------------------------------------
@@ -239,7 +173,7 @@ def main():
 
     # User Input for Data Period
         
-    # Define selectable periods (common Yahoo Finance periods)
+    # Define selectable periods
     AVAILABLE_PERIODS = ["3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
     
     # 1. Period Selection
@@ -287,7 +221,7 @@ def main():
     
     # Load and process all data required for the main display
     # Pass the custom period/date argument
-    final_df, df_daily, followed_tickers = _load_and_process_data(PeriodOrStart=period_arg)
+    final_df, df_daily, all_tickers = _load_and_process_data(PeriodOrStart=period_arg)
   
     # Save the period_arg into the session state
     st.session_state['main_dashboard_period_arg'] = period_arg 

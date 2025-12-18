@@ -121,7 +121,7 @@ def confirm_follow_dialog(tickers_to_add:list):
     """
     Displays a confirmation dialog before adding tickers to follow.
     """
-    st.write(f"Following tickers: **{', '.join(tickers_to_add)}**")
+    st.write(f"Adding tickers: **{', '.join(tickers_to_add)}**")
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Confirm Follow"):

@@ -4,45 +4,18 @@ import pandas as pd
 import numpy as np
 import altair as alt
 import datetime 
-
-# Import all necessary modules
 from src.dashboard_manager import calculate_all_indicators, get_stock_data
 from src.tickers_manager import load_tickers, add_ticker, confirm_unfollow_dialog, TickerValidationError
 from src.sim_portfolio import calculate_portfolio
-from src.dashboard_display import highlight_change, display_credits
+from src.dashboard_display import highlight_change, display_credits, render_info_section
 from src.indicators import annualized_risk_free_rate
 from src.price_forecast import project_price_range
-
-DISPLAY_COLUMNS = ['Ticker', 'sector', 'marketCap', 'beta', 'startPrice', 'close', 'divPayout',  'forecastLow', 'forecastHigh', 'avgReturn', 'annualizedVol', 'sharpeRatio']
-
-# ----------------------------------------------------------------------
-# --- UI Callback Functions ---
-# ----------------------------------------------------------------------
-
-def handle_add_ticker_click():
-    """Callback function to handle adding a new ticker symbol."""
-    # Retrieve the ticker value from session state
-    new_ticker = st.session_state.add_ticker_input.upper().strip()
-        
-    if not new_ticker:
-        st.warning("Please enter a ticker symbol to add.")
-        return 
-        
-    try:
-        add_ticker(new_ticker) 
-        st.session_state['add_ticker_input'] = ""
-        st.success(f"✅ Added ticker {new_ticker}")
-        st.rerun() 
-            
-    except TickerValidationError as e:
-        st.error(f"❌ {e}")
-        
-    except Exception as e:
-        st.error(f"❌ An unexpected error occurred: {e}")
 
 # ----------------------------------------------------------------------
 # --- Data Helper Functions ---
 # ----------------------------------------------------------------------
+
+DISPLAY_COLUMNS = ['Ticker', 'sector', 'marketCap', 'beta', 'startPrice', 'close', 'divPayout',  'forecastLow', 'forecastHigh', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -231,7 +204,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
                 # Pass the full daily data to the calculation function
                 portfolio_tuples = calculate_portfolio(selected_tickers, df_daily, total_investment)
                 st.session_state['portfolio'] = portfolio_tuples
-                st.switch_page("pages/02_Portfolio_Sim.py")
+                st.switch_page("pages/03_Portfolio_Sim.py")
             else:
                 st.warning("Please select at least one ticker.")
 
@@ -240,49 +213,6 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         if st.button("Unfollow Selected Tickers", disabled=not selected_tickers):
             confirm_unfollow_dialog(selected_tickers)
 
-def render_info_section():
-    st.sidebar.markdown("### ℹ️ Guides")
-    
-    with st.sidebar.expander("How calculations are made", expanded=False):
-        st.subheader("Data Source & Lookback Period")
-        st.markdown(
-            """
-            The data is sourced via an external financial data API (Yahoo Finance). 
-            
-            - **Data Type:** Daily Adjusted Closing Prices (`Close`), along with Sector and Dividend Payout.
-            """
-        )
-
-        st.subheader("Summary Table Column Methodology")
-        
-        st.markdown("**1. First**")
-        st.info("The Adjusted Close Price on the **first day** of the selected Lookback Period. Used as the base for all period-related returns")
-        
-        st.markdown("**2. Last**")
-        st.info("The latest Adjusted Close Price.")      
-        
-        st.markdown("**3. Dividends**")
-        st.info("The **Total Sum of Dividends** paid out per share for the stock over the entire Lookback Period.")
-        
-
-        st.markdown("**4. Forecast High / Forecast Low**")
-        st.info("The max/min price forecast range based on MonteCarlo simulation for a 1 month time horizon.")
-        
-        st.markdown("**5. Avg Return (AAR%) / Annualized Vol (Vol%)**")
-        st.info("These metrics are calculated using the daily logarithmic returns over the Lookback Period and are then **annualized** for comparison (assumes 252 trading days/year).")
-        
-        st.markdown("**6. Sharpe Ratio**")
-        st.info("Calculated as the **Annualized Average Return** (AAR%) divided by the **Annualized Volatility** (Vol%). This is a key measure of risk-adjusted return (assumes a risk-free rate of 0% for simplicity in this demo).")
-        
-
-    with st.sidebar.expander("How to use the dashboard", expanded=False):
-        st.markdown("""
-        1. **Choose Lookback Period** for analysis (e.g., '1y' or 'Custom Date').
-        2. **View Historical Risk-Return** chart for followed tickers.  
-        3. **View Metrics summary** table.
-        4. **Select Tickers** in the table and click **Simulate Portfolio** to analyze an equally-weighted $100k portfolio.
-        5. **Manage Tickers**: Add or remove tickers to follow below.
-        """)
 
 # ----------------------------------------------------------------------
 # --- Main Dashboard Function ---
