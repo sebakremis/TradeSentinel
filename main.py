@@ -7,7 +7,7 @@ import datetime
 
 # Import all necessary modules
 from src.dashboard_manager import calculate_all_indicators, get_stock_data
-from src.tickers_manager import load_followed_tickers, add_ticker, remove_ticker, TickerValidationError
+from src.tickers_manager import load_followed_tickers, add_ticker, confirm_unfollow_dialog, TickerValidationError
 from src.sim_portfolio import calculate_portfolio
 from src.dashboard_display import highlight_change
 from src.indicators import annualized_risk_free_rate
@@ -221,21 +221,26 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
     selected_tickers_df = edited_df[edited_df['Select']]
     selected_tickers = selected_tickers_df['Ticker'].tolist()
 
-    if st.button("Simulate Portfolio", disabled=not selected_tickers):
-        if selected_tickers:
-            total_investment = 100000
-            # CRITICAL ADDITION: Save data required for the next page
-            # Save the current period (already stored in session_state['main_dashboard_period_arg'])
-            st.session_state['portfolio_period_arg'] = st.session_state['main_dashboard_period_arg']
-            
-            # Pass the full daily data to the calculation function
-            portfolio_tuples = calculate_portfolio(selected_tickers, df_daily, total_investment)
-            st.session_state['portfolio'] = portfolio_tuples
-            st.switch_page("pages/02_Portfolio_Sim.py")
-        else:
-            st.warning("Please select at least one ticker.")
+    # Followed tickers buttons
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        if st.button("Simulate Portfolio", disabled=not selected_tickers):
+            if selected_tickers:
+                total_investment = 100000
+                # Save the current period (already stored in session_state['main_dashboard_period_arg'])
+                st.session_state['portfolio_period_arg'] = st.session_state['main_dashboard_period_arg']
+                
+                # Pass the full daily data to the calculation function
+                portfolio_tuples = calculate_portfolio(selected_tickers, df_daily, total_investment)
+                st.session_state['portfolio'] = portfolio_tuples
+                st.switch_page("pages/02_Portfolio_Sim.py")
+            else:
+                st.warning("Please select at least one ticker.")
 
-    st.markdown("Select tickers to simulate a $100 k **equally-weighted portfolio**.")
+        st.markdown("Select tickers to simulate a $100 k **equally-weighted portfolio**.")
+    with col2:
+        if st.button("Unfollow Selected Tickers", disabled=not selected_tickers):
+            confirm_unfollow_dialog(selected_tickers)
 
 def render_info_section():
     st.sidebar.markdown("### ℹ️ Guides")

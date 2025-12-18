@@ -50,16 +50,14 @@ def save_followed_tickers(tickers: pd.DataFrame) -> None:
 def get_followed_tickers():
     """
     Manages the Streamlit session state for followed tickers.
-    Initializes the state if it doesn't exist and returns the DataFrame.
+    Returns the DataFrame.
     """
-    if 'followed_tickers_df' not in st.session_state:
-        # Load from file only the first time
-        try:
-            st.session_state.followed_tickers_df = pd.read_csv(filepath)
-        except FileNotFoundError:
-            st.session_state.followed_tickers_df = pd.DataFrame(columns=['Ticker'])
-    
-    return st.session_state.followed_tickers_df
+    try:
+        followed_tickers_df = pd.read_csv(filepath)
+    except FileNotFoundError:
+        followed_tickers_df = pd.DataFrame(columns=['Ticker'])
+
+    return followed_tickers_df
 
 def add_ticker(ticker: str) -> None:
     """Add a ticker after fetching and validating its sector."""
@@ -77,12 +75,11 @@ def add_ticker(ticker: str) -> None:
     # Validate the ticker
     if not info:
         raise TickerValidationError(f"Ticker '{ticker}' is not valid.")
-       
-    # Update the session state DataFrame directly
-    st.session_state.followed_tickers_df = tickers_df
-    
+         
     # Save the updated DataFrame to disk
-    save_followed_tickers(st.session_state.followed_tickers_df)
+    new_row = pd.DataFrame({'Ticker': [ticker]})
+    expanded_df = pd.concat([tickers_df, new_row], ignore_index=True)
+    save_followed_tickers(expanded_df)
     
 def remove_ticker(ticker: str) -> None:
     """Removes a ticker if it is already present."""
@@ -94,7 +91,26 @@ def remove_ticker(ticker: str) -> None:
         raise TickerValidationError(f"Ticker '{ticker}' is not currently being followed.")
     
     # Remove the ticker row using boolean indexing and update session state
-    st.session_state.followed_tickers_df = tickers_df[tickers_df['Ticker'] != ticker]
+    reduced_df = tickers_df[tickers_df['Ticker'] != ticker].reset_index(drop=True)
     
     # Save the updated DataFrame to disk
-    save_followed_tickers(st.session_state.followed_tickers_df)
+    save_followed_tickers(reduced_df)
+
+@st.dialog("Confirm Unfollow")
+def confirm_unfollow_dialog(tickers_to_remove:list):
+    """
+    Displays a confirmation dialog before unfollowing tickers.
+    """
+    st.write(f"Unfollowing tickers: **{', '.join(tickers_to_remove)}**")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Confirm Unfollow"):
+            for ticker in tickers_to_remove:
+                try:
+                    remove_ticker(ticker)
+                except TickerValidationError as e:
+                    st.error(f"❌ {e}")
+            st.rerun()  # Refresh the app to reflect changes
+    with col2:
+        if st.button("Cancel"):
+            st.rerun()  # Refresh the app to reflect changes
