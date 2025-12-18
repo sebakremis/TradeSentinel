@@ -34,18 +34,6 @@ Users are solely responsible for any decisions made based on the information pro
 ## 🛠 Tech stack
 - **Python:** `pandas`, `numpy`, `altair`, `streamlit`, `plotly`
 - **Data APIs:** `Yahoo Finance`
-- **Deployment:** `Streamlit Community Cloud`
-
-## 📂 Project structure
-- **data/** — Sample datasets  
-- **src/** — Core Python scripts  
-  - **ensure_data.py** — Market data ingestion  
-  - **dashboard.py** — App UI and visualization  
-  - *(other supporting modules)*  
-- **tests/** — Unit tests  
-- **requirements.txt** — Python dependencies  
-- **README.md** — Project documentation  
-- **LICENSE** — License file  
 
 
 ## 📈 Example use case
@@ -57,15 +45,6 @@ Users are solely responsible for any decisions made based on the information pro
 ---
 
 ## 🚀 Launch app
-
-### Live demo
-<a href="https://tradesentinel.streamlit.app/" target="_blank">🌐 Click here to launch TradeSentinel demo on Streamlit Community Cloud</a>  
-
-_No installation required — runs directly in your browser._  
-
-*(Tip: On GitHub, links always open in the same tab. Right‑click and choose “Open link in new tab” if you prefer.)*
-
-### Run locally
 
 To run TradeSentinel on your own machine:
 
