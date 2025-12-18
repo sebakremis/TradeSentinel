@@ -15,10 +15,10 @@ Functions included:
 
 Robustness & Safety
 -------------------
-- All functions are pure and side‑effect free: they take pandas Series/DataFrames as input
+- All functions are pure and side-effect free: they take pandas Series/DataFrames as input
   and return numeric results or DataFrames, making them easy to test and reuse.
-- Empty or all‑NaN inputs are handled gracefully, returning `np.nan` rather than raising errors.
-- Division‑by‑zero cases (e.g., zero standard deviation or zero max drawdown) are explicitly guarded.
+- Empty or all-NaN inputs are handled gracefully, returning `np.nan` rather than raising errors.
+- Division-by-zero cases (e.g., zero standard deviation or zero max drawdown) are explicitly guarded.
 - Behaviour on insufficient data is predictable and safe for use in automated pipelines.
 
 Typical usage:

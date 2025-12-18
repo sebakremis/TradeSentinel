@@ -31,7 +31,7 @@ def display_per_ticker_pnl(df_pnl: pd.DataFrame):
             "Change (%)": "{:,.2f}",
             "Position Value ($)": "{:,.2f}"
         })
-        .hide(subset=["Sector"], axis=1),
+        .hide(subset=["sector"], axis=1),
         width="stretch",
         hide_index=True
     )
@@ -102,7 +102,7 @@ def display_sector_allocation(df_pnl: pd.DataFrame):
     st.subheader("📊 Portfolio Allocation by Sector")
     
     sector_alloc = (
-        df_pnl.groupby("Sector")
+        df_pnl.groupby("sector")
         .agg({
             "Position Value ($)": "sum",
             "Ticker": lambda s: ", ".join(sorted(set(s)))
@@ -118,7 +118,7 @@ def display_sector_allocation(df_pnl: pd.DataFrame):
         fig_sector = go.Figure(
             data=[
                 go.Pie(
-                    labels=sector_alloc["Sector"],
+                    labels=sector_alloc["sector"],
                     values=sector_alloc["PositionValue"],
                     hole=0.3,
                     textinfo="percent+label",
@@ -137,7 +137,7 @@ def display_sector_allocation(df_pnl: pd.DataFrame):
         st.plotly_chart(fig_sector, width='stretch')
         
         st.dataframe(
-            sector_alloc[["Sector", "PositionValue", "Ticker"]]
+            sector_alloc[["sector", "PositionValue", "Ticker"]]
             .rename(columns={"PositionValue": "Position Value ($)"})
             .style.format({"Position Value ($)": "${:,.2f}"}),
             width='stretch',

@@ -13,7 +13,7 @@ from src.dashboard_display import highlight_change
 from src.indicators import annualized_risk_free_rate
 from src.price_forecast import project_price_range
 
-DISPLAY_COLUMNS = ['Ticker', 'Sector', 'marketCap', 'beta', 'Start Price', 'Close', 'Dividend',  'Forecast Low', 'Forecast High', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']
+DISPLAY_COLUMNS = ['Ticker', 'sector', 'marketCap', 'beta', 'startPrice', 'close', 'divPayout',  'forecastLow', 'forecastHigh', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 # ----------------------------------------------------------------------
 # --- UI Callback Functions ---
@@ -55,9 +55,9 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
         if col not in df.columns:
             df[col] = np.nan
     
-    # Explicitly ensure 'Sector' column is a string type.
-    if 'Sector' in df.columns:
-        df['Sector'] = df['Sector'].fillna('N/A').astype(str) 
+    # Explicitly ensure 'sector' column is a string type.
+    if 'sector' in df.columns:
+        df['sector'] = df['sector'].fillna('N/A').astype(str) 
     
     if "marketCap" in df.columns:
         df["marketCap"] = (df["marketCap"] / 1_000_000_000).round(2)  # 2 decimal places
@@ -67,7 +67,7 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     df = df[DISPLAY_COLUMNS]
 
     # Apply rounding
-    for col in ['Close', 'Start Price', 'Forecast Low', 'Forecast High', 'Dividend', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']:
+    for col in ['close', 'startPrice', 'forecastLow', 'forecastHigh', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
         if col in df.columns:
             df[col] = df[col].round(2)
             
@@ -77,7 +77,7 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
 @st.cache_data
 def _cached_forecast(df_snapshot: pd.DataFrame) -> pd.DataFrame:
     return project_price_range(
-        df_snapshot[['Ticker', 'Close', 'Avg Return', 'Annualized Vol']].drop_duplicates(subset=['Ticker']),
+        df_snapshot[['Ticker', 'close', 'avgReturn', 'annualizedVol']].drop_duplicates(subset=['Ticker']),
         period_months=1,
         n_sims=10000
     )
@@ -116,35 +116,34 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
 
     final_df_unformatted = df_daily.groupby('Ticker').tail(1).copy()
 
-    # ⏱️ Forecast con cache
+    # Forecast with cache
     forecast_df = _cached_forecast(final_df_unformatted)
     final_df_unformatted = final_df_unformatted.merge(
-        forecast_df[['Ticker', 'Forecast Low', 'Forecast High']],
+        forecast_df[['Ticker', 'forecastLow', 'forecastHigh']],
         on='Ticker',
         how='left'
     )
 
-    start_prices = df_daily.groupby('Ticker')['Close'].first().reset_index()
-    start_prices.rename(columns={'Close': 'Start Price'}, inplace=True)
+    start_prices = df_daily.groupby('Ticker')['close'].first().reset_index()
+    start_prices.rename(columns={'close': 'startPrice'}, inplace=True)
     final_df_unformatted = final_df_unformatted.merge(start_prices, on='Ticker', how='left')
 
-    if 'Dividends' in df_daily.columns:
-        total_dividends = df_daily.groupby('Ticker')['Dividends'].sum().reset_index()
-        total_dividends.rename(columns={'Dividends': 'Dividend'}, inplace=True)
+    if 'dividends' in df_daily.columns:
+        total_dividends = df_daily.groupby('Ticker')['dividends'].sum().reset_index()
+        total_dividends.rename(columns={'dividends': 'divPayout'}, inplace=True)
         final_df_unformatted = final_df_unformatted.merge(total_dividends, on='Ticker', how='left')
-        final_df_unformatted['Dividend'] = final_df_unformatted['Dividend'].fillna(0)
+        final_df_unformatted['divPayout'] = final_df_unformatted['divPayout'].fillna(0)
     else:
-        final_df_unformatted['Dividend'] = 0
-
-    if 'Sector' in tickers_df.columns and not final_df_unformatted.empty:
+        final_df_unformatted['divPayout'] = 0
+    if 'sector' in tickers_df.columns and not final_df_unformatted.empty:
         final_df_unformatted = final_df_unformatted.merge(
-            tickers_df[['Ticker', 'Sector']],
+            tickers_df[['Ticker', 'sector']],
             on='Ticker',
             how='left'
         )
-        if 'Sector_x' in final_df_unformatted.columns:
-            final_df_unformatted['Sector'] = final_df_unformatted['Sector_y']
-            final_df_unformatted.drop(columns=['Sector_x', 'Sector_y'], inplace=True)
+        if 'sector_x' in final_df_unformatted.columns:
+            final_df_unformatted['sector'] = final_df_unformatted['sector_y']
+            final_df_unformatted.drop(columns=['sector_x', 'sector_y'], inplace=True)
 
     final_df = _format_final_df(final_df_unformatted)
 
@@ -159,12 +158,12 @@ def _render_overview_section(final_df: pd.DataFrame):
     """Renders the risk-return scatter plot."""
     st.subheader("Historical Risk-Return")
 
-    if not final_df.empty and 'Avg Return' in final_df.columns and 'Annualized Vol' in final_df.columns:
+    if not final_df.empty and 'avgReturn' in final_df.columns and 'annualizedVol' in final_df.columns:
         # Create the scatter plot using Altair
         chart = alt.Chart(final_df).mark_point(size=100).encode(
-            x=alt.X('Annualized Vol', title='Annualized Volatility (Vol%)'),
-            y=alt.Y('Avg Return', title='Annualized Average Return (AAR%)'),
-            tooltip=['Ticker', 'Avg Return', 'Annualized Vol'],
+            x=alt.X('annualizedVol', title='Annualized Volatility (Vol%)'),
+            y=alt.Y('avgReturn', title='Annualized Average Return (AAR%)'),
+            tooltip=['Ticker', 'avgReturn', 'annualizedVol'],
             color=alt.Color('Ticker', legend=None)
         ).properties(
             title=''
@@ -184,16 +183,16 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         st.info("No data available to display in the summary table.")
         return
 
-    sorted_df = final_df.sort_values(by='Sharpe Ratio', ascending=False)
+    sorted_df = final_df.sort_values(by='sharpeRatio', ascending=False)
 
     # --- Apply Conditional Formatting using Pandas Styler ---
     display_df_styled = sorted_df.copy()
     display_df_styled['Select'] = False # This must be done on the DataFrame copy before styling
     
-    # Apply the color function to the 'Avg Return' column
+    # Apply the color function to the 'avgReturn' column
     styled_table = display_df_styled.style.map(
         highlight_change, 
-        subset=['Avg Return'] 
+        subset=['avgReturn'] 
     )
 
 
@@ -203,20 +202,19 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         width='stretch',
         column_config={
             "Ticker": st.column_config.TextColumn("Ticker", width="small"),
-            "Sector": st.column_config.TextColumn("Sector"),
+            "sector": st.column_config.TextColumn("sector"),
             "marketCap": st.column_config.NumberColumn("marketCap", format="$%.1f B", width="small"),
             "beta": st.column_config.NumberColumn("beta", format="%.2f", width="small"),
-            "Start Price": st.column_config.NumberColumn("First", help="First price of the lookback period", format="$%.2f", width="small"),
-            "Close": st.column_config.NumberColumn("Last", help="Last price of the lookback period", format="$%.2f", width="small"),
-            "Dividend": st.column_config.NumberColumn("Dividends", help="Total dividends received during the lookback period.", format="$%.2f",width="small"),            
-            "Forecast Low": st.column_config.NumberColumn("Forecast Low", format="$%.2f", width="small"),
-            "Forecast High": st.column_config.NumberColumn("Forecast High", format="$%.2f",width="small"),                       
-            "Avg Return": st.column_config.NumberColumn("AAR%", help="Annualized Average return", format="%.2f%%", width="small"),
-            "Annualized Vol": st.column_config.NumberColumn("Vol%", help="Annualized Average volatility", format="%.2f%%", width="small"),
-            "Sharpe Ratio": st.column_config.NumberColumn("Sharpe", format="%.2f%%", width="small"),                      
+            "startPrice": st.column_config.NumberColumn("first", help="First price of the lookback period", format="$%.2f", width="small"),
+            "close": st.column_config.NumberColumn("last", help="Last price of the lookback period", format="$%.2f", width="small"),
+            "divPayout": st.column_config.NumberColumn("divPayout", help="Total dividends received during the lookback period.", format="$%.2f",width="small"),            
+            "forecastLow": st.column_config.NumberColumn("forecastLow", format="$%.2f", width="small"),
+            "forecastHigh": st.column_config.NumberColumn("forecastHigh", format="$%.2f",width="small"),                       
+            "avgReturn": st.column_config.NumberColumn("AAR%", help="Annualized Average return", format="%.2f%%", width="small"),
+            "annualizedVol": st.column_config.NumberColumn("Vol%", help="Annualized Average volatility", format="%.2f%%", width="small"),
+            "sharpeRatio": st.column_config.NumberColumn("sharpe", format="%.2f%%", width="small"),                      
             "Select": st.column_config.CheckboxColumn("Select", default=False, width="small")
         },
-        disabled=['Change %'],
         num_rows="fixed"
     )
     

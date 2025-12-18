@@ -1,71 +1,14 @@
-Ticker,Sector
-ABBV,Health Care
-AMD,Information Technology
-GOOGL,Communication Services
-GOOG,Communication Services
-AEP,Utilities
-APH,Information Technology
-APP,Communication Services
-APTV,Consumer Discretionary
-ATO,Utilities
-BK,Financials
-AVGO,Information Technology
-CHRW,Industrials
-CAH,Health Care
-CAT,Industrials
-CBOE,Financials
-COR,Real Estate
-CNP,Utilities
-CSCO,Information Technology
-C,Financials
-CME,Financials
-GLW,Information Technology
-CRWD,Information Technology
-CVS,Health Care
-DG,Consumer Staples
-DLTR,Consumer Staples
-ETR,Utilities
-EVRG,Utilities
-EXC,Utilities
-FOXA,Communication Services
-FOX,Communication Services
-GE,Industrials
-GEV,Industrials
-GILD,Health Care
-GS,Financials
-HCA,Health Care
-HWM,Industrials
-HII,Industrials
-IBM,Information Technology
-IDXX,Health Care
-INCY,Health Care
-JBL,Information Technology
-JNJ,Health Care
-JCI,Industrials
-KLAC,Information Technology
-LRCX,Information Technology
-LLY,Health Care
-L,Financials
-MCK,Health Care
-MU,Information Technology
-MNST,Consumer Staples
-NEM,Materials
-NRG,Utilities
-PLTR,Information Technology
-RL,Consumer Discretionary
-RTX,Industrials
-HOOD,Financials
-STX,Information Technology
-TPR,Consumer Discretionary
-TEL,Information Technology
-TER,Information Technology
-TJX,Consumer Discretionary
-TKO,Communication Services
-ULTA,Consumer Discretionary
-VTR,Real Estate
-VRSN,Information Technology
-WRB,Financials
-WBD,Communication Services
-WELL,Real Estate
-WDC,Information Technology
-MSFT,Technology
+Ticker
+AMD
+GOOG
+BK
+CSCO
+C
+GE
+GS
+JNJ
+MU
+NEM
+TPR
+WDC
+MSFT

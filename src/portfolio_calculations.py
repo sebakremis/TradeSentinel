@@ -8,8 +8,8 @@ def calculate_pnl_data(prices: dict, quantities: dict) -> pd.DataFrame:
     for ticker, df in prices.items():
         if df is not None and not df.empty:
             try:
-                start = df["Close"].iloc[0]
-                end = df["Close"].iloc[-1]
+                start = df["close"].iloc[0]
+                end = df["close"].iloc[-1]
                 
                 if hasattr(start, "item"): start = start.item()
                 if hasattr(end, "item"): end = end.item()
@@ -23,7 +23,7 @@ def calculate_pnl_data(prices: dict, quantities: dict) -> pd.DataFrame:
 
                 pnl_data.append({
                     "Ticker": ticker,
-                    "Sector": sector,
+                    "sector": sector,
                     "Quantity": qty,
                     "Start Price": start,
                     "End Price": end,
@@ -49,7 +49,7 @@ def prepare_pnl_time_series(prices: dict, quantities: dict) -> pd.DataFrame:
                 
                 qty = quantities.get(ticker, 0)
                 tmp["Quantity"] = qty
-                tmp["Price"] = tmp["Close"]
+                tmp["Price"] = tmp["close"]
                 tmp["Position Value ($)"] = tmp["Price"] * tmp["Quantity"]
                 tmp["PnL"] = (tmp["Price"] - tmp["Price"].iloc[0]) * tmp["Quantity"]
                 tmp["Ticker"] = ticker

@@ -1,22 +1,13 @@
 # src/etl.py
 import pandas as pd
 import yfinance as yf
-from config import DATA_DIR, stocks_folder, tickers_file, metadata_file
+from .config import DATA_DIR, stocks_folder, tickers_file, metadata_file
+from .tickers_manager import load_followed_tickers
 
-def load_tickers_from_csv(filepath: str) -> pd.DataFrame:
-    """
-    Load tickers from a CSV file.
-    Expects a CSV with at least a 'Ticker' column.
-    """
-    try:
-        tickers_df = pd.read_csv(filepath)
-        if 'Ticker' not in tickers_df.columns:
-            raise ValueError("CSV file must contain a 'Ticker' column.")
-        return tickers_df
-    except Exception as e:
-        print(f"Error loading tickers from {filepath}: {e}")
-        return pd.DataFrame(columns=['Ticker'])
-    
+# Define the path to the followed tickers CSV file
+filepath = tickers_file
+filename = filepath.name
+   
 def fetch_prices(ticker: str, period: str = None, start: str = None, interval: str = '1d') -> pd.DataFrame:
     """
     Fetch historical data for a given ticker using yfinance.
@@ -31,6 +22,18 @@ def fetch_prices(ticker: str, period: str = None, start: str = None, interval: s
             data = yf_ticker.history(start=start, interval=interval)
         else:
             raise ValueError("Either 'period' or 'start' must be provided.")
+        
+        # Format column names
+        data.rename(columns={
+            'Open': 'open',
+            'High': 'high',
+            'Low': 'low',
+            'Close': 'close',
+            'Volume': 'volume',
+            'Dividends': 'dividends',
+            'Stock Splits': 'stockSplits'
+        }, inplace=True)
+
         return data
     except Exception as e:
         print(f"Error fetching data for ticker {ticker}: {e}")
@@ -157,7 +160,7 @@ def update_stock_database():
     """
     Updates both stock prices and metadata databases.
     """
-    tickers_df = load_tickers_from_csv(tickers_file)   
+    tickers_df = load_followed_tickers()   
     stocks_folder.mkdir(parents=True, exist_ok=True)
     update_stock_prices(tickers_df)
     update_stock_metadata(tickers_df)
@@ -165,5 +168,8 @@ def update_stock_database():
 
 
 if __name__ == "__main__":
+    """
+    Main execution to update stock database.
+    """
     update_stock_database()    
   

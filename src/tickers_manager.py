@@ -1,24 +1,25 @@
 # src/tickers_manager.py
+from fileinput import filename
 import pandas as pd
 import streamlit as st
 from pathlib import Path
 import yfinance as yf
+from src.config import tickers_file, DATA_DIR
 
-# Assuming BASE_DIR is defined as a parent directory
-from src.config import DATA_DIR, BASE_DIR
+# Define the path to the followed tickers CSV file
+filepath = tickers_file
+filename = filepath.name
 
 # Define a custom exception for better error handling
 class TickerValidationError(Exception):
     """Custom exception for invalid or missing ticker data."""
     pass
 
-def load_followed_tickers(filename='followed_tickers.csv'):
+def load_followed_tickers():
     """
     Loads followed tickers from a single CSV file.
-    Returns a DataFrame with 'Ticker' and 'Sector' columns.
-    """
-    # Construct the correct path to the tickers file using the DATA_DIR constant
-    filepath = DATA_DIR / filename
+    Returns a DataFrame with a 'Ticker' column.
+    """   
     
     tickers_df = pd.DataFrame()
 
@@ -26,27 +27,22 @@ def load_followed_tickers(filename='followed_tickers.csv'):
         tickers_df = pd.read_csv(filepath)
     except FileNotFoundError:
         st.error(f"❌ Error loading tickers: File not found at {filepath}")
-        return pd.DataFrame(columns=['Ticker', 'Sector'])
+        return pd.DataFrame(columns=['Ticker'])
     except Exception as e:
         st.error(f"❌ Error loading tickers: {e}")
-        return pd.DataFrame(columns=['Ticker', 'Sector'])
+        return pd.DataFrame(columns=['Ticker'])
 
     if tickers_df.empty or 'Ticker' not in tickers_df.columns:
         st.warning(f"⚠️ No tickers found in {filename} or 'Ticker' column is missing.")
-        return pd.DataFrame(columns=['Ticker', 'Sector'])
-
-    # Ensure 'Sector' column exists; add it if not found
-    if 'Sector' not in tickers_df.columns:
-        tickers_df['Sector'] = 'N/A'
+        return pd.DataFrame(columns=['Ticker'])
         
     return tickers_df
 
 def save_followed_tickers(tickers: pd.DataFrame) -> None:
     """Save tickers list to CSV."""
-    TICKERS_FILE = DATA_DIR / 'followed_tickers.csv'
     try:
-        TICKERS_FILE.parent.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
-        tickers.to_csv(TICKERS_FILE, index=False)
+        filepath.parent.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
+        tickers.to_csv(filepath, index=False)
     except Exception as e:
         st.error(f"❌ Error saving tickers: {e}")
         return
@@ -58,14 +54,10 @@ def get_followed_tickers():
     """
     if 'followed_tickers_df' not in st.session_state:
         # Load from file only the first time
-        filepath = DATA_DIR / 'followed_tickers.csv'
         try:
             st.session_state.followed_tickers_df = pd.read_csv(filepath)
-            # Ensure 'Sector' column exists
-            if 'Sector' not in st.session_state.followed_tickers_df.columns:
-                st.session_state.followed_tickers_df['Sector'] = 'N/A'
         except FileNotFoundError:
-            st.session_state.followed_tickers_df = pd.DataFrame(columns=['Ticker', 'Sector'])
+            st.session_state.followed_tickers_df = pd.DataFrame(columns=['Ticker'])
     
     return st.session_state.followed_tickers_df
 
@@ -83,14 +75,11 @@ def add_ticker(ticker: str) -> None:
     info = yf_ticker.info
 
     # Validate the ticker
-    if not info or 'sector' not in info:
-        raise TickerValidationError(f"Ticker '{ticker}' is not valid or no sector information could be found.")
-    
-    sector = info.get('sector', 'N/A')
-    new_row = pd.DataFrame({"Ticker": [ticker], "Sector": [sector]})
-    
+    if not info:
+        raise TickerValidationError(f"Ticker '{ticker}' is not valid.")
+       
     # Update the session state DataFrame directly
-    st.session_state.followed_tickers_df = pd.concat([tickers_df, new_row], ignore_index=True)
+    st.session_state.followed_tickers_df = tickers_df
     
     # Save the updated DataFrame to disk
     save_followed_tickers(st.session_state.followed_tickers_df)

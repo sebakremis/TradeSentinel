@@ -4,7 +4,7 @@ import numpy as np
 
 def distance_from_ema(df: pd.DataFrame)->pd.DataFrame:
     df = df.sort_values(['Ticker', 'Date'])
-    df['Distance_Ema20'] = ((df['Close']-df['EMA_20'])/ df['EMA_20'])*100
+    df['Distance_Ema20'] = ((df['close']-df['EMA_20'])/ df['EMA_20'])*100
     return df
     
 
@@ -27,8 +27,8 @@ def calculate_price_change(df: pd.DataFrame) -> pd.DataFrame:
     df = df.sort_values(['Ticker', 'Date'])
 
     # Group by ticker and calculate the difference and percentage change
-    df['Change'] = df.groupby('Ticker')['Close'].diff()
-    df['Change %'] = df.groupby('Ticker')['Close'].pct_change(fill_method=None) * 100
+    df['change'] = df.groupby('Ticker')['close'].diff()
+    df['change%'] = df.groupby('Ticker')['close'].pct_change(fill_method=None) * 100
 
     return df
 
@@ -53,12 +53,12 @@ def ema(df: pd.DataFrame, n: int) -> pd.DataFrame:
 
     # Group by Ticker and apply the EMA calculation
     ema_column_name = f'EMA_{n}'
-    df[ema_column_name] = df.groupby('Ticker')['Close'].transform(
+    df[ema_column_name] = df.groupby('Ticker')['close'].transform(
         lambda x: x.ewm(span=n, adjust=False).mean()
     )
     return df
 
-def trend(df: pd.DataFrame, fast_n: int = 20, slow_n: int = 50, price_col: str = 'Close') -> pd.DataFrame:
+def trend(df: pd.DataFrame, fast_n: int = 20, slow_n: int = 50, price_col: str = 'close') -> pd.DataFrame:
     """
     Determines the trend based on a three-EMA crossover system.
 
@@ -109,13 +109,13 @@ def highest_close(df: pd.DataFrame, lookback: int = 20) -> pd.DataFrame:
     Returns:
         pd.DataFrame: The DataFrame with a new 'Highest Close' column.
     """
-    if 'Close' not in df.columns or 'Ticker' not in df.columns:
-        raise ValueError("DataFrame must contain 'Close' and 'Ticker' columns.")
+    if 'close' not in df.columns or 'Ticker' not in df.columns:
+        raise ValueError("DataFrame must contain 'close' and 'Ticker' columns.")
         
     df = df.sort_values(['Ticker', 'Date'])
     
     # Calculate the rolling highest high for each ticker
-    df['Highest Close'] = df.groupby('Ticker')['Close'].transform(
+    df['Highest Close'] = df.groupby('Ticker')['close'].transform(
         lambda x: x.shift(1).rolling(window=lookback, min_periods=1).max()
     )
     
@@ -127,16 +127,16 @@ def distance_highest_close(df: pd.DataFrame) -> pd.DataFrame:
     pre-calculated Highest Close value.
 
     Args:
-        df (pd.DataFrame): The DataFrame with 'Close' and 'Highest Close' columns.
+        df (pd.DataFrame): The DataFrame with 'close' and 'highestClose' columns.
 
     Returns:
-        pd.DataFrame: The DataFrame with a new 'Percent_Diff_From_HH' column.
+        pd.DataFrame: The DataFrame with a new 'distanceHC' column.
     """
-    if 'Close' not in df.columns or 'Highest Close' not in df.columns:
-        raise ValueError("DataFrame must contain 'Close' and 'Highest Close' columns.")
+    if 'close' not in df.columns or 'highestClose' not in df.columns:
+        raise ValueError("DataFrame must contain 'close' and 'highestClose' columns.")
         
     # Calculate the percent difference using the numerical formula
-    df['Distance HC'] = ((df['Close'] - df['Highest Close']) / df['Highest Close']) * 100
+    df['distanceHC'] = ((df['close'] - df['highestClose']) / df['highestClose']) * 100
     
     return df
 
@@ -164,11 +164,11 @@ def calculate_annualized_metrics(df: pd.DataFrame) -> pd.DataFrame:
     # 2. Define the aggregation logic for each Ticker
     def aggregate_metrics(group):
         """Calculates single-period annualized metrics for one ticker's data."""
-        returns = group['Daily Return'].dropna()
+        returns = group['dailyReturn'].dropna()
         N = len(returns)
         
         if N < 5: # Need a minimum number of observations for meaningful stats
-            return pd.Series({'Avg Return': np.nan, 'Annualized Vol': np.nan, 'Sharpe Ratio': np.nan})
+            return pd.Series({'avgReturn': np.nan, 'annualizedVol': np.nan, 'sharpeRatio': np.nan})
 
         # --- A. Annualized Volatility (Risk) ---
         # Volatility scales by the square root of time
@@ -191,14 +191,14 @@ def calculate_annualized_metrics(df: pd.DataFrame) -> pd.DataFrame:
 
         return pd.Series({
             # Store as percentage for easier formatting later (100 is applied in _format_final_df)
-            'Avg Return': annualized_return * 100,
-            'Annualized Vol': annualized_vol * 100,
-            'Sharpe Ratio': sharpe_ratio
+            'avgReturn': annualized_return * 100,
+            'annualizedVol': annualized_vol * 100,
+            'sharpeRatio': sharpe_ratio
         })
 
     # Ensure Daily Return is calculated before aggregation
-    if 'Daily Return' not in df.columns:
-        df['Daily Return'] = df.groupby('Ticker')['Close'].pct_change()
+    if 'dailyReturn' not in df.columns:
+        df['dailyReturn'] = df.groupby('Ticker')['close'].pct_change()
 
     # Apply the aggregation logic
     annual_metrics_df = df.groupby('Ticker').apply(aggregate_metrics, include_groups=False).reset_index()
@@ -224,7 +224,7 @@ def calculate_extreme_closes(df: pd.DataFrame) -> pd.DataFrame:
     """
     
     # Calculate Highest/Lowest Close for the entire lookback period per Ticker
-    extreme_prices = df.groupby('Ticker')['Close'].agg(
+    extreme_prices = df.groupby('Ticker')['close'].agg(
         highest_close='max',
         lowest_close='min'
     ).reset_index()
@@ -239,8 +239,8 @@ def calculate_extreme_closes(df: pd.DataFrame) -> pd.DataFrame:
     
     # Rename columns to match desired output
     df.rename(columns={
-        'highest_close': 'Highest Close',
-        'lowest_close': 'Lowest Close'
+        'highest_close': 'highestClose',
+        'lowest_close': 'lowestClose'
     }, inplace=True)
     
     return df
@@ -261,7 +261,7 @@ def calculate_distance_highest_close(df: pd.DataFrame) -> pd.DataFrame:
     # Formula: (Current Close - Highest Close) / Highest Close * 100
     # The result will be negative or zero.
     df['Distance HC'] = (
-        (df['Close'] - df['Highest Close']) / df['Highest Close']
+        (df['close'] - df['highestClose']) / df['highestClose']
     ) * 100
     
     return df

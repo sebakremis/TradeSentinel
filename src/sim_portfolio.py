@@ -22,9 +22,9 @@ def calculate_portfolio(selected_tickers, df_full_data, portfolio_size):
     portfolio_df = df_full_data[df_full_data['Ticker'].isin(selected_tickers)].copy()
 
     # 2. Get the *first* price for each ticker in the lookback period
-    # Group by Ticker and select the first 'Close' price (which corresponds to 
+    # Group by Ticker and select the first 'close' price (which corresponds to 
     # the oldest date fetched for the selected period).
-    first_prices = portfolio_df.groupby('Ticker')['Close'].first().reset_index(name='Starting_Price')
+    first_prices = portfolio_df.groupby('Ticker')['close'].first().reset_index(name='Starting_Price')
     
     # Check if we have prices for all selected tickers (should match num_tickers)
     if first_prices.empty:

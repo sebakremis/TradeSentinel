@@ -32,9 +32,9 @@ def project_price_range(data, period_months=1, n_sims=10000):
 
 
     for _, row in data.iterrows():
-        S0 = row['Close']
-        mu = row['Avg Return']/100  # Convert percentage to decimal
-        sigma = row['Annualized Vol']/100
+        S0 = row['close']
+        mu = row['avgReturn']/100  # Convert percentage to decimal
+        sigma = row['annualizedVol']/100
 
         # Simulate end price using Geometric Brownian Motion
         Z = np.random.normal(0, 1, n_sims)
@@ -45,9 +45,9 @@ def project_price_range(data, period_months=1, n_sims=10000):
 
         results.append({
             'Ticker': row['Ticker'],
-            'Forecast Low': forecast_min,
-            'Forecast High': forecast_max,
-            'PeriodMonths': period_months
+            'forecastLow': forecast_min,
+            'forecastHigh': forecast_max,
+            'periodMonths': period_months
         })
 
     forecast_df = pd.DataFrame(results)

@@ -75,14 +75,14 @@ def calculate_all_indicators(df_daily)-> pd.DataFrame:
     df_daily = df_daily.sort_values(['Ticker', 'Date'])
 
     # Calculate Daily Return (Required for performance metrics)
-    df_daily['Daily Return'] = df_daily.groupby('Ticker')['Close'].pct_change(fill_method=None)
+    df_daily['dailyReturn'] = df_daily.groupby('Ticker')['close'].pct_change(fill_method=None)
   
     # Call the extreme price function
     df_daily = calculate_extreme_closes(df_daily) 
     
     # Calculate Annualized Metrics (uses the full data slice per ticker)
     # The 'Ticker' column is crucial here for the groupby in the metrics function.
-    annual_metrics_df = calculate_annualized_metrics(df_daily[['Ticker', 'Date', 'Close', 'Daily Return']].copy())
+    annual_metrics_df = calculate_annualized_metrics(df_daily[['Ticker', 'Date', 'close', 'dailyReturn']].copy())
     
     # 4. Merge the new performance metrics back into the main DataFrame
     # Note: Annual metrics are calculated on the whole period, so they only exist
@@ -91,7 +91,7 @@ def calculate_all_indicators(df_daily)-> pd.DataFrame:
     # (Since annual_metrics_df only contains the final, latest date per ticker).
     df_daily = pd.merge(
         df_daily, 
-        annual_metrics_df[['Ticker', 'Avg Return', 'Annualized Vol', 'Sharpe Ratio']],
+        annual_metrics_df[['Ticker', 'avgReturn', 'annualizedVol', 'sharpeRatio']],
         on='Ticker',
         how='left'
     )  
