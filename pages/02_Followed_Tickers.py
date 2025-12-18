@@ -7,14 +7,38 @@ import datetime
 
 # Import all necessary modules
 from src.dashboard_manager import calculate_all_indicators, get_stock_data
-from src.tickers_manager import load_tickers, add_ticker, confirm_follow_dialog, TickerValidationError
+from src.tickers_manager import load_tickers, add_ticker, confirm_unfollow_dialog, TickerValidationError
 from src.sim_portfolio import calculate_portfolio
 from src.dashboard_display import highlight_change, display_credits
 from src.indicators import annualized_risk_free_rate
 from src.price_forecast import project_price_range
-from src.config import DATA_DIR, all_tickers_file
 
 DISPLAY_COLUMNS = ['Ticker', 'sector', 'marketCap', 'beta', 'startPrice', 'close', 'divPayout',  'forecastLow', 'forecastHigh', 'avgReturn', 'annualizedVol', 'sharpeRatio']
+
+# ----------------------------------------------------------------------
+# --- UI Callback Functions ---
+# ----------------------------------------------------------------------
+
+def handle_add_ticker_click():
+    """Callback function to handle adding a new ticker symbol."""
+    # Retrieve the ticker value from session state
+    new_ticker = st.session_state.add_ticker_input.upper().strip()
+        
+    if not new_ticker:
+        st.warning("Please enter a ticker symbol to add.")
+        return 
+        
+    try:
+        add_ticker(new_ticker) 
+        st.session_state['add_ticker_input'] = ""
+        st.success(f"✅ Added ticker {new_ticker}")
+        st.rerun() 
+            
+    except TickerValidationError as e:
+        st.error(f"❌ {e}")
+        
+    except Exception as e:
+        st.error(f"❌ An unexpected error occurred: {e}")
 
 # ----------------------------------------------------------------------
 # --- Data Helper Functions ---
@@ -59,7 +83,7 @@ def _cached_forecast(df_snapshot: pd.DataFrame) -> pd.DataFrame:
 
 def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, list): 
     
-    tickers_df = load_tickers(all_tickers_file)
+    tickers_df = load_tickers()
     followed_tickers = tickers_df['Ticker'].tolist() if not tickers_df.empty else []
 
     fetch_kwargs = {}
@@ -128,6 +152,26 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
 # --- UI Rendering Functions ---
 # ----------------------------------------------------------------------
 
+def _render_overview_section(final_df: pd.DataFrame):
+    """Renders the risk-return scatter plot."""
+    st.subheader("Historical Risk-Return")
+
+    if not final_df.empty and 'avgReturn' in final_df.columns and 'annualizedVol' in final_df.columns:
+        # Create the scatter plot using Altair
+        chart = alt.Chart(final_df).mark_point(size=100).encode(
+            x=alt.X('annualizedVol', title='Annualized Volatility (Vol%)'),
+            y=alt.Y('avgReturn', title='Annualized Average Return (AAR%)'),
+            tooltip=['Ticker', 'avgReturn', 'annualizedVol'],
+            color=alt.Color('Ticker', legend=None)
+        ).properties(
+            title=''
+        ).interactive()
+
+        st.altair_chart(chart, width='stretch')
+    else:
+        st.warning("Cannot generate risk-return plot. Ensure tickers are selected and data is loaded.")
+
+
 def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.DataFrame):
     """Renders the summary table and portfolio simulation controls."""
     st.subheader("Summary")
@@ -175,13 +219,26 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
     selected_tickers_df = edited_df[edited_df['Select']]
     selected_tickers = selected_tickers_df['Ticker'].tolist()
 
-    # Market Screen buttons
+    # Followed tickers buttons
     col1, col2 = st.columns([3, 1])
     with col1:
-        pass
+        if st.button("Simulate Portfolio", disabled=not selected_tickers):
+            if selected_tickers:
+                total_investment = 100000
+                # Save the current period (already stored in session_state['main_dashboard_period_arg'])
+                st.session_state['portfolio_period_arg'] = st.session_state['main_dashboard_period_arg']
+                
+                # Pass the full daily data to the calculation function
+                portfolio_tuples = calculate_portfolio(selected_tickers, df_daily, total_investment)
+                st.session_state['portfolio'] = portfolio_tuples
+                st.switch_page("pages/02_Portfolio_Sim.py")
+            else:
+                st.warning("Please select at least one ticker.")
+
+        st.markdown("Select tickers to simulate a $100 k **equally-weighted portfolio**.")
     with col2:
-        if st.button("Follow Selected Tickers", disabled=not selected_tickers):
-            confirm_follow_dialog(selected_tickers)
+        if st.button("Unfollow Selected Tickers", disabled=not selected_tickers):
+            confirm_unfollow_dialog(selected_tickers)
 
 def render_info_section():
     st.sidebar.markdown("### ℹ️ Guides")
@@ -233,7 +290,7 @@ def render_info_section():
 
 def main():
     st.set_page_config(layout="wide")
-    st.title("📊 TradeSentinel: Market Screen")
+    st.title("📊 TradeSentinel: Followed Tickers")
     # Guide section in sidebar
     render_info_section()
 
@@ -310,12 +367,15 @@ def main():
 
     if not final_df.empty:
         # Render the display sections if data is present
+        _render_overview_section(final_df)
         _render_summary_table_and_portfolio(final_df, df_daily) # Pass df_daily to the summary table function
     else:
         st.info("No data found.")
         
     # Credits
-    display_credits()    
+    display_credits()
+    
+    
 
 if __name__ == "__main__":
     main()

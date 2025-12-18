@@ -7,7 +7,7 @@ from src.dashboard_manager import get_stock_data
 from src.dashboard_display import (
     display_per_ticker_pnl, display_portfolio_summary,
     display_pnl_over_time, display_sector_allocation,
-    display_advanced_metrics, display_export_table
+    display_advanced_metrics, display_export_table, display_credits
 )
 
 
@@ -284,13 +284,7 @@ def main():
     display_export_table(combined_df)
 
     # Credits and Navigation
-    st.markdown("---")
-    st.markdown(
-        "🔗 [View Source Code on GitHub](https://github.com/sebakremis/TradeSentinel)",
-        unsafe_allow_html=True
-    )
-    st.markdown("👤 Developed by Sebastian Kremis")
-    st.caption("Built using Streamlit and Python. NO investment advice. For educational/demo purposes only.")
+    display_credits()
     if st.button("Go back to Main Dashboard"):
         st.switch_page("main.py")
 

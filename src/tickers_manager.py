@@ -5,7 +5,7 @@ from pathlib import Path
 import yfinance as yf
 from src.config import followed_tickers_file, DATA_DIR
 
-# Define the path to the followed tickers CSV file
+# Path to the followed tickers CSV file
 filepath = followed_tickers_file
 
 # Define a custom exception for better error handling
@@ -109,6 +109,25 @@ def confirm_unfollow_dialog(tickers_to_remove:list):
             for ticker in tickers_to_remove:
                 try:
                     remove_ticker(ticker)
+                except TickerValidationError as e:
+                    st.error(f"❌ {e}")
+            st.rerun()  # Refresh the app to reflect changes
+    with col2:
+        if st.button("Cancel"):
+            st.rerun()  # Refresh the app to reflect changes
+
+@st.dialog("Confirm Follow")
+def confirm_follow_dialog(tickers_to_add:list):
+    """
+    Displays a confirmation dialog before adding tickers to follow.
+    """
+    st.write(f"Following tickers: **{', '.join(tickers_to_add)}**")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Confirm Follow"):
+            for ticker in tickers_to_add:
+                try:
+                    add_ticker(ticker)
                 except TickerValidationError as e:
                     st.error(f"❌ {e}")
             st.rerun()  # Refresh the app to reflect changes

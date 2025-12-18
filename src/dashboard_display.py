@@ -282,3 +282,13 @@ def highlight_change(value):
         return 'color: red; font-weight: bold;'
     else:
         return ''
+    
+def display_credits():
+    """Displays the credits section."""
+    st.markdown("---")
+    st.markdown(
+        "🔗 [View Source Code on GitHub](https://github.com/sebakremis/TradeSentinel)",
+        unsafe_allow_html=True
+    )
+    st.markdown("👤 Developed by Sebastian Kremis")
+    st.caption("Built using Streamlit and Python. NO investment advice. For educational/demo purposes only.")
