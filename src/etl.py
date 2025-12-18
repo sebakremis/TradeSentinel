@@ -1,11 +1,11 @@
 # src/etl.py
 import pandas as pd
 import yfinance as yf
-from .config import DATA_DIR, stocks_folder, tickers_file, metadata_file
-from .tickers_manager import load_followed_tickers
+from .config import DATA_DIR, stocks_folder, all_tickers_file, metadata_file
+from .tickers_manager import load_tickers
 
-# Define the path to the followed tickers CSV file
-filepath = tickers_file
+# Define the path to the all tickers CSV file
+filepath = all_tickers_file
 filename = filepath.name
    
 def fetch_prices(ticker: str, period: str = None, start: str = None, interval: str = '1d') -> pd.DataFrame:
@@ -149,7 +149,7 @@ def update_stock_metadata(tickers_df: pd.DataFrame):
         if metadata_file.exists():
             existing_metadata = pd.read_csv(metadata_file)
             combined_metadata = pd.concat([existing_metadata, metadata_df])
-            combined_metadata = combined_metadata.drop_duplicates(subset=['ticker'], keep='last')
+            combined_metadata = combined_metadata.drop_duplicates(subset=['Ticker'], keep='last')
             combined_metadata.to_csv(metadata_file, index=False)
         else:
             metadata_df.to_csv(metadata_file, index=False)
@@ -160,7 +160,7 @@ def update_stock_database():
     """
     Updates both stock prices and metadata databases.
     """
-    tickers_df = load_followed_tickers()   
+    tickers_df = load_tickers(filepath)   
     stocks_folder.mkdir(parents=True, exist_ok=True)
     update_stock_prices(tickers_df)
     update_stock_metadata(tickers_df)

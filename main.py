@@ -7,7 +7,7 @@ import datetime
 
 # Import all necessary modules
 from src.dashboard_manager import calculate_all_indicators, get_stock_data
-from src.tickers_manager import load_followed_tickers, add_ticker, confirm_unfollow_dialog, TickerValidationError
+from src.tickers_manager import load_tickers, add_ticker, confirm_unfollow_dialog, TickerValidationError
 from src.sim_portfolio import calculate_portfolio
 from src.dashboard_display import highlight_change
 from src.indicators import annualized_risk_free_rate
@@ -83,7 +83,7 @@ def _cached_forecast(df_snapshot: pd.DataFrame) -> pd.DataFrame:
 
 def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, list): 
     
-    tickers_df = load_followed_tickers()
+    tickers_df = load_tickers()
     followed_tickers = tickers_df['Ticker'].tolist() if not tickers_df.empty else []
 
     fetch_kwargs = {}

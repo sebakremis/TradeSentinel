@@ -1,32 +1,31 @@
 # src/tickers_manager.py
-from fileinput import filename
 import pandas as pd
 import streamlit as st
 from pathlib import Path
 import yfinance as yf
-from src.config import tickers_file, DATA_DIR
+from src.config import followed_tickers_file, DATA_DIR
 
 # Define the path to the followed tickers CSV file
-filepath = tickers_file
-filename = filepath.name
+filepath = followed_tickers_file
 
 # Define a custom exception for better error handling
 class TickerValidationError(Exception):
     """Custom exception for invalid or missing ticker data."""
     pass
 
-def load_followed_tickers():
+def load_tickers(tickers_path: Path = filepath) -> pd.DataFrame:
     """
-    Loads followed tickers from a single CSV file.
+    Loads tickers from a single CSV file.
+    Loads followed tickers by default.
     Returns a DataFrame with a 'Ticker' column.
     """   
-    
+    filename = tickers_path.name
     tickers_df = pd.DataFrame()
 
     try:
-        tickers_df = pd.read_csv(filepath)
+        tickers_df = pd.read_csv(tickers_path)
     except FileNotFoundError:
-        st.error(f"❌ Error loading tickers: File not found at {filepath}")
+        st.error(f"❌ Error loading tickers: File not found at {tickers_path}")
         return pd.DataFrame(columns=['Ticker'])
     except Exception as e:
         st.error(f"❌ Error loading tickers: {e}")
@@ -39,7 +38,9 @@ def load_followed_tickers():
     return tickers_df
 
 def save_followed_tickers(tickers: pd.DataFrame) -> None:
-    """Save tickers list to CSV."""
+    """
+    Save tickers to CSV.
+    """
     try:
         filepath.parent.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
         tickers.to_csv(filepath, index=False)
@@ -49,7 +50,7 @@ def save_followed_tickers(tickers: pd.DataFrame) -> None:
 
 def get_followed_tickers():
     """
-    Manages the Streamlit session state for followed tickers.
+    Reads the CSV file for Followed Tickers.
     Returns the DataFrame.
     """
     try:
