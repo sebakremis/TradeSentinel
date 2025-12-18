@@ -3,18 +3,13 @@ import pandas as pd
 import datetime # Import required for date inputs
 
 from src.portfolio_calculations import calculate_pnl_data, prepare_pnl_time_series
-# from src.data_fetching import get_portfolio_data_cached
 from src.dashboard_manager import get_stock_data
 from src.dashboard_display import (
     display_per_ticker_pnl, display_portfolio_summary,
     display_pnl_over_time, display_sector_allocation,
     display_advanced_metrics, display_export_table
 )
-from src.database_manager import init_db
 
-# --- Configuration and Initialization ---
-DB_NAME = 'portfolio_data.db'
-init_db(DB_NAME)
 
 def _safe_df_concat(df1, df2):
     """Safely concatenates two DataFrames, handling Pandas append deprecation."""

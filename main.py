@@ -6,7 +6,7 @@ import altair as alt
 import datetime 
 
 # Import all necessary modules
-from src.dashboard_manager import get_all_prices_cached, calculate_all_indicators, get_stock_data
+from src.dashboard_manager import calculate_all_indicators, get_stock_data
 from src.tickers_manager import load_followed_tickers, add_ticker, remove_ticker, TickerValidationError
 from src.sim_portfolio import calculate_portfolio
 from src.dashboard_display import highlight_change
