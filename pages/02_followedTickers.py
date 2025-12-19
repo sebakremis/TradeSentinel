@@ -1,5 +1,5 @@
 import streamlit as st
-st.set_page_config(page_title="📊 TradeSentinel", layout="wide")
+st.set_page_config(page_title="📊 tradeSentinel", layout="wide")
 import pandas as pd
 import numpy as np
 import altair as alt
@@ -220,7 +220,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
 
 def main():
     st.set_page_config(layout="wide")
-    st.title("📊 TradeSentinel: Followed Tickers")
+    st.title("📊 followedTickers")
     # Guide section in sidebar
     render_info_section()
 

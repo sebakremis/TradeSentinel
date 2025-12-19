@@ -1,4 +1,5 @@
 import streamlit as st
+st.set_page_config(page_title="📊 tradeSentinel", layout="wide")
 import pandas as pd
 import datetime # Import required for date inputs
 
@@ -202,7 +203,7 @@ def setup_sidebar_controls():
 
 def main():
     """The main function to run the Streamlit app content."""
-    st.title("📈 Simulated Portfolio Analysis")
+    st.title("📈 portfolioSim")
     
     # 1. Setup Sidebar and Control Flow
     setup_sidebar_controls()

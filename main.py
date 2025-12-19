@@ -1,5 +1,5 @@
 import streamlit as st
-st.set_page_config(page_title="📊 TradeSentinel", layout="wide")
+st.set_page_config(page_title="📊 tradeSentinel", layout="wide")
 import pandas as pd
 import numpy as np
 import altair as alt
@@ -14,7 +14,7 @@ from src.config import DATA_DIR, all_tickers_file
 # --- Data Helper Functions ---
 # ----------------------------------------------------------------------
 
-DISPLAY_COLUMNS = ['Ticker', 'sector', 'marketCap', 'beta', 'close', '52WeekLow', '52WeekHigh','enterpriseToEbitda', 'dividendYield', 'avgReturn', 'annualizedVol', 'sharpeRatio']
+DISPLAY_COLUMNS = ['Ticker', 'sector', 'marketCap', 'beta', 'close', '52WeekHigh', 'enterpriseToEbitda', 'priceToBook',  'dividendYield', 'returnOnAssets', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -30,6 +30,10 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     # Convert marketCap to billions and round   
     if "marketCap" in df.columns:
         df["marketCap"] = (df["marketCap"] / 1_000_000_000).round(2)  # 2 decimal places
+    
+    # Convert returnOnAssets to percentage
+    if "returnOnAssets" in df.columns:
+        df["returnOnAssets"] = (df["returnOnAssets"] * 100).round(2)  
         
     # Select only the display columns
     df = df[DISPLAY_COLUMNS]
@@ -41,7 +45,7 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, list): 
-    
+    # Load the DF for all tickers
     tickers_df = load_tickers(all_tickers_file)
     all_tickers = tickers_df['Ticker'].tolist() if not tickers_df.empty else []
 
@@ -59,7 +63,7 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
         fetch_kwargs['period'] = PeriodOrStart
         fetch_kwargs['start'] = None
     
-
+    # load prices and metadata for all tickers
     df_daily = get_stock_data(
         all_tickers,
         interval="1d",
@@ -76,6 +80,9 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
     start_prices = df_daily.groupby('Ticker')['close'].first().reset_index()
     start_prices.rename(columns={'close': 'startPrice'}, inplace=True)
     final_df_unformatted = final_df_unformatted.merge(start_prices, on='Ticker', how='left')
+
+
+
 
     final_df = _format_final_df(final_df_unformatted)
 
@@ -116,14 +123,15 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "marketCap": st.column_config.NumberColumn("marketCap", format="$%.1f B", width="small"),
             "beta": st.column_config.NumberColumn("beta", format="%.2f", width="small"),
             "close": st.column_config.NumberColumn("close", help="Last price of the lookback period", format="$%.2f", width="small"),
-            "52WeekHigh": st.column_config.NumberColumn("52WeekHigh", help="52 Week High price", format="$%.2f", width="small"),
-            "52WeekLow": st.column_config.NumberColumn("52WeekLow", help="52 Week Low price", format="$%.2f", width="small"),
+            "52WeekHigh": st.column_config.NumberColumn("52wHigh", help="52 Week High price", format="$%.2f", width="small"),
+            "priceToBook": st.column_config.NumberColumn("priceToBook", help="Price to Book ratio", format="%.2f", width="small"),
             "enterpriseToEbitda": st.column_config.NumberColumn("enToEbitda", help="Enterprise value to EBITDA ratio", format="%.2f", width="small"),
-            "dividendYield": st.column_config.NumberColumn("divYield", help="dividend yeld", format="%.2f%%",width="small"),                       
+            "dividendYield": st.column_config.NumberColumn("divYield", help="dividend yeld", format="%.2f%%",width="small"),
+            "returnOnAssets": st.column_config.NumberColumn("ROA%", help="Return on Assets", format="%.2f%%",width="small"),                       
             "avgReturn": st.column_config.NumberColumn("AAR%", help="Annualized Average return", format="%.2f%%", width="small"),
             "annualizedVol": st.column_config.NumberColumn("Vol%", help="Annualized Average volatility", format="%.2f%%", width="small"),
             "sharpeRatio": st.column_config.NumberColumn("sharpe", format="%.2f%%", width="small"),                      
-            "Select": st.column_config.CheckboxColumn("Select", default=False, width="small")
+            "Select": st.column_config.CheckboxColumn("select", default=False, width="small")
         },
         num_rows="fixed"
     )
@@ -145,7 +153,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
 
 def main():
     st.set_page_config(layout="wide")
-    st.title("📊 TradeSentinel: Market Screen")
+    st.title("📊 tradeSentinel")
     # Guide section in sidebar
     render_info_section()
 

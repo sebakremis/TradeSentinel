@@ -60,15 +60,11 @@ def fetch_metadata(ticker: str) -> dict:
             '52WeekHigh': info.get('fiftyTwoWeekHigh', None),
             '52WeekLow': info.get('fiftyTwoWeekLow', None),
             # valuation data
-            'trailingPE': info.get('trailingPE', None),
             'forwardPE': info.get('forwardPE', None),
             'priceToBook': info.get('priceToBook', None),
-            'priceToSalesTrailing12Months': info.get('priceToSalesTrailing12Months', None),
             'enterpriseToEbitda': info.get('enterpriseToEbitda', None),
             # profitability data
-            'returnOnAssets': info.get('returnOnAssets', None),
-            'returnOnEquity': info.get('returnOnEquity', None),
-            'profitMargins': info.get('profitMargins', None)            
+            'returnOnAssets': info.get('returnOnAssets', None)           
         }
         etfs_df = pd.read_csv(DATA_DIR/'etfs.csv')
         if ticker in etfs_df['Ticker'].values:
