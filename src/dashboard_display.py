@@ -10,6 +10,7 @@ from src.metrics import (
     calculate_var, calculate_cvar, sharpe_ratio, sortino_ratio,
     calmar_ratio, max_drawdown, correlation_matrix, win_loss_stats
 )
+from src.indicators import annualized_risk_free_rate
 
 def display_per_ticker_pnl(df_pnl: pd.DataFrame):
     """Displays the per-ticker PnL table with conditional formatting."""
@@ -293,9 +294,28 @@ def display_credits():
     st.markdown("👤 Developed by Sebastian Kremis")
     st.caption("Built using Streamlit and Python. NO investment advice. For educational/demo purposes only.")
 
-def render_info_section():
+def display_info_section(df_daily: pd.DataFrame):
     """
-    Renders the informational sidebar section with guides on calculations and usage.
+    Displays the informational sidebar section with trading period info.
+    """
+    if not df_daily.empty and 'Date' in df_daily.columns:
+        num_days = df_daily['Date'].nunique()
+        first_date = pd.to_datetime(df_daily['Date'].min())
+        last_date = pd.to_datetime(df_daily['Date'].max())
+    else:
+        num_days = 0
+        first_date, last_date = None, None
+
+    with st.sidebar.expander("ℹ️ Trading Period Info", expanded=False):
+        st.write(f"**Trading Days:** {num_days}")
+        st.write(f"**First Price Date:** {first_date.strftime('%Y-%m-%d') if first_date else 'N/A'}")
+        st.write(f"**Last Price Date:** {last_date.strftime('%Y-%m-%d') if last_date else 'N/A'}")
+        st.write(f"**Annualized Risk Free rate:** {annualized_risk_free_rate*100:.2f}% (assumed risk-free rate for Sharpe Ratio calculation)")
+
+
+def display_guides_section():
+    """
+    Displays the informational sidebar section with guides on calculations and usage.
     """  
     with st.sidebar.expander("ℹ️ Guides", expanded=False):
         st.subheader("How calculations are made")

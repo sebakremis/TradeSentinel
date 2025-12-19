@@ -7,8 +7,7 @@ import datetime
 from src.dashboard_manager import calculate_all_indicators, get_stock_data
 from src.tickers_manager import load_tickers, add_ticker, confirm_unfollow_dialog, TickerValidationError
 from src.sim_portfolio import calculate_portfolio
-from src.dashboard_display import highlight_change, display_credits, render_info_section
-from src.indicators import annualized_risk_free_rate
+from src.dashboard_display import highlight_change, display_credits, display_guides_section, display_info_section
 from src.price_forecast import project_price_range
 
 # ----------------------------------------------------------------------
@@ -221,8 +220,6 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
 def main():
     st.set_page_config(layout="wide")
     st.title("📊 followedTickers")
-    # Guide section in sidebar
-    render_info_section()
 
     # User Input for Data Period
         
@@ -279,33 +276,21 @@ def main():
     # Save the period_arg into the session state
     st.session_state['main_dashboard_period_arg'] = period_arg 
 
-    # Info section
-    if not df_daily.empty and 'Date' in df_daily.columns:
-        num_days = df_daily['Date'].nunique()
-        first_date = pd.to_datetime(df_daily['Date'].min())
-        last_date = pd.to_datetime(df_daily['Date'].max())
-    else:
-        num_days = 0
-        first_date, last_date = None, None
-
-    with st.expander("ℹ️ Trading Period Info", expanded=False):
-        st.write(f"**Trading Days:** {num_days}")
-        st.write(f"**First Price Date:** {first_date.strftime('%Y-%m-%d') if first_date else 'N/A'}")
-        st.write(f"**Last Price Date:** {last_date.strftime('%Y-%m-%d') if last_date else 'N/A'}")
-        st.write(f"**Annualized Risk Free rate:** {annualized_risk_free_rate*100:.2f}% (assumed risk-free rate for Sharpe Ratio calculation)")
-
-
     if not final_df.empty:
         # Render the display sections if data is present
         _render_overview_section(final_df)
         _render_summary_table_and_portfolio(final_df, df_daily) # Pass df_daily to the summary table function
     else:
         st.info("No data found.")
+    
+    # Info section in sidebar
+    display_info_section(df_daily)
+
+    # Guides section in sidebar
+    display_guides_section()
         
     # Credits
-    display_credits()
+    display_credits() 
     
-    
-
 if __name__ == "__main__":
     main()

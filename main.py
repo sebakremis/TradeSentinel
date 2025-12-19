@@ -6,8 +6,8 @@ import altair as alt
 import datetime 
 from src.dashboard_manager import calculate_all_indicators, get_stock_data
 from src.tickers_manager import load_tickers, confirm_follow_dialog, TickerValidationError
-from src.dashboard_display import highlight_change, display_credits, render_info_section
-from src.indicators import annualized_risk_free_rate
+from src.dashboard_display import highlight_change, display_credits, display_guides_section, display_info_section
+
 from src.config import DATA_DIR, all_tickers_file
 
 # ----------------------------------------------------------------------
@@ -81,9 +81,6 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
     start_prices.rename(columns={'close': 'startPrice'}, inplace=True)
     final_df_unformatted = final_df_unformatted.merge(start_prices, on='Ticker', how='left')
 
-
-
-
     final_df = _format_final_df(final_df_unformatted)
 
     return final_df, df_daily, all_tickers 
@@ -102,7 +99,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
 
     sorted_df = final_df.sort_values(by='sharpeRatio', ascending=False)
 
-    # --- Apply Conditional Formatting using Pandas Styler ---
+    # Apply Conditional Formatting using Pandas Styler
     display_df_styled = sorted_df.copy()
     display_df_styled['Select'] = False # This must be done on the DataFrame copy before styling
     
@@ -139,7 +136,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
     selected_tickers_df = edited_df[edited_df['Select']]
     selected_tickers = selected_tickers_df['Ticker'].tolist()
 
-    # Market Screen buttons
+    # Main dashboard buttons
     col1, col2 = st.columns([3, 1])
     with col1:
         pass
@@ -154,8 +151,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
 def main():
     st.set_page_config(layout="wide")
     st.title("📊 tradeSentinel")
-    # Guide section in sidebar
-    render_info_section()
+    
 
     #--- User Input for Data Period ---
         
@@ -212,27 +208,21 @@ def main():
     # Save the period_arg into the session state
     st.session_state['main_dashboard_period_arg'] = period_arg 
 
-    # Info section
-    if not df_daily.empty and 'Date' in df_daily.columns:
-        num_days = df_daily['Date'].nunique()
-        first_date = pd.to_datetime(df_daily['Date'].min())
-        last_date = pd.to_datetime(df_daily['Date'].max())
-    else:
-        num_days = 0
-        first_date, last_date = None, None
-
-    with st.expander("ℹ️ Trading Period Info", expanded=False):
-        st.write(f"**Trading Days:** {num_days}")
-        st.write(f"**First Price Date:** {first_date.strftime('%Y-%m-%d') if first_date else 'N/A'}")
-        st.write(f"**Last Price Date:** {last_date.strftime('%Y-%m-%d') if last_date else 'N/A'}")
-        st.write(f"**Annualized Risk Free rate:** {annualized_risk_free_rate*100:.2f}% (assumed risk-free rate for Sharpe Ratio calculation)")
+    
+    
 
     if not final_df.empty:
         # Render the display sections if data is present
         _render_summary_table_and_portfolio(final_df, df_daily) # Pass df_daily to the summary table function
     else:
         st.info("No data found.")
-        
+
+    # Info section in sidebar
+    display_info_section(df_daily)
+
+    # Guides section in sidebar
+    display_guides_section()
+
     # Credits
     display_credits()    
 
