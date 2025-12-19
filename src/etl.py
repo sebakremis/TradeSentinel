@@ -70,6 +70,10 @@ def fetch_metadata(ticker: str) -> dict:
             'returnOnEquity': info.get('returnOnEquity', None),
             'profitMargins': info.get('profitMargins', None)            
         }
+        etfs_df = pd.read_csv(DATA_DIR/'etfs.csv')
+        if ticker in etfs_df['Ticker'].values:
+            metadata['sector'] = 'ETF'
+
         print(f"Metadata for {ticker} extracted successfully.")
         return metadata
     except Exception as e:

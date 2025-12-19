@@ -48,11 +48,15 @@ def get_stock_data(tickers: list, interval: str, period: str = None, start: str 
             SELECT *,
             regexp_extract(filename, '[\\\\/]([^\\\\/]+)\.parquet$', 1) AS Ticker
             FROM read_parquet('{stocks_folder}/prices/*.parquet')
+        ),
+        clean_metadata AS (
+            SELECT * FROM read_csv_auto('{metadata_path}')
+            WHERE Ticker IS NOT NULL AND Ticker != ''
         )
         SELECT p.*,
         m.* EXCLUDE(Ticker)
         FROM raw_prices AS p
-        LEFT JOIN read_csv_auto('{metadata_path}') AS m
+        LEFT JOIN clean_metadata AS m
         ON p.Ticker = m.Ticker
         WHERE p.Ticker IN {tickers_sql}
           AND p.Date BETWEEN '{start}' AND '{end}'
