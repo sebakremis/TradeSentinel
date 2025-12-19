@@ -64,7 +64,9 @@ def fetch_metadata(ticker: str) -> dict:
             'priceToBook': info.get('priceToBook', None),
             'enterpriseToEbitda': info.get('enterpriseToEbitda', None),
             # profitability data
-            'returnOnAssets': info.get('returnOnAssets', None)           
+            'returnOnAssets': info.get('returnOnAssets', None),
+            # last updated timestamp
+            'lastUpdated': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')           
         }
         etfs_df = pd.read_csv(DATA_DIR/'etfs.csv')
         if ticker in etfs_df['Ticker'].values:
@@ -77,11 +79,25 @@ def fetch_metadata(ticker: str) -> dict:
         return {}
 
 
+def log_updates():
+    """
+    Logs the last time the stock prices were updated.
+    Creates both the log file and the parent folder if they do not exist.
+    """
+    log_file = stocks_folder/'update_log.txt'
+    stocks_folder.mkdir(parents=True, exist_ok=True)
+
+    with open(log_file, 'a') as f:
+        f.write(pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S'))
+    print(f"Update logged in {log_file}")
+
 def update_stock_prices(tickers_df: pd.DataFrame):
     """
     Updates the stock prices database with the latest information for all followed tickers.
     Creates the parket file for the ticker if it does not exist.
-    """   
+    """
+    # Track if any updates were made
+    last_update = None
     
     for _, row in tickers_df.iterrows():
         ticker = row['Ticker']
@@ -105,17 +121,24 @@ def update_stock_prices(tickers_df: pd.DataFrame):
                     updated_data = updated_data[~updated_data.index.duplicated(keep='last')]
                     updated_data.to_parquet(stock_prices_file)
                     print(f"Updated data for {ticker} saved to {stock_prices_file}")
+                    last_update = pd.Timestamp.now().date()
             else:
                 # If existing data is empty, fetch all available data
                 updated_data = fetch_prices(ticker, period='5y')
                 updated_data.to_parquet(stock_prices_file)
-                print(f"Updated data for {ticker} saved to {stock_prices_file}")        
+                print(f"Updated data for {ticker} saved to {stock_prices_file}")
+                last_update = pd.Timestamp.now().date()        
 
         else:
             # If file does not exist, fetch all available data
             updated_data = fetch_prices(ticker, period='5y')
             updated_data.to_parquet(stock_prices_file)
             print(f"Updated data for {ticker} saved to {stock_prices_file}")
+            last_update = pd.Timestamp.now().date()
+
+    # Log the update time
+    if last_update:
+        log_updates()
 
 def update_stock_metadata(tickers_df: pd.DataFrame):
     """
@@ -130,9 +153,8 @@ def update_stock_metadata(tickers_df: pd.DataFrame):
         if metadata_file.exists():
             existing_metadata = pd.read_csv(metadata_file)
             if ticker in existing_metadata['Ticker'].values:
-                # check last updated date
-                existing_ticker_metadata = existing_metadata[existing_metadata['Ticker'] == ticker].iloc[0]
-                last_updated_str = existing_ticker_metadata.get('lastUpdated', '')
+                # check last updated date for the ticker
+                last_updated_str = existing_metadata.loc[existing_metadata['Ticker'] == ticker, 'lastUpdated'].values[0]               
                 if last_updated_str:
                     last_updated = pd.to_datetime(last_updated_str)
                     if (pd.Timestamp.now() - last_updated).days < 7:
@@ -152,7 +174,6 @@ def update_stock_metadata(tickers_df: pd.DataFrame):
         else:
             metadata_df.to_csv(metadata_file, index=False)
         print(f"Metadata updated and saved to {metadata_file}")
-        lastUpdated = pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
 def update_stock_database():    
