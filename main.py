@@ -10,6 +10,7 @@ from src.dashboard_display import (
     highlight_change, display_credits, display_guides_section, display_info_section, display_period_selection
     )
 from src.config import DATA_DIR, all_tickers_file
+from src.etl import update_from_dashboard
 
 # ----------------------------------------------------------------------
 # --- Data Helper Functions ---
@@ -151,6 +152,11 @@ def main():
         _render_summary_table_and_portfolio(final_df, df_daily) # Pass df_daily to the summary table function
     else:
         st.info("No data found.")
+    
+    # Update Database section
+    st.markdown("---")
+    st.subheader("Update Database")
+    update_from_dashboard()  
 
     # Info section in sidebar
     display_info_section(df_daily)

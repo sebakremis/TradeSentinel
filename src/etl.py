@@ -1,5 +1,6 @@
 # src/etl.py
 import pandas as pd
+import streamlit as st
 import yfinance as yf
 from .config import DATA_DIR, stocks_folder, all_tickers_file, metadata_file
 from .tickers_manager import load_tickers
@@ -7,6 +8,8 @@ from .tickers_manager import load_tickers
 # Define the path to the all tickers CSV file
 filepath = all_tickers_file
 filename = filepath.name
+# Define the log file path
+log_file = stocks_folder/'update_log.txt'
    
 def fetch_prices(ticker: str, period: str = None, start: str = None, interval: str = '1d') -> pd.DataFrame:
     """
@@ -84,11 +87,11 @@ def log_updates():
     Logs the last time the stock prices were updated.
     Creates both the log file and the parent folder if they do not exist.
     """
-    log_file = stocks_folder/'update_log.txt'
+    
     stocks_folder.mkdir(parents=True, exist_ok=True)
 
     with open(log_file, 'a') as f:
-        f.write(pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S'))
+        f.write(pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S') + '\n')
     print(f"Update logged in {log_file}")
 
 def update_stock_prices(tickers_df: pd.DataFrame):
@@ -185,11 +188,24 @@ def update_stock_database():
     update_stock_prices(tickers_df)
     update_stock_metadata(tickers_df)
 
-
+def update_from_dashboard():
+    """
+    Wrapper function to update stock database from the dashboard.
+    """
+    try:
+        with open(log_file, 'r') as f:
+            last_update = f.readlines()[-1].strip() # get last line
+            st.write(f"Last update:- {last_update}")
+    except FileNotFoundError:
+        st.write("- No updates logged yet.")
+    if st.button("Update All Tickers Data"):
+        with st.spinner("Updating data... This may take a while."):           
+            update_stock_database()
+        st.rerun()
 
 if __name__ == "__main__":
     """
-    Main execution to update stock database.
+    Manual execution to update stock database.
     """
     update_stock_database()    
   
