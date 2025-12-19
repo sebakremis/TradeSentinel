@@ -14,7 +14,7 @@ from src.config import DATA_DIR, all_tickers_file
 # --- Data Helper Functions ---
 # ----------------------------------------------------------------------
 
-DISPLAY_COLUMNS = ['Ticker', 'sector', 'marketCap', 'beta', 'startPrice', 'close', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']
+DISPLAY_COLUMNS = ['Ticker', 'sector', 'marketCap', 'beta', 'close', '52WeekLow', '52WeekHigh','enterpriseToEbitda', 'dividendYield', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -37,11 +37,8 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     # Apply rounding
     for col in ['close', 'startPrice', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
         if col in df.columns:
-            df[col] = df[col].round(2)
-            
+            df[col] = df[col].round(2)           
     return df
-
-
 
 def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, list): 
     
@@ -76,33 +73,13 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
 
     final_df_unformatted = df_daily.groupby('Ticker').tail(1).copy()
 
-
-
     start_prices = df_daily.groupby('Ticker')['close'].first().reset_index()
     start_prices.rename(columns={'close': 'startPrice'}, inplace=True)
     final_df_unformatted = final_df_unformatted.merge(start_prices, on='Ticker', how='left')
 
-    if 'dividends' in df_daily.columns:
-        total_dividends = df_daily.groupby('Ticker')['dividends'].sum().reset_index()
-        total_dividends.rename(columns={'dividends': 'divPayout'}, inplace=True)
-        final_df_unformatted = final_df_unformatted.merge(total_dividends, on='Ticker', how='left')
-        final_df_unformatted['divPayout'] = final_df_unformatted['divPayout'].fillna(0)
-    else:
-        final_df_unformatted['divPayout'] = 0
-    if 'sector' in tickers_df.columns and not final_df_unformatted.empty:
-        final_df_unformatted = final_df_unformatted.merge(
-            tickers_df[['Ticker', 'sector']],
-            on='Ticker',
-            how='left'
-        )
-        if 'sector_x' in final_df_unformatted.columns:
-            final_df_unformatted['sector'] = final_df_unformatted['sector_y']
-            final_df_unformatted.drop(columns=['sector_x', 'sector_y'], inplace=True)
-
     final_df = _format_final_df(final_df_unformatted)
 
     return final_df, df_daily, all_tickers 
-
 
 # ----------------------------------------------------------------------
 # --- UI Rendering Functions ---
@@ -111,8 +88,7 @@ def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, 
 def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.DataFrame):
     """Renders the summary table and portfolio simulation controls."""
     st.subheader("Summary")
-
-    
+   
     if final_df.empty:
         st.info("No data available to display in the summary table.")
         return
@@ -139,9 +115,11 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "sector": st.column_config.TextColumn("sector"),
             "marketCap": st.column_config.NumberColumn("marketCap", format="$%.1f B", width="small"),
             "beta": st.column_config.NumberColumn("beta", format="%.2f", width="small"),
-            "startPrice": st.column_config.NumberColumn("first", help="First price of the lookback period", format="$%.2f", width="small"),
-            "close": st.column_config.NumberColumn("last", help="Last price of the lookback period", format="$%.2f", width="small"),
-            "divPayout": st.column_config.NumberColumn("divPayout", help="Total dividends received during the lookback period.", format="$%.2f",width="small"),                       
+            "close": st.column_config.NumberColumn("close", help="Last price of the lookback period", format="$%.2f", width="small"),
+            "52WeekHigh": st.column_config.NumberColumn("52WeekHigh", help="52 Week High price", format="$%.2f", width="small"),
+            "52WeekLow": st.column_config.NumberColumn("52WeekLow", help="52 Week Low price", format="$%.2f", width="small"),
+            "enterpriseToEbitda": st.column_config.NumberColumn("enToEbitda", help="Enterprise value to EBITDA ratio", format="%.2f", width="small"),
+            "dividendYield": st.column_config.NumberColumn("divYield", help="dividend yeld", format="%.2f%%",width="small"),                       
             "avgReturn": st.column_config.NumberColumn("AAR%", help="Annualized Average return", format="%.2f%%", width="small"),
             "annualizedVol": st.column_config.NumberColumn("Vol%", help="Annualized Average volatility", format="%.2f%%", width="small"),
             "sharpeRatio": st.column_config.NumberColumn("sharpe", format="%.2f%%", width="small"),                      
@@ -171,7 +149,7 @@ def main():
     # Guide section in sidebar
     render_info_section()
 
-    # User Input for Data Period
+    #--- User Input for Data Period ---
         
     # Define selectable periods
     AVAILABLE_PERIODS = ["3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
@@ -240,7 +218,6 @@ def main():
         st.write(f"**First Price Date:** {first_date.strftime('%Y-%m-%d') if first_date else 'N/A'}")
         st.write(f"**Last Price Date:** {last_date.strftime('%Y-%m-%d') if last_date else 'N/A'}")
         st.write(f"**Annualized Risk Free rate:** {annualized_risk_free_rate*100:.2f}% (assumed risk-free rate for Sharpe Ratio calculation)")
-
 
     if not final_df.empty:
         # Render the display sections if data is present

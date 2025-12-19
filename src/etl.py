@@ -68,9 +68,7 @@ def fetch_metadata(ticker: str) -> dict:
             # profitability data
             'returnOnAssets': info.get('returnOnAssets', None),
             'returnOnEquity': info.get('returnOnEquity', None),
-            'profitMargins': info.get('profitMargins', None),
-            # last updated
-            'lastUpdated': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
+            'profitMargins': info.get('profitMargins', None)            
         }
         print(f"Metadata for {ticker} extracted successfully.")
         return metadata
@@ -154,6 +152,7 @@ def update_stock_metadata(tickers_df: pd.DataFrame):
         else:
             metadata_df.to_csv(metadata_file, index=False)
         print(f"Metadata updated and saved to {metadata_file}")
+        lastUpdated = pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
 def update_stock_database():    
