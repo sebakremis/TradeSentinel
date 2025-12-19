@@ -6,8 +6,9 @@ import altair as alt
 import datetime 
 from src.dashboard_manager import calculate_all_indicators, get_stock_data
 from src.tickers_manager import load_tickers, confirm_follow_dialog, TickerValidationError
-from src.dashboard_display import highlight_change, display_credits, display_guides_section, display_info_section
-
+from src.dashboard_display import (
+    highlight_change, display_credits, display_guides_section, display_info_section, display_period_selection
+    )
 from src.config import DATA_DIR, all_tickers_file
 
 # ----------------------------------------------------------------------
@@ -44,24 +45,10 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
             df[col] = df[col].round(2)           
     return df
 
-def _load_and_process_data(PeriodOrStart= "1y") -> (pd.DataFrame, pd.DataFrame, list): 
+def _load_and_process_data(fetch_kwargs: dict) -> (pd.DataFrame, pd.DataFrame, list): 
     # Load the DF for all tickers
     tickers_df = load_tickers(all_tickers_file)
     all_tickers = tickers_df['Ticker'].tolist() if not tickers_df.empty else []
-
-    fetch_kwargs = {}
-
-    if '|' in PeriodOrStart:
-        start_date, end_date = PeriodOrStart.split('|')
-        fetch_kwargs['start'] = start_date
-        fetch_kwargs['end'] = end_date
-        fetch_kwargs['period'] = None
-    elif len(PeriodOrStart) > 5 and '-' in PeriodOrStart:
-        fetch_kwargs['start'] = PeriodOrStart
-        fetch_kwargs['period'] = None
-    else:
-        fetch_kwargs['period'] = PeriodOrStart
-        fetch_kwargs['start'] = None
     
     # load prices and metadata for all tickers
     df_daily = get_stock_data(
@@ -149,70 +136,18 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
 # ----------------------------------------------------------------------
 
 def main():
-    st.set_page_config(layout="wide")
     st.title("📊 tradeSentinel")
-    
+    st.markdown("---")
 
-    #--- User Input for Data Period ---
-        
-    # Define selectable periods
-    AVAILABLE_PERIODS = ["3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
-    
-    # 1. Period Selection
-    selected_period = st.selectbox(
-        "Lookback Period", 
-        options=AVAILABLE_PERIODS, 
-        index=AVAILABLE_PERIODS.index("1y"), # Default to 1 year
-        key='data_period_select'
-    )
-    
-    # Initialize the argument to be passed to the data fetcher
-    period_arg = selected_period
-    
-    if selected_period == "Custom Date":
-        
-        # Define default values
-        today = pd.Timestamp.now().normalize()
-        default_start_date = today - pd.DateOffset(years=1)
-        
-        col1, col2 = st.columns(2)
-
-        with col1:
-            # 2a. Custom Start Date Selection
-            custom_start_date = st.date_input(
-                "Select Analysis **Start Date**", 
-                value=default_start_date,
-                max_value=today,
-                key='custom_start_date_select'
-            )
-        
-        with col2:
-            # 2b. Custom End Date Selection (Default to Today)
-            custom_end_date = st.date_input(
-                "Select Analysis **End Date**", 
-                value=today,
-                min_value=custom_start_date, # End date cannot be before start date
-                max_value=today,
-                key='custom_end_date_select'
-            )
-
-        # Pack both dates into a tuple or list string to pass as the argument
-        period_arg = f"{custom_start_date}|{custom_end_date}" 
-
-    st.markdown("---") # Separator for cleaner UI
-    
+    # User Input for Data Period
+    fetch_args = display_period_selection()
+   
     # Load and process all data required for the main display
     # Pass the custom period/date argument
-    final_df, df_daily, all_tickers = _load_and_process_data(PeriodOrStart=period_arg)
+    final_df, df_daily, all_tickers = _load_and_process_data(fetch_kwargs=fetch_args)
   
-    # Save the period_arg into the session state
-    st.session_state['main_dashboard_period_arg'] = period_arg 
-
-    
-    
-
     if not final_df.empty:
-        # Render the display sections if data is present
+        # Render the summary table if data is present
         _render_summary_table_and_portfolio(final_df, df_daily) # Pass df_daily to the summary table function
     else:
         st.info("No data found.")

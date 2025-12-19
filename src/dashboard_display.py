@@ -268,8 +268,6 @@ def display_export_table(combined_df: pd.DataFrame):
     else:
         st.info("No valid data to display. Try refreshing or adjusting tickers/date range.")
 
-
-
 def highlight_change(value):
     """
     Returns the CSS style string for background color based on the value.
@@ -283,21 +281,67 @@ def highlight_change(value):
         return 'color: red; font-weight: bold;'
     else:
         return ''
+
+def display_period_selection()-> dict:
+    """Displays the period selection UI and returns the selected period argument."""
+    # Define selectable periods
+    AVAILABLE_PERIODS = ["3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
+
+    with st.sidebar:
+        st.header("📅 Configuration")
+        
+        # Period Selection
+        selected_period = st.selectbox(
+            "Lookback Period", 
+            options=AVAILABLE_PERIODS, 
+            index=AVAILABLE_PERIODS.index("2y"), # Default to 2 years
+            key='data_period_select'
+        )
+        # Initialize the dictionary to hold fetch arguments
+        fetch_kwargs = {}
+        
+        if selected_period == "Custom Date":
+            today = pd.Timestamp.now().normalize()
+            default_start_date = today - pd.DateOffset(years=2)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                # Custom Start Date Selection
+                start_date = st.date_input(
+                    "Select **Start Date**", 
+                    value=default_start_date,
+                    max_value=today,
+                    key='custom_start'
+                )        
+            with col2:
+                # Custom End Date Selection (Default to Today)
+                end_date = st.date_input(
+                    "Select **End Date**", 
+                    value=today,
+                    min_value=start_date, # End date cannot be before start date
+                    max_value=today,
+                    key='custom_end'
+                )
+            # Logic for Custom Date
+            fetch_kwargs['start'] = str(start_date)
+            fetch_kwargs['end'] = str(end_date)
+            fetch_kwargs['period'] = None
+
+        else:
+            # Logic for Standard Periods
+            fetch_kwargs['period'] = selected_period
+            fetch_kwargs['start'] = None
+            fetch_kwargs['end'] = None
     
-def display_credits():
-    """Displays the credits section."""
-    st.markdown("---")
-    st.markdown(
-        "🔗 [View Source Code on GitHub](https://github.com/sebakremis/TradeSentinel)",
-        unsafe_allow_html=True
-    )
-    st.markdown("👤 Developed by Sebastian Kremis")
-    st.caption("Built using Streamlit and Python. NO investment advice. For educational/demo purposes only.")
+    return fetch_kwargs
+
+
 
 def display_info_section(df_daily: pd.DataFrame):
     """
     Displays the informational sidebar section with trading period info.
     """
+    st.sidebar.markdown("---")
     if not df_daily.empty and 'Date' in df_daily.columns:
         num_days = df_daily['Date'].nunique()
         first_date = pd.to_datetime(df_daily['Date'].min())
@@ -316,8 +360,9 @@ def display_info_section(df_daily: pd.DataFrame):
 def display_guides_section():
     """
     Displays the informational sidebar section with guides on calculations and usage.
-    """  
-    with st.sidebar.expander("ℹ️ Guides", expanded=False):
+    """
+      
+    with st.sidebar.expander("ℹ️ Guides", expanded=False):        
         st.subheader("How calculations are made")
         st.subheader("Data Source & Lookback Period")
         st.markdown(
@@ -349,6 +394,7 @@ def display_guides_section():
         st.markdown("**6. Sharpe Ratio**")
         st.info("Calculated as the **Annualized Average Return** (AAR%) divided by the **Annualized Volatility** (Vol%). This is a key measure of risk-adjusted return (assumes a risk-free rate of 0% for simplicity in this demo).")
         
+        st.markdown("---")
         st.subheader("How to use the dashboard")
         st.markdown("""
         1. **Choose Lookback Period** for analysis (e.g., '1y' or 'Custom Date').
@@ -357,3 +403,13 @@ def display_guides_section():
         4. **Select Tickers** in the table and click **Simulate Portfolio** to analyze an equally-weighted $100k portfolio.
         5. **Manage Tickers**: Add or remove tickers to follow below.
         """)
+
+def display_credits():
+    """Displays the credits section."""
+    st.markdown("---")
+    st.markdown(
+        "🔗 [View Source Code on GitHub](https://github.com/sebakremis/TradeSentinel)",
+        unsafe_allow_html=True
+    )
+    st.markdown("👤 Developed by Sebastian Kremis")
+    st.caption("Built using Streamlit and Python. NO investment advice. For educational/demo purposes only.")
