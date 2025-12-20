@@ -18,7 +18,7 @@ The entry point of the application acts as a Market Screener.
 
 * Action: Select interesting tickers and add them directly to your Followed Tickers list.
 
-### 2. Followed Tickers (Watchlist)
+### 2. Watchlist
 A dedicated dashboard for your curated list of assets.
 
 * Scope: Focuses only on the stocks and ETFs you have selected from the Market View.
@@ -27,7 +27,7 @@ A dedicated dashboard for your curated list of assets.
 
 * Action: Select a subset of these tickers to send to the Portfolio Simulator for performance testing.
 
-### 3. Portfolio Sim
+### 3. Backtest
 A simulation engine for historical performance analysis.
 
 * Scope: Evaluates a hypothetical portfolio based on selected assets.
@@ -69,9 +69,9 @@ The application is driven by two key CSV files located in the /data/ directory, 
 ## 📈 Example use case
 * 1) **Screening**: You open the Market View and notice that the Tech sector is outperforming. You filter for Tech stocks with high momentum and select NVDA and AMD.
 
-* 2) **Tracking**: You add them to Followed Tickers. A week later, you review this page and decide you want to see how a portfolio split 50/50 between them would have performed vs. the S&P 500.
+* 2) **Tracking**: You add them to the watchlist. A week later, you review this page and decide you want to see how a portfolio split 50/50 between them would have performed vs. the S&P 500.
 
-* 3) **Simulation**: You select them and click "Simulate". The Portfolio Sim page opens, showing you the historical Drawdown and Volatility of that specific combination.
+* 3) **Simulation**: You select them and click "Backtest Portfolio". The Backtest page opens, showing you the historical Drawdown and Volatility of that specific combination.
 
 ## 🚀 Launch app
 
