@@ -34,3 +34,7 @@ Thumbs.db
 
 # --- untrack data files from data/ ---
 data/
+
+# --- csv and txt files ---
+*.csv
+*.txt
