@@ -32,7 +32,7 @@ def load_tickers(tickers_path: Path = filepath) -> pd.DataFrame:
         return pd.DataFrame(columns=['Ticker'])
 
     if tickers_df.empty or 'Ticker' not in tickers_df.columns:
-        st.warning(f"⚠️ No tickers found in {filename} or 'Ticker' column is missing.")
+        st.warning(f"⚠️ No tickers found in {filename}.")
         return pd.DataFrame(columns=['Ticker'])
         
     return tickers_df

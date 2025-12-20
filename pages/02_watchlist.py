@@ -201,8 +201,6 @@ def main():
         # Render the display sections if data is present
         
         _render_summary_table_and_portfolio(final_df, df_daily) # Pass df_daily to the summary table function
-    else:
-        st.info("No data found.")
     
     # Info section in sidebar
     display_info_section(df_daily)
