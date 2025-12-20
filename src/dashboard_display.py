@@ -379,45 +379,60 @@ def display_guides_section():
     """
     st.sidebar.markdown("---")  
     with st.sidebar.expander("ℹ️ Guides", expanded=False):        
-        st.subheader("How calculations are made")
-        st.subheader("Data Source & Lookback Period")
+        st.subheader("Data & Methodology")
+        
         st.markdown(
             """
-            The data is sourced via an external financial data API (Yahoo Finance). 
+            **Data Source:** Market data and fundamentals are sourced via Yahoo Finance API to a local database.
             
-            - **Data Type:** Daily Adjusted Closing Prices (`Close`), along with Sector and Dividend Payout.
+            **Lookback Period:** All return and volatility metrics are calculated based on the specific period selected.
             """
         )
 
-        st.subheader("Summary Table Column Methodology")
-        
-        st.markdown("**1. First**")
-        st.info("The Adjusted Close Price on the **first day** of the selected Lookback Period. Used as the base for all period-related returns")
-        
-        st.markdown("**2. Last**")
-        st.info("The latest Adjusted Close Price.")      
-        
-        st.markdown("**3. Dividends**")
-        st.info("The **Total Sum of Dividends** paid out per share for the stock over the entire Lookback Period.")
-        
-
-        st.markdown("**4. Forecast High / Forecast Low**")
-        st.info("The max/min price forecast range based on MonteCarlo simulation for a 1 month time horizon.")
-        
-        st.markdown("**5. Avg Return (AAR%) / Annualized Vol (Vol%)**")
-        st.info("These metrics are calculated using the daily logarithmic returns over the Lookback Period and are then **annualized** for comparison (assumes 252 trading days/year).")
-        
-        st.markdown("**6. Sharpe Ratio**")
-        st.info("Calculated as the **Annualized Average Return** (AAR%) divided by the **Annualized Volatility** (Vol%). This is a key measure of risk-adjusted return (assumes a risk-free rate of 0% for simplicity in this demo).")
-        
         st.markdown("---")
-        st.subheader("How to use the dashboard")
+        st.subheader("How to use the app:")
+
+        st.markdown("Main dashboard:")
         st.markdown("""
-        1. **Choose Lookback Period** for analysis (e.g., '1y' or 'Custom Date').
-        2. **View Historical Risk-Return** chart for followed tickers.  
-        3. **View Metrics summary** table.
-        4. **Select Tickers** in the table and click **Simulate Portfolio** to analyze an equally-weighted $100k portfolio.
-        5. **Manage Tickers**: Add or remove tickers to follow below.
+        1. **Select Period:** Choose a timeframe (e.g., '1y' or 'Custom') to define the analysis window.
+        2. **Filter Data:** Use the 🔎 **Filter Data** expander to narrow stocks by Sector, Market Cap, or Performance metrics.
+        3. **Analyze Risk/Return:** Use the 📈 **Scatter Plot** to visually identify 'Top Left' winners (High Return, Low Risk).
+        4. **Select & Follow:** Tick the boxes next to interesting stocks in the table.
+        5. **Add to Watchlist:** Click the button below the table to add selected tickers to your tracking database.
+        """)
+        st.markdown("---")
+        st.markdown("Watchlist:")
+        st.markdown("""
+        1. **Filter:** Use the 'Filter Data' section to isolate stocks by Sector or Metrics.
+        2. **Select:** Tick the boxes next to stocks you want to analyze as a group.
+        3. **Backtest:** Click **'Backtest Portfolio'** to simulate how an equally-weighted $100k investment in the selected stocks would have performed.
+        4. **Clean Up:** Use **'Unfollow selected tickers'** to remove stocks from your database.
+        """)
+        st.markdown("---")
+        st.markdown("Backtest:")
+        st.markdown("**1. Define Portfolio (Sidebar)**")
+        st.markdown("""
+        * **Ticker:** The stock symbol (e.g., AAPL, TSLA).
+        * **Quantity:** The number of shares held (must be a whole number).
+        * *Note: You can edit the table directly.*
+        """)
+        
+        st.markdown("**2. Select Period**")
+        st.markdown("Choose a preset lookback (e.g., '1y') or define a specific **Custom Date** range to see how the portfolio performed during specific market events (e.g., the 2020 crash).")
+
+        st.markdown("---")
+        st.subheader("Understanding the Metrics")
+        
+        st.markdown("**PnL (Profit & Loss)**")
+        st.info("The difference between the value of the portfolio at the **Start Date** vs. the **End Date**.")
+        
+        st.markdown("**Sector Allocation**")
+        st.info("Breakdown of your total exposure by industry. Helps identify if you are over-concentrated in one sector (e.g., Tech).")
+        
+        st.markdown("**Advanced Metrics**")
+        st.info("""
+        * **Volatility:** How violently the portfolio value fluctuates.
+        * **Max Drawdown:** The largest percentage drop the portfolio experienced during the selected period.
         """)
 
 def display_credits():
