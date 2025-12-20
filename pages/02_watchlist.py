@@ -174,7 +174,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
     selected_tickers = selected_tickers_df['Ticker'].tolist()
 
     # Followed tickers buttons
-    col1, col2 = st.columns([3, 1])
+    col1, col2 = st.columns(2)
     with col1:
         if st.button("Backtest Portfolio", disabled=not selected_tickers):
             if selected_tickers:
@@ -189,7 +189,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
 
         st.markdown("Select tickers to backtest a $100 k **equally-weighted portfolio**.")
     with col2:
-        if st.button("Unfollow Selected Tickers", disabled=not selected_tickers):
+        if st.button("Unfollow selected tickers", disabled=not selected_tickers):
             confirm_unfollow_dialog(selected_tickers)
 
 

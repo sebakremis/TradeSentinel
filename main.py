@@ -88,9 +88,8 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
     # sort data
     sorted_df = final_df.sort_values(by='sharpeRatio', ascending=False)
 
-    # --- Render Dataframe with native selection ---
-    # Capture the 'event' to know which rows are selected
-    event = st.dataframe(
+    # --- Render Dataframe table ---    
+    event = st.dataframe( # Capture the 'event' to know which rows are selected
         sorted_df,
         hide_index=True,
         width='stretch',
@@ -120,12 +119,8 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
     selected_tickers = selected_tickers_df['Ticker'].tolist()
 
     # Main dashboard buttons
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        pass
-    with col2:
-        if st.button("Add to watchlist", disabled=not selected_tickers):
-            confirm_follow_dialog(selected_tickers)
+    if st.button("Add to watchlist", disabled=not selected_tickers):
+        confirm_follow_dialog(selected_tickers)
 
 # ----------------------------------------------------------------------
 # --- Main Dashboard Function ---

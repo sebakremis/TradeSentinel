@@ -97,7 +97,7 @@ def remove_ticker(ticker: str) -> None:
     # Save the updated DataFrame to disk
     save_followed_tickers(reduced_df)
 
-@st.dialog("Confirm Unfollow")
+@st.dialog("Removing tickers from watchlist")
 def confirm_unfollow_dialog(tickers_to_remove:list):
     """
     Displays a confirmation dialog before unfollowing tickers.
@@ -116,7 +116,7 @@ def confirm_unfollow_dialog(tickers_to_remove:list):
         if st.button("Cancel"):
             st.rerun()  # Refresh the app to reflect changes
 
-@st.dialog("Confirm Follow")
+@st.dialog("Adding tickers to watchlist")
 def confirm_follow_dialog(tickers_to_add:list):
     """
     Displays a confirmation dialog before adding tickers to follow.
