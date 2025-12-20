@@ -335,7 +335,24 @@ def display_period_selection()-> dict:
     
     return fetch_kwargs
 
+def display_risk_return_plot(final_df: pd.DataFrame):
+    """Renders the risk-return scatter plot."""
+    st.subheader("Historical Risk-Return")
 
+    if not final_df.empty and 'avgReturn' in final_df.columns and 'annualizedVol' in final_df.columns:
+        # Create the scatter plot using Altair
+        chart = alt.Chart(final_df).mark_point(size=100).encode(
+            x=alt.X('annualizedVol', title='Annualized Volatility (Vol%)'),
+            y=alt.Y('avgReturn', title='Annualized Average Return (AAR%)'),
+            tooltip=['Ticker', 'avgReturn', 'annualizedVol'],
+            color=alt.Color('Ticker', legend=None)
+        ).properties(
+            title=''
+        ).interactive()
+
+        st.altair_chart(chart, width='stretch')
+    else:
+        st.warning("Cannot generate risk-return plot. Ensure tickers are selected and data is loaded.")
 
 def display_info_section(df_daily: pd.DataFrame):
     """

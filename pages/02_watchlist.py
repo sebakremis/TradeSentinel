@@ -9,7 +9,7 @@ from src.tickers_manager import load_tickers, add_ticker, confirm_unfollow_dialo
 from src.sim_portfolio import calculate_portfolio
 from src.dashboard_display import ( 
     highlight_change, display_credits, display_guides_section, display_info_section,
-    display_period_selection
+    display_period_selection, display_risk_return_plot
     )
 from src.price_forecast import project_price_range
 
@@ -113,30 +113,8 @@ def _load_and_process_data(fetch_kwargs: dict) -> (pd.DataFrame, pd.DataFrame, l
 # --- UI Rendering Functions ---
 # ----------------------------------------------------------------------
 
-def _render_overview_section(final_df: pd.DataFrame):
-    """Renders the risk-return scatter plot."""
-    st.subheader("Historical Risk-Return")
-
-    if not final_df.empty and 'avgReturn' in final_df.columns and 'annualizedVol' in final_df.columns:
-        # Create the scatter plot using Altair
-        chart = alt.Chart(final_df).mark_point(size=100).encode(
-            x=alt.X('annualizedVol', title='Annualized Volatility (Vol%)'),
-            y=alt.Y('avgReturn', title='Annualized Average Return (AAR%)'),
-            tooltip=['Ticker', 'avgReturn', 'annualizedVol'],
-            color=alt.Color('Ticker', legend=None)
-        ).properties(
-            title=''
-        ).interactive()
-
-        st.altair_chart(chart, width='stretch')
-    else:
-        st.warning("Cannot generate risk-return plot. Ensure tickers are selected and data is loaded.")
-
-
 def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.DataFrame):
-    """Renders the summary table and portfolio simulation controls."""
-    st.subheader("Watchlist Summary")
-    
+    """Renders the summary table and portfolio simulation controls."""    
     if final_df.empty:
         st.info("No data available to display in the summary table.")
         return
@@ -147,9 +125,12 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
     # Apply dynamic filtering
     sorted_df = dynamic_filtering(sorted_df, DISPLAY_COLUMNS)
 
+    # --- Risk-Return Plot ---
+    display_risk_return_plot(sorted_df)
+
     # Show active row count 
     if len(sorted_df) != len(final_df):
-        st.caption(f"Showing {len(sorted_df)} of {len(final_df)} stocks based on filters.")
+        st.caption(f"Showing {len(sorted_df)} of {len(final_df)} stocks based on filter.")
     else:
         st.caption(f"Showing all {len(final_df)} stocks.")
 
@@ -218,7 +199,7 @@ def main():
   
     if not final_df.empty:
         # Render the display sections if data is present
-        _render_overview_section(final_df)
+        
         _render_summary_table_and_portfolio(final_df, df_daily) # Pass df_daily to the summary table function
     else:
         st.info("No data found.")

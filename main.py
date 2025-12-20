@@ -7,7 +7,8 @@ import datetime
 from src.dashboard_manager import calculate_all_indicators, get_stock_data, dynamic_filtering
 from src.tickers_manager import load_tickers, confirm_follow_dialog, TickerValidationError
 from src.dashboard_display import (
-    highlight_change, display_credits, display_guides_section, display_info_section, display_period_selection
+    highlight_change, display_credits, display_guides_section, display_info_section, 
+    display_period_selection, display_risk_return_plot
     )
 from src.config import DATA_DIR, all_tickers_file
 from src.etl import update_from_dashboard
@@ -79,8 +80,6 @@ def _load_and_process_data(fetch_kwargs: dict) -> (pd.DataFrame, pd.DataFrame, l
 
 def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.DataFrame):
     """Renders the summary table and portfolio simulation controls."""
-    st.subheader("Market Summary")
-   
     if final_df.empty:
         st.info("No data available to display in the summary table.")
         return
@@ -91,9 +90,12 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
     # Apply dynamic filtering
     sorted_df = dynamic_filtering(sorted_df, DISPLAY_COLUMNS)
 
+    # --- Risk-Return Plot ---
+    display_risk_return_plot(sorted_df)
+
     # Show active row count 
     if len(sorted_df) != len(final_df):
-        st.caption(f"Showing {len(sorted_df)} of {len(final_df)} stocks based on filters.")
+        st.caption(f"Showing {len(sorted_df)} of {len(final_df)} stocks based on filter.")
     else:
         st.caption(f"Showing all {len(final_df)} stocks.")
 
