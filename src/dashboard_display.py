@@ -341,7 +341,6 @@ def display_info_section(df_daily: pd.DataFrame):
     """
     Displays the informational sidebar section with trading period info.
     """
-    st.sidebar.markdown("---")
     if not df_daily.empty and 'Date' in df_daily.columns:
         num_days = df_daily['Date'].nunique()
         first_date = pd.to_datetime(df_daily['Date'].min())
@@ -350,7 +349,7 @@ def display_info_section(df_daily: pd.DataFrame):
         num_days = 0
         first_date, last_date = None, None
 
-    with st.sidebar.expander("ℹ️ Trading Period Info", expanded=False):
+    with st.sidebar.expander("ℹ️ Trading Period Info", expanded=True):
         st.write(f"**Trading Days:** {num_days}")
         st.write(f"**First Price Date:** {first_date.strftime('%Y-%m-%d') if first_date else 'N/A'}")
         st.write(f"**Last Price Date:** {last_date.strftime('%Y-%m-%d') if last_date else 'N/A'}")
@@ -361,7 +360,7 @@ def display_guides_section():
     """
     Displays the informational sidebar section with guides on calculations and usage.
     """
-      
+    st.sidebar.markdown("---")  
     with st.sidebar.expander("ℹ️ Guides", expanded=False):        
         st.subheader("How calculations are made")
         st.subheader("Data Source & Lookback Period")
