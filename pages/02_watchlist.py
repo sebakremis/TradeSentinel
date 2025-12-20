@@ -178,7 +178,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
     with col1:
         if st.button("Backtest Portfolio", disabled=not selected_tickers):
             if selected_tickers:
-                total_investment = 100000  # $100k investment
+                total_investment = 100000  # $100k initial investment
                 
                 # Pass the full daily data to the calculation function
                 portfolio_tuples = calculate_portfolio(selected_tickers, df_daily, total_investment)
