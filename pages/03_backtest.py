@@ -1,5 +1,5 @@
 import streamlit as st
-st.set_page_config(page_title="📊 tradeSentinel", layout="wide")
+st.set_page_config(page_title="📊 TradeSentinel", layout="wide")
 import pandas as pd
 import datetime # Import required for date inputs
 
@@ -64,7 +64,7 @@ def setup_sidebar_controls():
     AVAILABLE_PERIODS = ["3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
 
     # Get the period from the main dashboard's session state (initial/default)
-    initial_period_arg = st.session_state.get('main_dashboard_period_arg', '1y') 
+    initial_period_arg = '2y'
     
     # Determine which value should be selected by default in the selectbox
     if '|' in initial_period_arg:
@@ -203,7 +203,7 @@ def setup_sidebar_controls():
 
 def main():
     """The main function to run the Streamlit app content."""
-    st.title("📈 portfolioSim")
+    st.title("📈 Backtest")
     
     # 1. Setup Sidebar and Control Flow
     setup_sidebar_controls()

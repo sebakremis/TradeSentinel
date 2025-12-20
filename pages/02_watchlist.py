@@ -1,5 +1,5 @@
 import streamlit as st
-st.set_page_config(page_title="📊 tradeSentinel", layout="wide")
+st.set_page_config(page_title="📊 TradeSentinel", layout="wide")
 import pandas as pd
 import numpy as np
 import altair as alt
@@ -182,20 +182,18 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
     # Followed tickers buttons
     col1, col2 = st.columns([3, 1])
     with col1:
-        if st.button("Simulate Portfolio", disabled=not selected_tickers):
+        if st.button("Backtest Portfolio", disabled=not selected_tickers):
             if selected_tickers:
-                total_investment = 100000
-                # Save the current period (already stored in session_state['main_dashboard_period_arg'])
-                st.session_state['portfolio_period_arg'] = st.session_state['main_dashboard_period_arg']
+                total_investment = 100000  # $100k investment
                 
                 # Pass the full daily data to the calculation function
                 portfolio_tuples = calculate_portfolio(selected_tickers, df_daily, total_investment)
                 st.session_state['portfolio'] = portfolio_tuples
-                st.switch_page("pages/03_Portfolio_Sim.py")
+                st.switch_page("pages/03_backtest.py")
             else:
                 st.warning("Please select at least one ticker.")
 
-        st.markdown("Select tickers to simulate a $100 k **equally-weighted portfolio**.")
+        st.markdown("Select tickers to backtest a $100 k **equally-weighted portfolio**.")
     with col2:
         if st.button("Unfollow Selected Tickers", disabled=not selected_tickers):
             confirm_unfollow_dialog(selected_tickers)
@@ -206,17 +204,15 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
 # ----------------------------------------------------------------------
 
 def main():
-    st.title("📊 followedTickers")
+    st.title("📊 Watchlist")
 
     # User Input for Data Period
-    fetch_args = display_period_selection()     
-       
+    fetch_args = display_period_selection()
+      
     # Load and process all data required for the main display
     # Pass the period/date dictionary argument
     final_df, df_daily, followed_tickers = _load_and_process_data(fetch_kwargs=fetch_args)
   
-    
-
     if not final_df.empty:
         # Render the display sections if data is present
         _render_overview_section(final_df)

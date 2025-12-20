@@ -1,5 +1,5 @@
 import streamlit as st
-st.set_page_config(page_title="📊 tradeSentinel", layout="wide")
+st.set_page_config(page_title="📊 TradeSentinel", layout="wide")
 import pandas as pd
 import numpy as np
 import altair as alt
@@ -79,7 +79,7 @@ def _load_and_process_data(fetch_kwargs: dict) -> (pd.DataFrame, pd.DataFrame, l
 
 def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.DataFrame):
     """Renders the summary table and portfolio simulation controls."""
-    st.subheader("Summary")
+    st.subheader("Market Summary")
    
     if final_df.empty:
         st.info("No data available to display in the summary table.")
@@ -129,7 +129,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
     with col1:
         pass
     with col2:
-        if st.button("Follow Selected Tickers", disabled=not selected_tickers):
+        if st.button("Add to watchlist", disabled=not selected_tickers):
             confirm_follow_dialog(selected_tickers)
 
 # ----------------------------------------------------------------------
@@ -137,7 +137,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
 # ----------------------------------------------------------------------
 
 def main():
-    st.title("📊 tradeSentinel")
+    st.title("📊 TradeSentinel")
     st.markdown("---")
 
     # User Input for Data Period

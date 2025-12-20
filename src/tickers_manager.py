@@ -124,7 +124,7 @@ def confirm_follow_dialog(tickers_to_add:list):
     st.write(f"Adding tickers: **{', '.join(tickers_to_add)}**")
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("Confirm Follow"):
+        if st.button("Confirm"):
             for ticker in tickers_to_add:
                 try:
                     add_ticker(ticker)
