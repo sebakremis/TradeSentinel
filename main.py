@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import altair as alt
 import datetime 
-from src.dashboard_manager import calculate_all_indicators, get_stock_data
+from src.dashboard_manager import calculate_all_indicators, get_stock_data, dynamic_filtering
 from src.tickers_manager import load_tickers, confirm_follow_dialog, TickerValidationError
 from src.dashboard_display import (
     highlight_change, display_credits, display_guides_section, display_info_section, display_period_selection
@@ -87,6 +87,15 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
 
     # sort data
     sorted_df = final_df.sort_values(by='sharpeRatio', ascending=False)
+
+    # Apply dynamic filtering
+    sorted_df = dynamic_filtering(sorted_df, DISPLAY_COLUMNS)
+
+    # Show active row count 
+    if len(sorted_df) != len(final_df):
+        st.caption(f"Showing {len(sorted_df)} of {len(final_df)} stocks based on filters.")
+    else:
+        st.caption(f"Showing all {len(final_df)} stocks.")
 
     # --- Render Dataframe table ---    
     event = st.dataframe( # Capture the 'event' to know which rows are selected

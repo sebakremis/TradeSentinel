@@ -102,3 +102,79 @@ def calculate_all_indicators(df_daily)-> pd.DataFrame:
     
     # 5. Return the enriched DataFrame
     return df_daily
+
+def dynamic_filtering(sorted_df: pd.DataFrame, DISPLAY_COLUMNS: list) -> pd.DataFrame:
+    """
+    Applies dynamic filtering to the DataFrame.
+    Returns the filtered DataFrame.
+    """
+    filter_options = [col for col in DISPLAY_COLUMNS if col != 'Ticker']
+    with st.expander("🔎 Filter Data", expanded=False):
+        # Create columns for the filter controls
+        f_col1, f_col2, f_col3 = st.columns([1, 1, 2])
+        
+        with f_col1:
+            # Allow user to select which column to filter
+            filter_column = st.selectbox("Filter by:", options=filter_options)
+
+        # Logic: Check if selected column is Numeric or Text
+        if filter_column in sorted_df.columns:
+            is_numeric = pd.api.types.is_numeric_dtype(sorted_df[filter_column])
+            
+            # --- NUMERIC FILTERING ---
+            if is_numeric:
+                min_val = float(sorted_df[filter_column].min())
+                max_val = float(sorted_df[filter_column].max())
+                
+                # Handle edge case where column might be empty or all NaNs
+                if pd.isna(min_val): min_val = 0.0
+                if pd.isna(max_val): max_val = 1.0
+                
+                with f_col2:
+                    # Select condition type
+                    filter_condition = st.selectbox("Condition", ["Range", "Greater than", "Less than"])
+                
+                with f_col3:
+                    if filter_condition == "Range":
+                        # Use a slider for range
+                        val_range = st.slider(
+                            f"Select range for {filter_column}",
+                            min_value=min_val,
+                            max_value=max_val,
+                            value=(min_val, max_val)
+                        )
+                        # Apply Filter
+                        sorted_df = sorted_df[
+                            (sorted_df[filter_column] >= val_range[0]) & 
+                            (sorted_df[filter_column] <= val_range[1])
+                        ]
+                    elif filter_condition == "Greater than":
+                        val = st.number_input(f"Value for {filter_column}", value=min_val)
+                        sorted_df = sorted_df[sorted_df[filter_column] >= val]
+                    elif filter_condition == "Less than":
+                        val = st.number_input(f"Value for {filter_column}", value=max_val)
+                        sorted_df = sorted_df[sorted_df[filter_column] <= val]
+
+            # --- TEXT FILTERING ---
+            else:
+                unique_values = sorted_df[filter_column].dropna().unique().tolist()
+                
+                # Use Multiselect if there are few categories (like Sector), otherwise Text Search
+                if len(unique_values) < 20:
+                    with f_col3:
+                        selected_items = st.multiselect(
+                            f"Select {filter_column}", 
+                            options=unique_values, 
+                            default=unique_values
+                        )
+                        # Apply Filter
+                        sorted_df = sorted_df[sorted_df[filter_column].isin(selected_items)]
+                else:
+                    with f_col3:
+                        search_text = st.text_input(f"Search inside {filter_column}", "")
+                        # Apply Filter
+                        if search_text:
+                            sorted_df = sorted_df[
+                                sorted_df[filter_column].astype(str).str.contains(search_text, case=False, na=False)
+                            ]
+    return sorted_df

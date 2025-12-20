@@ -14,7 +14,7 @@ The entry point of the application acts as a Market Screener.
 
 * Scope: Analyzes the broad market based on the universe of tickers defined in all_tickers.csv.
 
-* Functionality: view fundamental data, filter by sector or metrics (coming soon), and identify potential opportunities.
+* Functionality: view fundamental data, filter by sector or metrics, and identify potential opportunities.
 
 * Action: Select interesting tickers and add them directly to your Followed Tickers list.
 
