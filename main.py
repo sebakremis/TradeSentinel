@@ -85,23 +85,17 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         st.info("No data available to display in the summary table.")
         return
 
+    # sort data
     sorted_df = final_df.sort_values(by='sharpeRatio', ascending=False)
 
-    # Apply Conditional Formatting using Pandas Styler
-    display_df_styled = sorted_df.copy()
-    display_df_styled['Select'] = False # This must be done on the DataFrame copy before styling
-    
-    # Apply the color function to the 'avgReturn' column
-    styled_table = display_df_styled.style.map(
-        highlight_change, 
-        subset=['avgReturn'] 
-    )
-
-    # --- Render Data Editor ---
-    edited_df = st.data_editor(
-        styled_table,
+    # --- Render Dataframe with native selection ---
+    # Capture the 'event' to know which rows are selected
+    event = st.dataframe(
+        sorted_df,
         hide_index=True,
         width='stretch',
+        on_select="rerun",
+        selection_mode="multi-row", # allow multi-row selection
         column_config={
             "Ticker": st.column_config.TextColumn("Ticker", width="small"),
             "sector": st.column_config.TextColumn("sector"),
@@ -115,13 +109,14 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "returnOnAssets": st.column_config.NumberColumn("ROA%", help="Return on Assets", format="%.2f%%",width="small"),                       
             "avgReturn": st.column_config.NumberColumn("AAR%", help="Annualized Average return", format="%.2f%%", width="small"),
             "annualizedVol": st.column_config.NumberColumn("Vol%", help="Annualized Average volatility", format="%.2f%%", width="small"),
-            "sharpeRatio": st.column_config.NumberColumn("sharpe", format="%.2f%%", width="small"),                      
-            "Select": st.column_config.CheckboxColumn("select", default=False, width="small")
+            "sharpeRatio": st.column_config.NumberColumn("sharpe", format="%.2f%%", width="small")
         },
-        num_rows="fixed"
     )
-    
-    selected_tickers_df = edited_df[edited_df['Select']]
+    # Get tickers from selected rows.
+    selected_indices = event.selection.rows # returns a list of numerical indices
+    selected_tickers_df = sorted_df.iloc[selected_indices]
+
+    # Get list of selected tickers
     selected_tickers = selected_tickers_df['Ticker'].tolist()
 
     # Main dashboard buttons
