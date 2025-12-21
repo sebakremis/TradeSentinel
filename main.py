@@ -7,7 +7,7 @@ import datetime
 from src.dashboard_manager import calculate_all_indicators, get_stock_data, dynamic_filtering
 from src.tickers_manager import load_tickers, confirm_follow_dialog, TickerValidationError
 from src.dashboard_display import (
-    highlight_change, display_credits, display_guides_section, display_info_section, 
+    display_credits, display_guides_section, display_info_section, 
     display_period_selection, display_risk_return_plot
     )
 from src.config import DATA_DIR, all_tickers_file

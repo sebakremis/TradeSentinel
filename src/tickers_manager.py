@@ -122,15 +122,24 @@ def confirm_follow_dialog(tickers_to_add:list):
     Displays a confirmation dialog before adding tickers to follow.
     """
     st.write(f"Adding tickers: **{', '.join(tickers_to_add)}**")
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("Confirm"):
+        if st.button("Confirm & switch to watchlist page"):
+            for ticker in tickers_to_add:
+                try:
+                    add_ticker(ticker)
+                except TickerValidationError as e:
+                    st.error(f"❌ {e}")
+            st.switch_page("pages/02_watchlist.py")
+            # st.rerun()  # Refresh the app to reflect changes
+    with col2:
+        if st.button("Confirm & stay on main page"):
             for ticker in tickers_to_add:
                 try:
                     add_ticker(ticker)
                 except TickerValidationError as e:
                     st.error(f"❌ {e}")
             st.rerun()  # Refresh the app to reflect changes
-    with col2:
+    with col3:
         if st.button("Cancel"):
             st.rerun()  # Refresh the app to reflect changes
