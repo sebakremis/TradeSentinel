@@ -1,7 +1,6 @@
 import streamlit as st
 st.set_page_config(page_title="📊 TradeSentinel", layout="wide")
 import pandas as pd
-import datetime # Import required for date inputs
 
 from src.portfolio_calculations import calculate_pnl_data, prepare_pnl_time_series
 from src.dashboard_manager import get_stock_data
@@ -20,44 +19,43 @@ def _safe_df_concat(df1, df2):
 def setup_sidebar_controls():
     """Sets up the sidebar controls for portfolio definition and parameters, including validation."""
     
-    # 1. Initialize DataFrame in Session State (Critical for clean start)
+    # 1. Initialize DataFrame in Session State
     if 'portfolio' not in st.session_state or st.session_state['portfolio'] is None:
         st.session_state['portfolio'] = []
 
-    portfolio_tuples = st.session_state.get('portfolio')
+    portfolio_data = st.session_state.get('portfolio')
     
-    # Define a blank DataFrame structure. 'Int64' allows integer NA values.
-    blank_df = pd.DataFrame(
-        {'Ticker': pd.Series(dtype='str'), 'Quantity': pd.Series(dtype='Int64')}
-    )
+    # Define schema using specific types
+    df_schema = {'Ticker': pd.Series(dtype='str'), 'Quantity': pd.Series(dtype='Int64')}
 
-    if portfolio_tuples:
-        # If data is present, load it, ensuring 'Quantity' is correctly typed
-        sim_portfolio = pd.DataFrame(portfolio_tuples, columns=['Ticker', 'Quantity'])
-        # Use pd.to_numeric to handle strings/floats, then use 'Int64' for nullable integers
-        sim_portfolio['Quantity'] = pd.to_numeric(sim_portfolio['Quantity'], errors='coerce').fillna(0).astype('Int64')
+    if portfolio_data:
+        # Load existing data
+        sim_portfolio = pd.DataFrame(portfolio_data, columns=['Ticker', 'Quantity'])
+        # Ensure Quantity is numeric and nullable Int64
+        sim_portfolio['Quantity'] = pd.to_numeric(sim_portfolio['Quantity'], errors='coerce').astype('Int64')
     else:
-        # Start with a single empty row to prompt user input
-        new_row = pd.DataFrame([{'Ticker': '', 'Quantity': 0}])
-        sim_portfolio = _safe_df_concat(blank_df, new_row)
+        # Initialize empty DataFrame. 'dynamic' mode in data_editor handles adding rows.
+        sim_portfolio = pd.DataFrame(df_schema)
 
     st.sidebar.title("Set portfolio to analyze:")
     
-    # Use st.data_editor to allow users to modify the portfolio
+    # Using data_editor with num_rows="dynamic" removes need for manual blank row insertion
     portfolio_df = st.sidebar.data_editor(
         sim_portfolio, 
         num_rows="dynamic", 
         width="stretch",
-        # Use column config to enforce non-negative integers in the UI
         column_config={
+            "Ticker": st.column_config.TextColumn("Ticker", required=True),
             "Quantity": st.column_config.NumberColumn(
                 "Quantity",
                 help="Number of shares/units (non-negative integer)",
-                min_value=0,
+                min_value=0, # UI restriction
                 step=1,
-                format="%d"
+                format="%d",
+                required=True
             )
-        }
+        },
+        key="portfolio_editor"
     )
 
     # --- Fixed Parameters and Period Selection ---
@@ -133,75 +131,55 @@ def setup_sidebar_controls():
     
     st.sidebar.markdown(f"**Fixed Interval:** `{FIXED_INTERVAL}`")
     interval_input = FIXED_INTERVAL
-    
-    refresh = st.sidebar.button("Refresh Data")
-
-    # Guides on sidebar
-    display_guides_section()
-    
-    # 2. VALIDATION BLOCK (The Final Fix)
-    if refresh:
+       
+    # VALIDATION & REFRESH LOGIC
+    if st.sidebar.button("Refresh Data", type="primary"):
         
-        # Defensive Data Cleaning: Convert the entire DataFrame to strings first.
-        temp_df = portfolio_df.astype(str).copy()
-        temp_df['Ticker'] = temp_df['Ticker'].str.strip()
-        temp_df['Quantity'] = temp_df['Quantity'].str.strip()
+        # Clean Inputs
+        clean_df = portfolio_df.copy()
         
-        # Filter 1: Remove rows where the Ticker is empty
-        clean_df = temp_df[temp_df['Ticker'] != ''].copy()
+        # Drop rows where Ticker is missing or NaN
+        clean_df = clean_df.dropna(subset=['Ticker'])
+        clean_df = clean_df[clean_df['Ticker'].astype(str).str.strip() != '']
         
-        # Filter 2: If the DataFrame is empty after filtering, stop processing gracefully
         if clean_df.empty:
-            st.sidebar.warning("Please enter at least one ticker and quantity.")
+            st.sidebar.warning("Please enter at least one ticker.")
             st.stop()
 
+        # Vectorized Validation
+        # 1. Ticker Validation (alphanumeric check)
+        # We strip strings and remove dots/periods before checking isalnum
+        invalid_tickers_mask = ~clean_df['Ticker'].astype(str).str.replace('.', '', regex=False).str.isalnum()
+        
+        # 2. Quantity Validation
+        # Coerce to numeric, anything that fails becomes NaN
+        clean_df['Quantity'] = pd.to_numeric(clean_df['Quantity'], errors='coerce')
+        invalid_qty_mask = clean_df['Quantity'].isna() | (clean_df['Quantity'] < 0)
+
+        if invalid_tickers_mask.any() or invalid_qty_mask.any():
+            st.sidebar.error("Invalid input detected. Check Tickers (alphanumeric) and Quantities (positive numbers).")
+            st.stop()
+
+        # Prepare Final Data
+        clean_df['Ticker'] = clean_df['Ticker'].astype(str).str.upper().str.strip()
+        clean_df['Quantity'] = clean_df['Quantity'].astype(int)
+
+        # Commit to Session State
         tickers_input = clean_df["Ticker"].tolist()
+        quantities_clean = clean_df["Quantity"].tolist()
         
-        # Ticker Validation
-        invalid_tickers = [t for t in tickers_input if not t or not t.replace('.', '').isalnum()]
-        
-        # Robust Quantity Conversion and Validation
-        quantities_numeric = pd.to_numeric(clean_df["Quantity"], errors='coerce')
-
-        invalid_quantities_found = False
-        quantities_clean = []
-        
-        for q in quantities_numeric:
-            # Check 1: Must be a valid number
-            if pd.isna(q):
-                invalid_quantities_found = True
-                break
-            
-            # Check 2: Must be non-negative
-            if q < 0:
-                invalid_quantities_found = True
-                break
-
-            # Check 3: Must be a whole number 
-            if abs(q - round(q)) < 1e-9: 
-                quantities_clean.append(int(round(q))) 
-            else:
-                invalid_quantities_found = True
-                break
-
-        # Final Error Check
-        if invalid_tickers or invalid_quantities_found:
-            st.sidebar.error("Invalid input. Check tickers (must be alphanumeric/dot) and quantities (must be non-negative whole numbers).")
-            st.stop()
-        
-        # Final commitment and rerun logic
         st.session_state.active_tickers = tickers_input
         st.session_state.active_quantities = dict(zip(tickers_input, quantities_clean))
-        #  Use the dynamically calculated period_input
         st.session_state.active_period = period_input
-        st.session_state.active_interval = interval_input
+        st.session_state.active_interval = FIXED_INTERVAL
         
-        # Save the current valid portfolio
-        clean_df['Quantity'] = quantities_clean
+        # Save portfolio for persistence (as list of lists/tuples for simplicity)
         st.session_state['portfolio'] = clean_df[['Ticker', 'Quantity']].values.tolist()
-
         
         st.rerun()
+    
+    # Guides on sidebar
+    display_guides_section()
 
 # --- Main App Execution ---
 
@@ -213,58 +191,55 @@ def main():
     setup_sidebar_controls()
     
     if "active_tickers" not in st.session_state:
-        st.info("Set your portfolio parameters and click **Refresh Data** to load the dashboard.")
+        st.info("👈 Set your portfolio parameters and click **Refresh Data** to load the dashboard.")
         st.stop()
 
-    # Retrieve finalized parameters
+    # Retrieve parameters
     tickers = st.session_state.active_tickers
     quantities = st.session_state.active_quantities
-    period_arg = st.session_state.active_period # Renamed to period_arg for clarity
+    period_arg = st.session_state.active_period
     interval = st.session_state.active_interval
 
-    #  FIX: Determine yfinance arguments based on the period_arg format
+    # Configure fetch arguments
     fetch_kwargs = {'interval': interval}
-    display_period = period_arg # Default display
+    display_period_label = period_arg
 
     if '|' in period_arg:
-        # Custom Date format found (e.g., '2025-09-10|2025-09-29')
         start_date, end_date = period_arg.split('|')
         fetch_kwargs['start'] = start_date
         fetch_kwargs['end'] = end_date
-        # Display nicely for the user
-        display_period = f"Custom: {start_date} to {end_date}"
+        display_period_label = f"Custom: {start_date} to {end_date}"
     else:
-        # Preset Period format (e.g., '1y')
         fetch_kwargs['period'] = period_arg
-        display_period = period_arg
 
-    # 2. Load Data
-    with st.spinner(f"Loading daily market data for {len(tickers)} tickers over {display_period}..."):
-        # Pass the dynamically created arguments using the ** operator
+    # Load Data
+    with st.spinner(f"Loading data for {len(tickers)} tickers ({display_period_label})..."):
         prices_df = get_stock_data(tickers, **fetch_kwargs)
-        # set date as index and sort
+        
+        if prices_df.empty:
+            st.error("No data returned. Please check your tickers or date range.")
+            st.stop()
+            
         prices_df.set_index('Date', inplace=True)
         prices_df.sort_index(inplace=True)
 
-                
-
-        # Convert prices_df to dictionary (keys: tickers, values: DataFrames)
-        prices = {
-            ticker: prices_df[prices_df['Ticker'] == ticker].copy() if not prices_df[prices_df['Ticker'] == ticker].empty else pd.DataFrame()
-            for ticker in tickers
-        }
+        # OPTIMIZATION: Use groupby instead of list comprehension for speed
+        # This splits the big dataframe into a dict of small dataframes in one go
+        prices = dict(tuple(prices_df.groupby('Ticker')))
         
+        # Handle cases where a ticker might have returned no data despite request
+        missing_tickers = set(tickers) - set(prices.keys())
+        if missing_tickers:
+            st.warning(f"Could not load data for: {', '.join(missing_tickers)}")
+            # Filter quantities to match available data to prevent KeyErrors later
+            quantities = {k: v for k, v in quantities.items() if k not in missing_tickers}
 
-        st.session_state.data = prices
-    
-    if not prices:
-        st.error("Could not load data for the selected portfolio. Please check tickers and try again.")
-        st.stop()
-        
-    # 3. Calculate Core PnL Data
+    # Calculate Core PnL Data
+    # Assuming calculate_pnl_data handles the dict logic
     df_pnl = calculate_pnl_data(prices, quantities)
+    
     if df_pnl.empty:
-        st.error("PnL calculation failed for all tickers.")
+        st.error("PnL calculation yielded no results.")
         st.stop()
 
     # --- Display Sections ---
