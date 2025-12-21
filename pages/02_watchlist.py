@@ -130,9 +130,9 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
 
     # Show active row count 
     if len(sorted_df) != len(final_df):
-        st.caption(f"Showing {len(sorted_df)} of {len(final_df)} stocks based on filter.")
+        st.caption(f"Showing {len(sorted_df)} of {len(final_df)} tickers based on filter.")
     else:
-        st.caption(f"Showing all {len(final_df)} stocks.")
+        st.caption(f"Showing all {len(final_df)} tickers.")
 
     # --- Render Dataframe table ---
     event = st.dataframe(
@@ -208,8 +208,10 @@ def main():
     # Guides section in sidebar
     display_guides_section()
         
-    # Credits
-    display_credits() 
+    # Credits & Navigation
+    display_credits()
+    if st.button("Go back to main page"):
+        st.switch_page("main.py") 
     
 if __name__ == "__main__":
     main()

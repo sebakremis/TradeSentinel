@@ -192,7 +192,7 @@ def setup_sidebar_controls():
         # Final commitment and rerun logic
         st.session_state.active_tickers = tickers_input
         st.session_state.active_quantities = dict(zip(tickers_input, quantities_clean))
-        # 🚨 Use the dynamically calculated period_input
+        #  Use the dynamically calculated period_input
         st.session_state.active_period = period_input
         st.session_state.active_interval = interval_input
         
@@ -222,7 +222,7 @@ def main():
     period_arg = st.session_state.active_period # Renamed to period_arg for clarity
     interval = st.session_state.active_interval
 
-    # 🚨 FIX: Determine yfinance arguments based on the period_arg format
+    #  FIX: Determine yfinance arguments based on the period_arg format
     fetch_kwargs = {'interval': interval}
     display_period = period_arg # Default display
 
@@ -290,7 +290,7 @@ def main():
 
     # Credits and Navigation
     display_credits()
-    if st.button("Go back to Main Dashboard"):
+    if st.button("Go back to main page"):
         st.switch_page("main.py")
 
 if __name__ == "__main__":
