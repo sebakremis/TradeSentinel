@@ -7,7 +7,7 @@ This project was created as part of my practice for the Master in Data Science, 
 ---
 
 ## 🏗️ App Architecture & Workflow
-The application is structured into three interconnected pages, designed to support a logical investment analysis workflow:
+The application is structured into four pages, designed to support a logical investment analysis workflow:
 
 ### 1. Market View (Main)
 The entry point of the application acts as a Market Screener.
@@ -35,6 +35,15 @@ A simulation engine for historical performance analysis.
 * Functionality: Calculate annualized returns, volatility, Sharpe Ratio, and visualize cumulative performance over time.
 
 * Usage: Can be used as the final step in the workflow (receiving tickers from the Watchlist) or independently to test ad-hoc combinations.
+
+### 4. Portfolios
+Allows the creation, management, and detailed analysis of custom investment portfolios with realistic transaction tracking.
+
+* Scope: Unlike the Backtest module—which simulates buying a set of assets all at once at the beginning of a period—this module manages real-world portfolios. It handles staggered entry points (buying different assets at different dates), tracks cost basis versus market value, and provides a persistent storage system to save and reload multiple portfolio configurations.
+
+* Functionality: Create, save, edit, and delete multiple named portfolios using a local JSON backend.
+
+* Usage: Can be used as the final step in the workflow, to track the performance of specific portfolios over time.
 
 ## 📂 Data Configuration
 The application is driven by two key CSV files located in the /data/ directory, allowing for easy customization of the analysis universe:

@@ -434,6 +434,36 @@ def display_guides_section():
         * **Volatility:** How violently the portfolio value fluctuates.
         * **Max Drawdown:** The largest percentage drop the portfolio experienced during the selected period.
         """)
+        st.markdown("---")
+        st.markdown("### Portfolios")
+        st.markdown("**1. Manage Portfolios (Sidebar)**")
+        st.markdown("""
+        * **View Existing:** Select a saved portfolio to analyze its performance.
+        * **Create:** Start a new portfolio from scratch.
+        * **Edit/Delete:** Modify holdings or remove portfolios entirely using the buttons in the sidebar.
+        """)
+        
+        st.markdown("**2. Input Data (Editor)**")
+        st.markdown("""
+        When creating or editing, ensure you provide accurate details:
+        * **Purchase Date:** The chart tracks value starting from this specific date for each asset.
+        * **Unit Cost ($):** The price you paid per share. Used to calculate your *Cost Basis* and *Total Return*.
+        """)
+
+        st.markdown("---")
+        st.subheader("Understanding the Metrics")
+        
+        st.markdown("**Real-World Tracking**")
+        st.info("Unlike the Backtest page (which assumes you bought everything on day 1), this page respects your **Purchase Dates**. The chart shows your portfolio value growing as you add assets over time.")
+        
+        st.markdown("**PnL (Unrealized)**")
+        st.info("""
+        * **Total Invested Cost:** The actual cash spent (Quantity x Unit Cost).
+        * **Unrealized PnL:** How much profit/loss you would have if you sold everything today (Current Value - Total Cost).
+        """)
+        
+        st.markdown("**Sector Allocation**")
+        st.info("Automatically groups your holdings by sector (e.g., Technology, Healthcare) based on database metadata to visualize diversification.")
 
 def display_credits():
     """Displays the credits section."""

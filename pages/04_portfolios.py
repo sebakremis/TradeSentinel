@@ -8,7 +8,8 @@ from src.dashboard_manager import get_stock_data
 from src.dashboard_display import (
     display_per_ticker_pnl, display_portfolio_summary,
     display_pnl_over_time, display_sector_allocation,
-    display_advanced_metrics, display_export_table, display_credits
+    display_advanced_metrics, display_export_table, display_credits,
+    display_guides_section
 )
 
 st.set_page_config(page_title="💼 Portfolio Tracker", layout="wide")
@@ -153,7 +154,10 @@ def render_sidebar():
                 with col2:
                     if st.button("Delete Portfolio", type="primary"):
                         confirmation_dialog(selected_portfolio_name)
-                        
+
+    # Guides on sidebar
+    display_guides_section()
+
     return mode, selected_portfolio_name, portfolio_data
 
 def render_editor(current_data=None, current_name=None):
