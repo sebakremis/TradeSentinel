@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import json
+import time
 
 from src.config import PORTFOLIO_FILE
 from src.dashboard_manager import get_stock_data
@@ -161,6 +162,9 @@ def render_editor(current_data=None):
         data_to_save = clean_df.to_dict(orient='records')
         save_portfolio(new_name, data_to_save)
         st.success(f"Portfolio '{new_name}' saved successfully!")
+        
+        # Wait 1.5 seconds before reloading
+        time.sleep(1.5)
         st.rerun()
 
 def prepare_detailed_export(prices_dict, portfolio_config):
