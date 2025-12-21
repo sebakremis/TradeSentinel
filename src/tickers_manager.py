@@ -131,7 +131,6 @@ def confirm_follow_dialog(tickers_to_add:list):
                 except TickerValidationError as e:
                     st.error(f"❌ {e}")
             st.switch_page("pages/02_watchlist.py")
-            # st.rerun()  # Refresh the app to reflect changes
     with col2:
         if st.button("Confirm & stay on main page"):
             for ticker in tickers_to_add:
@@ -142,4 +141,4 @@ def confirm_follow_dialog(tickers_to_add:list):
             st.rerun()  # Refresh the app to reflect changes
     with col3:
         if st.button("Cancel"):
-            st.rerun()  # Refresh the app to reflect changes
+            st.rerun()

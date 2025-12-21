@@ -8,7 +8,8 @@ from src.dashboard_manager import get_stock_data
 from src.dashboard_display import (
     display_per_ticker_pnl, display_portfolio_summary,
     display_pnl_over_time, display_sector_allocation,
-    display_advanced_metrics, display_export_table, display_credits
+    display_advanced_metrics, display_export_table, display_credits,
+    display_guides_section
 )
 
 
@@ -134,6 +135,9 @@ def setup_sidebar_controls():
     interval_input = FIXED_INTERVAL
     
     refresh = st.sidebar.button("Refresh Data")
+
+    # Guides on sidebar
+    display_guides_section()
     
     # 2. VALIDATION BLOCK (The Final Fix)
     if refresh:
