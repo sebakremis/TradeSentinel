@@ -235,7 +235,6 @@ def main():
             quantities = {k: v for k, v in quantities.items() if k not in missing_tickers}
 
     # Calculate Core PnL Data
-    # Assuming calculate_pnl_data handles the dict logic
     df_pnl = calculate_pnl_data(prices, quantities)
     
     if df_pnl.empty:
