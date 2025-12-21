@@ -106,6 +106,6 @@ Users are solely responsible for any decisions made based on the information pro
 
 ## 📜 License
 This repository is publicly available under the terms of the **MIT License**.  
-You are free to use, modify, and distribute the code, provided that proper attribution is given and the original license notice is included in any copies or substantial portions of the software.
+You are free to use, modify, and distribute the code for any purpose.
 
 For full details, please see the [MIT License](LICENSE) file included in this repository.
