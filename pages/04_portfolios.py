@@ -103,7 +103,29 @@ def confirmation_dialog(portfolio_name):
 def render_sidebar():
     st.sidebar.title("Manage Portfolios")
     
-    mode = st.sidebar.radio("Mode", ["View Existing", "Create"], label_visibility="collapsed")
+    # --- FIX: HANDLE REDIRECT FROM SAVE ---
+    # This must happen BEFORE the widgets are instantiated
+    if 'newly_saved_portfolio' in st.session_state:
+        # 1. Force the Radio button to 'View Existing'
+        st.session_state['portfolio_mode_radio'] = "View Existing"
+        # 2. Force the Selectbox to the new name
+        st.session_state['portfolio_select_box'] = st.session_state['newly_saved_portfolio']
+        # 3. Clean up the flag
+        del st.session_state['newly_saved_portfolio']
+
+    # Initialize edit mode state
+    if 'edit_mode' not in st.session_state:
+        st.session_state['edit_mode'] = False
+    
+    mode = st.sidebar.radio(
+        "Mode", 
+        ["View Existing", "Create"], 
+        label_visibility="collapsed",
+        key="portfolio_mode_radio"
+    )
+    
+    if mode == "Create" and st.session_state['edit_mode']:
+        st.session_state['edit_mode'] = False
     
     saved_portfolios = load_portfolios()
     selected_portfolio_name = None
@@ -113,21 +135,35 @@ def render_sidebar():
         if not saved_portfolios:
             st.sidebar.warning("No portfolios saved yet. Switch to 'Create' to start.")
         else:
-            selected_portfolio_name = st.sidebar.selectbox("Select Portfolio", list(saved_portfolios.keys()))
+            selected_portfolio_name = st.sidebar.selectbox(
+                "Select Portfolio", 
+                list(saved_portfolios.keys()),
+                key="portfolio_select_box"
+            )
+            
             if selected_portfolio_name:
                 portfolio_data = saved_portfolios[selected_portfolio_name]
-                
-                if st.sidebar.button("Delete Portfolio", type="primary"):
-                    confirmation_dialog(selected_portfolio_name)
 
+                col1, col2 = st.sidebar.columns(2)                
+                with col1:
+                    if st.button("Edit Portfolio"):
+                        st.session_state['edit_mode'] = True
+                        st.rerun()
+                        
+                with col2:
+                    if st.button("Delete Portfolio", type="primary"):
+                        confirmation_dialog(selected_portfolio_name)
+                        
     return mode, selected_portfolio_name, portfolio_data
 
-def render_editor(current_data=None):
-    st.subheader("🛠️ Portfolio Editor")
+def render_editor(current_data=None, current_name=None):
+    st.subheader(f"🛠️ {'Edit Portfolio' if current_name else 'Create New Portfolio'}")
     
     col1, col2 = st.columns([1, 2])
     with col1:
-        new_name = st.text_input("Portfolio Name", placeholder="e.g., Tech Growth Fund")
+        # Pre-fill name if editing
+        default_name = current_name if current_name else ""
+        new_name = st.text_input("Portfolio Name", value=default_name, placeholder="e.g., Tech Growth Fund")
     
     # Define Schema for the Editor
     if current_data:
@@ -140,10 +176,11 @@ def render_editor(current_data=None):
         df = pd.DataFrame({
             "Ticker": pd.Series(dtype="str"),
             "Quantity": pd.Series(dtype="int"),
-            "Purchase Date": pd.Series(dtype="object"), # Object needed for Date input
+            "Purchase Date": pd.Series(dtype="object"), 
             "Purchase Price": pd.Series(dtype="float"),
         })
 
+    # The dynamic editor allows adding new rows (tickers) and editing existing ones
     edited_df = st.data_editor(
         df,
         num_rows="dynamic",
@@ -156,29 +193,48 @@ def render_editor(current_data=None):
         }
     )
 
-    if st.button("Save Portfolio"):
-        if not new_name:
-            st.error("Please enter a portfolio name.")
-            return
+    col_save, col_cancel = st.columns([1, 10])
+    
+    with col_save:
+        if st.button("Save Portfolio", type="primary"):
+            if not new_name:
+                st.error("Please enter a portfolio name.")
+                return
 
-        # Clean Data
-        clean_df = edited_df.dropna(how='any')
-        if clean_df.empty:
-            st.error("Portfolio cannot be empty.")
-            return
+            # Clean Data
+            clean_df = edited_df.dropna(how='any')
+            if clean_df.empty:
+                st.error("Portfolio cannot be empty.")
+                return
+                
+            # Convert dates to string for JSON serialization
+            clean_df['Purchase Date'] = clean_df['Purchase Date'].astype(str)
+            clean_df['Ticker'] = clean_df['Ticker'].str.upper().str.strip()
             
-        # Convert dates to string for JSON serialization
-        clean_df['Purchase Date'] = clean_df['Purchase Date'].astype(str)
-        clean_df['Ticker'] = clean_df['Ticker'].str.upper().str.strip()
-        
-        # Save
-        
-        with st.spinner(f"saving Portfolio '{new_name}'"):
-            data_to_save = clean_df.to_dict(orient='records')
-            save_portfolio(new_name, data_to_save)
-            # Wait 1.5 seconds before reloading
-            time.sleep(1.5)        
-        st.rerun()
+            # Save
+            with st.spinner("Saving..."):
+                data_to_save = clean_df.to_dict(orient='records')
+                save_portfolio(new_name, data_to_save)
+                
+                if current_name and new_name != current_name:
+                    delete_portfolio(current_name)
+
+                # Redirect flag
+                st.session_state['newly_saved_portfolio'] = new_name
+                
+                # Turn off edit mode
+                st.session_state['edit_mode'] = False
+                
+                st.session_state['success_msg'] = f"Portfolio '{new_name}' saved successfully!"
+                time.sleep(0.5) 
+            
+            st.rerun()
+
+    with col_cancel:
+        # Cancel Button to exit edit mode
+        if st.button("Cancel"):
+            st.session_state['edit_mode'] = False
+            st.rerun()
 
 def prepare_detailed_export(prices_dict, portfolio_config):
     """
@@ -233,12 +289,20 @@ def main():
     
     mode, name, data = render_sidebar()
 
-    # --- Mode 1: Create  ---
+    # --- Router Logic ---
+
+    # 1. Check for Edit Mode Override
+    if st.session_state.get('edit_mode') and name and data:
+        # We pass both data AND the name so the editor knows what we are editing
+        render_editor(current_data=data, current_name=name)
+        return
+
+    # 2. Standard Create Mode
     if mode == "Create":
         render_editor()
         return
 
-    # --- Mode 2: View / Analyze ---
+    # 3. View / Analyze Mode
     if not name or not data:
         st.info("Select a portfolio from the sidebar to view analysis.")
         st.stop()
