@@ -86,10 +86,24 @@ def process_portfolio_history(prices_dict, portfolio_config):
 
 # --- UI Sections ---
 
+@st.dialog("Confirm Deletion")
+def confirmation_dialog(portfolio_name):
+    st.write(f"Are you sure you want to delete **{portfolio_name}**?")
+    st.warning("This action cannot be undone.")
+    
+    col1, col2 = st.columns(2)
+    if col1.button("Yes, Delete", type="primary"):
+        delete_portfolio(portfolio_name)
+        st.session_state['success_msg'] = "Portfolio deleted."
+        st.rerun()
+        
+    if col2.button("Cancel"):
+        st.rerun()
+
 def render_sidebar():
     st.sidebar.title("Manage Portfolios")
     
-    mode = st.sidebar.radio("Mode", ["View Existing", "Create / Edit"], label_visibility="collapsed")
+    mode = st.sidebar.radio("Mode", ["View Existing", "Create"], label_visibility="collapsed")
     
     saved_portfolios = load_portfolios()
     selected_portfolio_name = None
@@ -104,8 +118,7 @@ def render_sidebar():
                 portfolio_data = saved_portfolios[selected_portfolio_name]
                 
                 if st.sidebar.button("Delete Portfolio", type="primary"):
-                    delete_portfolio(selected_portfolio_name)
-                    st.rerun()
+                    confirmation_dialog(selected_portfolio_name)
 
     return mode, selected_portfolio_name, portfolio_data
 
@@ -159,12 +172,12 @@ def render_editor(current_data=None):
         clean_df['Ticker'] = clean_df['Ticker'].str.upper().str.strip()
         
         # Save
-        data_to_save = clean_df.to_dict(orient='records')
-        save_portfolio(new_name, data_to_save)
-        st.success(f"Portfolio '{new_name}' saved successfully!")
         
-        # Wait 1.5 seconds before reloading
-        time.sleep(1.5)
+        with st.spinner(f"saving Portfolio '{new_name}'"):
+            data_to_save = clean_df.to_dict(orient='records')
+            save_portfolio(new_name, data_to_save)
+            # Wait 1.5 seconds before reloading
+            time.sleep(1.5)        
         st.rerun()
 
 def prepare_detailed_export(prices_dict, portfolio_config):
@@ -220,8 +233,8 @@ def main():
     
     mode, name, data = render_sidebar()
 
-    # --- Mode 1: Create / Edit ---
-    if mode == "Create / Edit":
+    # --- Mode 1: Create  ---
+    if mode == "Create":
         render_editor()
         return
 
