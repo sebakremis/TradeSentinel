@@ -25,7 +25,7 @@ A dedicated dashboard for your curated list of assets.
 
 * Functionality: detailed monitoring of your specific interest list without the noise of the broader market.
 
-* Action: Select a subset of these tickers to send to the Portfolio Simulator for performance testing.
+* Action: Select a subset of these tickers to send to the Backtest page for performance testing.
 
 ### 3. Backtest
 A simulation engine for historical performance analysis.
@@ -34,7 +34,7 @@ A simulation engine for historical performance analysis.
 
 * Functionality: Calculate annualized returns, volatility, Sharpe Ratio, and visualize cumulative performance over time.
 
-* Usage: Can be used as the final step in the workflow (receiving tickers from the Watchlist) or independently to test ad-hoc combinations.
+* Usage: Can receive tickers from the Watchlist when creating an equally-weighted portfolio or independently to test any combination of tickers.
 
 ### 4. Portfolios
 Allows the creation, management, and detailed analysis of custom investment portfolios with realistic transaction tracking.
