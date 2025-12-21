@@ -108,7 +108,8 @@ def dynamic_filtering(sorted_df: pd.DataFrame, DISPLAY_COLUMNS: list) -> pd.Data
     Applies dynamic filtering to the DataFrame.
     Returns the filtered DataFrame.
     """
-    filter_options = [col for col in DISPLAY_COLUMNS if col != 'Ticker']
+    excluded_columns = ['Ticker', 'close', 'startPrice', 'divPayout', 'forecastLow', 'forecastHigh', '52WeekHigh', '52WeekLow']
+    filter_options = [col for col in DISPLAY_COLUMNS if col not in excluded_columns]
     with st.expander("🔎 Filter Data", expanded=False):
         # Create columns for the filter controls
         f_col1, f_col2, f_col3 = st.columns([1, 1, 2])
