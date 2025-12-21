@@ -63,7 +63,7 @@ The application is driven by two key CSV files located in the /data/ directory, 
 * **Total Return Analysis**: Uses adjusted close prices to account for dividends and splits, ensuring PnL calculations reflect true economic return.
 
 ## 🛠 Tech stack
-- **Python:** `pandas`, `numpy`, `altair`, `streamlit`, `plotly`
+- **Python:** `pandas`, `numpy`, `altair`, `streamlit`, `plotly`, `duckdb`
 - **Data APIs:** `Yahoo Finance`
 
 ## 📈 Example use case
