@@ -16,64 +16,103 @@ def display_per_ticker_pnl(df_pnl: pd.DataFrame):
     """Displays the per-ticker PnL table with conditional formatting."""
     st.subheader("📋 Per-Ticker PnL")
 
+    # Define the specific column order for the table
+    # We check if columns exist first to ensure safety if you revert to old data
+    desired_order = [
+        "Ticker", "Quantity", "Start Price", "End Price", 
+        "PnL ($)", "Dividends ($)", "Total Return ($)", 
+        "Change (%)", "Position Value ($)"
+    ]
+    
+    # Filter to only use columns that actually exist in the dataframe
+    final_cols = [c for c in desired_order if c in df_pnl.columns]
+
     st.dataframe(
-        df_pnl.sort_values(by='PnL ($)', ascending=False)
+        df_pnl[final_cols].sort_values(by='PnL ($)', ascending=False)
         .style
         .map(
             lambda v: "color: green" if isinstance(v, (int, float)) and v > 0
             else ("color: red" if isinstance(v, (int, float)) and v < 0 else ""),
-            subset=["PnL ($)", "Change (%)"]
+            # Apply color logic to PnL, Total Return, and Change %
+            subset=[c for c in ["PnL ($)", "Total Return ($)", "Change (%)"] if c in df_pnl.columns]
         )
         .format({
             "Quantity": "{:,.0f}",
             "Start Price": "{:,.2f}",
             "End Price": "{:,.2f}",
             "PnL ($)": "{:,.2f}",
+            "Dividends ($)": "{:,.2f}",    
+            "Total Return ($)": "{:,.2f}", 
             "Change (%)": "{:,.2f}",
             "Position Value ($)": "{:,.2f}"
-        })
-        .hide(subset=["sector"], axis=1),
+        }),
         width="stretch",
         hide_index=True
     )
 
 def display_portfolio_summary(df_pnl: pd.DataFrame):
     """Calculates and displays the overall portfolio summary metrics and a pie chart."""
-    total_pnl = df_pnl["PnL ($)"].sum()
+    
+    # 1. Calculate Totals
+    total_price_pnl = df_pnl["PnL ($)"].sum()
     total_value = df_pnl["Position Value ($)"].sum()
-    total_pct = (total_pnl / total_value) * 100 if total_value else 0.0
+    
+    # Sum Dividends and Total Return if they exist 
+    total_divs = df_pnl["Dividends ($)"].sum() if "Dividends ($)" in df_pnl.columns else 0.0
+    total_return = df_pnl["Total Return ($)"].sum() if "Total Return ($)" in df_pnl.columns else total_price_pnl
+
+    # 2. Calculate ROI %
+    # Cost Basis = Current Value - Capital Gains (Price PnL)
+    cost_basis = total_value - total_price_pnl
+    total_return_pct = (total_return / cost_basis) * 100 if cost_basis != 0 else 0.0
 
     st.subheader("📊 Portfolio Summary")
     col1, col2 = st.columns([1, 1])
 
+    # --- Metrics Section ---
     with col1:
-        st.metric("Total PnL ($)", f"${total_pnl:,.2f}")
+        # Main high-level metrics
         st.metric("Total Position Value ($)", f"${total_value:,.2f}")
-        st.metric("Total Change (%)", f"{total_pct:.2f}%")
+        
+        # Total Return (Combines Price PnL + Dividends)
+        st.metric(
+            "Total Return ($)", 
+            f"${total_return:,.2f}", 
+            f"{total_return_pct:.2f}%", 
+            help="Includes both Capital Gains and Dividends"
+        )
+        
+        st.markdown("---") # Visual separator for the breakdown
+        
+        # Breakdown: Capital Gains vs Dividends
+        m_col1, m_col2 = st.columns(2)
+        with m_col1:
+            st.metric("Capital Gains", f"${total_price_pnl:,.2f}")
+        with m_col2:
+            st.metric("Total Dividends", f"${total_divs:,.2f}")
 
+    # --- Chart Section (Unchanged logic, just cleanup) ---
     with col2:
         pie_df = df_pnl[["Ticker", "Position Value ($)"]].copy()
-        total_value = pie_df["Position Value ($)"].sum()
-
-        if not pie_df.empty and total_value > 0:
-            pie_df["Percentage"] = (pie_df["Position Value ($)"] / total_value) * 100
-
+        
+        if not pie_df.empty and pie_df["Position Value ($)"].sum() > 0:
             fig = px.pie(
                 pie_df,
                 names="Ticker",
                 values="Position Value ($)",
-                title=" ",
-                hole=0.3
+                title="Allocation by Value",
+                hole=0.4
             )
             fig.update_traces(textposition="inside", textinfo="percent+label")
-            fig.update_layout(showlegend=False, title_x=0.3)
+            fig.update_layout(
+                showlegend=False, 
+                title_x=0.3,
+                margin=dict(t=30, b=0, l=0, r=0) # Tighter margins
+            )
 
             st.plotly_chart(fig, width='stretch')
- 
         else:
-            st.info("No data available for portfolio value pie chart.")
-
-
+            st.info("No positive position value to display.")
 
 
 def display_pnl_over_time(combined_df: pd.DataFrame):
@@ -207,6 +246,11 @@ def display_export_table(combined_df: pd.DataFrame):
         default=sorted(combined_df["Ticker"].unique().tolist()),
     )
     
+    # Check if 'Time' exists, otherwise handle gracefully (though it should exist based on context)
+    if "Time" not in combined_df.columns:
+        st.error("Dataframe missing 'Time' column required for filtering.")
+        return
+
     date_min = combined_df["Time"].min().normalize().date()
     date_max = combined_df["Time"].max().normalize().date()
     
@@ -236,26 +280,37 @@ def display_export_table(combined_df: pd.DataFrame):
         
         df_display = df_display.drop(columns=["Time"], errors='ignore')
 
-        cols_order = ["Date", "Time_of_Day", "Ticker", "Quantity", "Price", "Position Value ($)", "PnL"]
-        df_display = df_display[[c for c in cols_order if c in df_display.columns]].reset_index(drop=True)
+        # Updated columns order to include Dividends
+        # We check for both "Dividends" and "Dividend" to be safe
+        possible_div_cols = [c for c in df_display.columns if "ividend" in c]
+        div_col = possible_div_cols[0] if possible_div_cols else "Dividends"
+
+        cols_order = ["Date", "Ticker", "Quantity", "Price", "Position Value ($)", "PnL", div_col]
         
-        for col in ["Price", "Position Value ($)", "PnL"]:
+        # Filter to only use columns that actually exist
+        final_cols = [c for c in cols_order if c in df_display.columns]
+        df_display = df_display[final_cols].reset_index(drop=True)
+        
+        # Format numeric columns
+        numeric_cols = ["Price", "Position Value ($)", "PnL", div_col]
+        for col in numeric_cols:
             if col in df_display.columns:
-                df_display[col] = df_display[col].astype(float).round(2)
+                df_display[col] = df_display[col].fillna(0.0).astype(float).round(2)
 
         st.dataframe(
             df_display.style.format({
                 "Quantity": "{:,.0f}",
                 "Price": "{:,.2f}",
                 "PnL": "{:,.2f}",
-                "Position Value ($)": "{:,.2f}"
+                "Position Value ($)": "{:,.2f}",
+                div_col: "{:,.2f}" # Format dividends
             }),
             width="stretch",
             hide_index=True
         )
         
         # CSV export
-        tickers_str = "_".join(tickers_selected) if tickers_selected else "All"
+        tickers_str = "_".join(tickers_selected) if len(tickers_selected) < 5 else "Multiple"
         filename = f"pnl_data_{tickers_str}_{date_range[0]}_{date_range[1]}.csv"
         csv_data = df_display.to_csv(index=False).encode("utf-8")
         st.download_button(

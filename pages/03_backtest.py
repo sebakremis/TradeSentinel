@@ -12,10 +12,6 @@ from src.dashboard_display import (
 )
 
 
-def _safe_df_concat(df1, df2):
-    """Safely concatenates two DataFrames, handling Pandas append deprecation."""
-    return pd.concat([df1, df2], ignore_index=True)
-
 def setup_sidebar_controls():
     """Sets up the sidebar controls for portfolio definition and parameters, including validation."""
     
