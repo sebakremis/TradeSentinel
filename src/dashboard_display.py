@@ -349,7 +349,7 @@ def display_period_selection()-> dict:
         selected_period = st.selectbox(
             "Lookback Period", 
             options=AVAILABLE_PERIODS, 
-            index=AVAILABLE_PERIODS.index("2y"), # Default to 2 years
+            index=AVAILABLE_PERIODS.index("3mo"), # Default period
             key='data_period_select'
         )
         # Initialize the dictionary to hold fetch arguments

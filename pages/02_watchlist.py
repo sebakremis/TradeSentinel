@@ -17,7 +17,7 @@ from src.price_forecast import project_price_range
 # --- Data Helper Functions ---
 # ----------------------------------------------------------------------
 
-DISPLAY_COLUMNS = ['Ticker', 'sector', 'marketCap', 'beta', 'startPrice', 'close', 'divPayout',  'forecastLow', 'forecastHigh', 'avgReturn', 'annualizedVol', 'sharpeRatio']
+DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'startPrice', 'close', 'dist_EMA_50', 'forecastLow', 'forecastHigh', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -42,7 +42,7 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     df = df[DISPLAY_COLUMNS]
 
     # Apply rounding
-    for col in ['close', 'startPrice', 'forecastLow', 'forecastHigh', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
+    for col in ['close', 'dist_EMA_50', 'startPrice', 'forecastLow', 'forecastHigh', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
         if col in df.columns:
             df[col] = df[col].round(2)
             
@@ -120,7 +120,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         return
 
     # sort data
-    sorted_df = final_df.sort_values(by='sharpeRatio', ascending=False)
+    sorted_df = final_df.sort_values(by='avgReturn', ascending=False)
 
     # Apply dynamic filtering
     sorted_df = dynamic_filtering(sorted_df, DISPLAY_COLUMNS)
@@ -143,12 +143,12 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         selection_mode="multi-row", # allow multi-row selection
         column_config={
             "Ticker": st.column_config.TextColumn("Ticker", width="small"),
+            "shortName": st.column_config.TextColumn("Short Name", width="medium"),
             "sector": st.column_config.TextColumn("sector"),
-            "marketCap": st.column_config.NumberColumn("marketCap", format="$%.1f B", width="small"),
-            "beta": st.column_config.NumberColumn("beta", format="%.2f", width="small"),
             "startPrice": st.column_config.NumberColumn("first", help="First price of the lookback period", format="$%.2f", width="small"),
             "close": st.column_config.NumberColumn("last", help="Last price of the lookback period", format="$%.2f", width="small"),
-            "divPayout": st.column_config.NumberColumn("divPayout", help="Total dividends received during the lookback period.", format="$%.2f",width="small"),            
+            # "divPayout": st.column_config.NumberColumn("divPayout", help="Total dividends received during the lookback period.", format="$%.2f",width="small"),
+            "dist_EMA_50": st.column_config.NumberColumn("dist EMA 50", help="Distance to EMA 50. Positive = Above EMA", format="%.2f%%", width="small"),            
             "forecastLow": st.column_config.NumberColumn("forecastLow", format="$%.2f", width="small"),
             "forecastHigh": st.column_config.NumberColumn("forecastHigh", format="$%.2f",width="small"),                       
             "avgReturn": st.column_config.NumberColumn("AAR%", help="Annualized Average return", format="%.2f%%", width="small"),
