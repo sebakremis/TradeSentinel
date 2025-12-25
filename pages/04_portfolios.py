@@ -5,8 +5,7 @@ import time
 
 from src.config import PORTFOLIO_FILE
 from src.dashboard_manager import get_stock_data
-# Import the shared logic from Page 03
-from src.portfolio_calculations import calculate_pnl_data, prepare_pnl_time_series
+from src.analytics import calculate_pnl_data, prepare_pnl_time_series
 from src.dashboard_display import (
     display_per_ticker_pnl, display_portfolio_summary,
     display_pnl_over_time, display_sector_allocation,

@@ -5,7 +5,7 @@ import duckdb
 
 from src.log_utils import warn
 from src.config import DATA_DIR, stocks_folder
-from src.indicators import calculate_annualized_metrics, distance_from_ema
+from src.analytics import calculate_annualized_metrics, distance_from_ema
 
 def get_stock_data(tickers: list, interval: str, period: str = None, start: str = None, end: str = None) -> pd.DataFrame:
     """
@@ -58,8 +58,8 @@ def calculate_all_indicators(df_daily) -> pd.DataFrame:
     # 1. Calculate Daily Return
     df_daily['dailyReturn'] = df_daily.groupby('Ticker')['close'].pct_change(fill_method=None)
   
-    # 2. Calculate Distance to EMA 50
-    df_daily = distance_from_ema(df_daily, 50)
+    # 2. Calculate Distance to EMA 20
+    df_daily = distance_from_ema(df_daily, 20)
     
     # 3. Calculate Annualized Metrics
     annual_metrics_df = calculate_annualized_metrics(df_daily[['Ticker', 'Date', 'close', 'dailyReturn']].copy())

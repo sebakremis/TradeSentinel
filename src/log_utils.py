@@ -3,7 +3,7 @@
 log_utils.py
 ============
 
-Utility functions for standardized, color‑coded logging with optional verbosity control.
+Utility functions for standardized, color-coded logging with optional verbosity control.
 
 This module provides simple logging helpers (`info`, `warn`, `error`) that print
 timestamped messages to the console, with color formatting via `colorama` for
@@ -15,7 +15,7 @@ Features
 - **Timestamped Output**:
   All log messages include the current local time in `YYYY-MM-DD HH:MM:SS` format.
 
-- **Color‑Coded Levels**:
+- **Color-Coded Levels**:
   - INFO → Green
   - WARN → Yellow
   - ERROR → Red
@@ -27,7 +27,7 @@ Features
 Functions
 ---------
 - `set_verbose(value: bool) -> None`  
-  Enable or disable INFO‑level logging globally.
+  Enable or disable INFO-level logging globally.
 
 - `info(msg: str) -> None`  
   Print a green INFO message if verbosity is enabled.
@@ -40,7 +40,7 @@ Functions
 
 Dependencies
 ------------
-- `colorama` for cross‑platform colored terminal output.
+- `colorama` for cross-platform colored terminal output.
 - `datetime` from the Python standard library.
 
 Usage Example

@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pandas as pd
-from src.metrics import (
+from src.analytics import (
     sharpe_ratio,
     sortino_ratio,
     calmar_ratio,

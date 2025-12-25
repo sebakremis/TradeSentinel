@@ -6,11 +6,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 import datetime as dt
 
-from src.metrics import (
+from src.analytics import (
     calculate_var, calculate_cvar, sharpe_ratio, sortino_ratio,
-    calmar_ratio, max_drawdown, correlation_matrix, win_loss_stats
+    calmar_ratio, max_drawdown, correlation_matrix, win_loss_stats,
+    annualized_risk_free_rate
 )
-from src.indicators import annualized_risk_free_rate
+
 
 def display_per_ticker_pnl(df_pnl: pd.DataFrame):
     """Displays the per-ticker PnL table with conditional formatting."""
@@ -349,7 +350,7 @@ def display_period_selection()-> dict:
         selected_period = st.selectbox(
             "Lookback Period", 
             options=AVAILABLE_PERIODS, 
-            index=AVAILABLE_PERIODS.index("3mo"), # Default period
+            index=AVAILABLE_PERIODS.index("6mo"), # Default period
             key='data_period_select'
         )
         # Initialize the dictionary to hold fetch arguments

@@ -17,7 +17,7 @@ from src.etl import update_from_dashboard
 # --- Data Helper Functions ---
 # ----------------------------------------------------------------------
 
-DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'marketCap', 'beta', 'close', 'enterpriseToEbitda', 'priceToBook',  'dividendYield', 'avgReturn', 'annualizedVol', 'sharpeRatio']
+DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'marketCap', 'beta', 'close', 'dist_EMA_20', 'enterpriseToEbitda', 'priceToBook', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -42,7 +42,7 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     df = df[DISPLAY_COLUMNS]
 
     # Apply rounding
-    for col in ['close', 'EMA_50', 'startPrice', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
+    for col in ['close', 'dist_EMA_20', 'startPrice', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
         if col in df.columns:
             df[col] = df[col].round(2)           
     return df
@@ -112,10 +112,10 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "sector": st.column_config.TextColumn("sector"),
             "marketCap": st.column_config.NumberColumn("marketCap", format="$%.1f B", width="small"),
             "beta": st.column_config.NumberColumn("beta", format="%.2f", width="small"),
-            "close": st.column_config.NumberColumn("close", help="Last price of the lookback period", format="$%.2f", width="small"),
+            "close": st.column_config.NumberColumn("price", help="Last Close price of the lookback period", format="$%.2f", width="small"),
+            "dist_EMA_20": st.column_config.NumberColumn("dist EMA 20", help="Distance to EMA 20", format="%.2f%%", width="small"),
             "priceToBook": st.column_config.NumberColumn("priceToBook", help="Price to Book ratio", format="%.2f", width="small"),
-            "enterpriseToEbitda": st.column_config.NumberColumn("enToEbitda", help="Enterprise value to EBITDA ratio", format="%.2f", width="small"),
-            "dividendYield": st.column_config.NumberColumn("divYield", help="dividend yeld", format="%.2f%%",width="small"),                      
+            "enterpriseToEbitda": st.column_config.NumberColumn("enToEbitda", help="Enterprise value to EBITDA ratio", format="%.2f", width="small"),                     
             "avgReturn": st.column_config.NumberColumn("AAR%", help="Annualized Average return", format="%.2f%%", width="small"),
             "annualizedVol": st.column_config.NumberColumn("Vol%", help="Annualized Average volatility", format="%.2f%%", width="small"),
             "sharpeRatio": st.column_config.NumberColumn("sharpe", format="%.2f%%", width="small")

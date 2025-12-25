@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import pytest
 
-from src.metrics import (
+from src.analytics import (
     max_drawdown,
     calculate_var,
     calculate_cvar,

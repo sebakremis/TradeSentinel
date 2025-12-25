@@ -2,7 +2,7 @@ import streamlit as st
 st.set_page_config(page_title="📊 TradeSentinel", layout="wide")
 import pandas as pd
 
-from src.portfolio_calculations import calculate_pnl_data, prepare_pnl_time_series
+from src.analytics import calculate_pnl_data, prepare_pnl_time_series
 from src.dashboard_manager import get_stock_data
 from src.dashboard_display import (
     display_per_ticker_pnl, display_portfolio_summary,
