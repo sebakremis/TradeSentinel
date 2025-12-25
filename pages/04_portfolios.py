@@ -4,7 +4,7 @@ import json
 import time
 
 from src.config import PORTFOLIO_FILE
-from src.dashboard_manager import get_stock_data
+from src.dashboard_core import get_stock_data
 from src.analytics import calculate_pnl_data, prepare_pnl_time_series
 from src.dashboard_display import (
     display_per_ticker_pnl, display_portfolio_summary,

@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit as st
 import yfinance as yf
 from .config import DATA_DIR, stocks_folder, all_tickers_file, metadata_file
-from .tickers_manager import load_tickers
+from .dashboard_core import load_tickers
 
 # Define the path to the all tickers CSV file
 filepath = all_tickers_file

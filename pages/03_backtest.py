@@ -3,7 +3,7 @@ st.set_page_config(page_title="📊 TradeSentinel", layout="wide")
 import pandas as pd
 
 from src.analytics import calculate_pnl_data, prepare_pnl_time_series
-from src.dashboard_manager import get_stock_data
+from src.dashboard_core import get_stock_data
 from src.dashboard_display import (
     display_per_ticker_pnl, display_portfolio_summary,
     display_pnl_over_time, display_sector_allocation,

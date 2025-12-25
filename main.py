@@ -4,8 +4,10 @@ import pandas as pd
 import numpy as np
 import altair as alt
 import datetime 
-from src.dashboard_manager import calculate_all_indicators, get_stock_data, dynamic_filtering
-from src.tickers_manager import load_tickers, confirm_follow_dialog, TickerValidationError
+from src.dashboard_core import (
+    calculate_all_indicators, get_stock_data, dynamic_filtering,
+    load_tickers, confirm_follow_dialog, TickerValidationError
+)
 from src.dashboard_display import (
     display_credits, display_guides_section, display_info_section, 
     display_period_selection, display_risk_return_plot
