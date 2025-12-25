@@ -1,4 +1,24 @@
-# src/dashboard_display.py
+"""
+dashboard_display.py
+
+This module centralizes reusable rendering functions for dashboard sections that
+are shared across multiple pages of the TradeSentinel project. Functions in this
+file follow the naming convention `display_{function_name}`, indicating that they
+are generic, composable display utilities intended to be imported and reused
+wherever needed.
+
+By contrast, rendering logic that is unique to a specific page remains defined
+within that page's module, using the naming convention `_render_{function_name}`.
+This separation ensures:
+    - Clear distinction between shared vs. page-specific rendering code
+    - Improved modularity and maintainability of the dashboard layer
+    - Consistent naming conventions that make the scope and reusability of each
+      function immediately apparent
+
+In short, `display_*` functions = reusable building blocks,
+while `_render_*` functions = page-specific implementations.
+"""
+
 import streamlit as st
 import pandas as pd
 import altair as alt
