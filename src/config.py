@@ -1,17 +1,24 @@
 # src/config.py
 from pathlib import Path
 
-# Define base directory and data directory paths
+# Data sources
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
-
-# Tickers files
 followed_tickers_file = DATA_DIR / 'followed_tickers.csv'
 all_tickers_file = DATA_DIR / 'all_tickers.csv'
-
-# Database and folders
 stocks_folder = DATA_DIR / 'stocks'
 metadata_file = stocks_folder / 'metadata.csv'
-
-# Portfolio file
 PORTFOLIO_FILE = DATA_DIR / 'portfolios.json'
+
+# Portfolio defaults
+RISK_FREE_RATE = 0.0415 # 10-Year U.S. Treasury Note
+BENCHMARK_INDEX = "SPY"
+ANNUAL_TRADING_DAYS = 252
+
+# Indicators
+EMA_PERIOD = 20
+CONFIDENCE_LEVEL = 0.95 # used for calculating VAR and for the Monte Carlo Simulation
+
+# Forecasting (Monte Carlo)
+FORECAST_HORIZON = 1 # 1 month
+N_SIMS = 10000 # number of simulations

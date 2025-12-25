@@ -13,13 +13,13 @@ from src.dashboard_display import (
     highlight_change, display_credits, display_guides_section, display_info_section,
     display_period_selection, display_risk_return_plot
     )
-
+from src.config import EMA_PERIOD
 
 # ----------------------------------------------------------------------
 # --- Data Helper Functions ---
 # ----------------------------------------------------------------------
-
-DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'close', 'dist_EMA_20', 'forecastLow', 'forecastHigh', 'avgReturn', 'annualizedVol', 'sharpeRatio']
+dist_EMA_column_name = f'dist_EMA_{EMA_PERIOD}'
+DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'close', dist_EMA_column_name, 'forecastLow', 'forecastHigh', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -44,7 +44,7 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     df = df[DISPLAY_COLUMNS]
 
     # Apply rounding
-    for col in ['close', 'dist_EMA_20', 'startPrice', 'forecastLow', 'forecastHigh', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
+    for col in ['close', dist_EMA_column_name, 'startPrice', 'forecastLow', 'forecastHigh', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
         if col in df.columns:
             df[col] = df[col].round(2)
             
@@ -53,9 +53,7 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
 @st.cache_data
 def _cached_forecast(df_snapshot: pd.DataFrame) -> pd.DataFrame:
     return project_price_range(
-        df_snapshot[['Ticker', 'close', 'avgReturn', 'annualizedVol']].drop_duplicates(subset=['Ticker']),
-        period_months=1,
-        n_sims=10000
+        df_snapshot[['Ticker', 'close', 'avgReturn', 'annualizedVol']].drop_duplicates(subset=['Ticker'])
     )
 
 def _load_and_process_data(fetch_kwargs: dict) -> (pd.DataFrame, pd.DataFrame, list): 
@@ -122,7 +120,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         return
 
     # sort data
-    sorted_df = final_df.sort_values(by='dist_EMA_20', ascending=True)
+    sorted_df = final_df.sort_values(by=dist_EMA_column_name, ascending=True)
 
     # Apply dynamic filtering
     sorted_df = dynamic_filtering(sorted_df, DISPLAY_COLUMNS)
@@ -148,8 +146,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "shortName": st.column_config.TextColumn("Short Name", width="medium"),
             "sector": st.column_config.TextColumn("sector"),
             "close": st.column_config.NumberColumn("price", help="Last Close price of the lookback period", format="$%.2f", width="small"),
-            # "divPayout": st.column_config.NumberColumn("divPayout", help="Total dividends received during the lookback period.", format="$%.2f",width="small"),
-            "dist_EMA_20": st.column_config.NumberColumn("dist EMA 20", help="Distance to EMA 20", format="%.2f%%", width="small"),            
+            dist_EMA_column_name: st.column_config.NumberColumn(f"dist EMA {EMA_PERIOD}", help="Distance to the Exponential Moving Average (%)", format="%.2f%%", width="small"),        
             "forecastLow": st.column_config.NumberColumn("forecastLow", format="$%.2f", width="small"),
             "forecastHigh": st.column_config.NumberColumn("forecastHigh", format="$%.2f",width="small"),                       
             "avgReturn": st.column_config.NumberColumn("AAR%", help="Annualized Average return", format="%.2f%%", width="small"),

@@ -25,11 +25,10 @@ import altair as alt
 import plotly.express as px
 import plotly.graph_objects as go
 import datetime as dt
-
+from src.config import RISK_FREE_RATE, EMA_PERIOD
 from src.analytics import (
     calculate_var, calculate_cvar, sharpe_ratio, sortino_ratio,
-    calmar_ratio, max_drawdown, correlation_matrix, win_loss_stats,
-    annualized_risk_free_rate
+    calmar_ratio, max_drawdown, correlation_matrix, win_loss_stats
 )
 
 
@@ -446,7 +445,8 @@ def display_info_section(df_daily: pd.DataFrame):
         st.write(f"**Trading Days:** {num_days}")
         st.write(f"**First Price Date:** {first_date.strftime('%Y-%m-%d') if first_date else 'N/A'}")
         st.write(f"**Last Price Date:** {last_date.strftime('%Y-%m-%d') if last_date else 'N/A'}")
-        st.write(f"**Annualized Risk Free rate:** {annualized_risk_free_rate*100:.2f}% (assumed risk-free rate for Sharpe Ratio calculation)")
+        st.write(f"**Annualized Risk Free rate:** {RISK_FREE_RATE*100:.2f}% (assumed risk-free rate for Sharpe Ratio calculation)")
+        st.write(f"**EMA period:** {EMA_PERIOD}")
 
 
 def display_guides_section():

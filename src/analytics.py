@@ -36,6 +36,10 @@ a cohesive, maintainable module.
 import pandas as pd
 import numpy as np
 import streamlit as st
+from src.config import (
+    RISK_FREE_RATE, ANNUAL_TRADING_DAYS, CONFIDENCE_LEVEL, 
+    FORECAST_HORIZON, N_SIMS, EMA_PERIOD
+)
 
 # --- Portfolio Calculations ---
 
@@ -137,49 +141,64 @@ def prepare_pnl_time_series(prices: dict, quantities: dict) -> pd.DataFrame:
 
 # --- Metrics ---
 
-def calculate_var(returns: pd.Series, confidence_level: float = 0.95) -> float:
+def calculate_var(returns: pd.Series, confidence_level: float = CONFIDENCE_LEVEL) -> float:
     """
-    Calculate the Value at Risk (VaR) at the given confidence level.
+    Calculate the Value at Risk (VaR).
+    
+    Args:
+        returns (pd.Series): Series of returns.
+        confidence_level (float): The confidence level (default is global CONFIDENCE_LEVEL).
     """
     if returns.empty or returns.dropna().empty:
         return np.nan
+
+    # Use the passed parameter 'confidence_level', not the global constant directly
     return np.percentile(returns.dropna(), (1 - confidence_level) * 100)
 
 
-def calculate_cvar(returns: pd.Series, confidence_level: float = 0.95) -> float:
+def calculate_cvar(returns: pd.Series, confidence_level: float = CONFIDENCE_LEVEL) -> float:
     """
-    Calculate the Conditional Value at Risk (CVaR) at the given confidence level.
+    Calculate the Conditional Value at Risk (CVaR).
+    
+    Args:
+        returns (pd.Series): Series of returns.
+        confidence_level (float): The confidence level (default is global CONFIDENCE_LEVEL).
     """
     if returns.empty or returns.dropna().empty:
         return np.nan
-    var = calculate_var(returns, confidence_level)
+
+    # PASS the confidence_level down to calculate_var so they stay in sync
+    var = calculate_var(returns, confidence_level=confidence_level)
+    
     cvar_values = returns[returns <= var]
+    
     if cvar_values.empty:
         return np.nan
+        
     return cvar_values.mean()
 
 
-def sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
+def sharpe_ratio(returns: pd.Series) -> float:
     """Calculate the annualized Sharpe ratio."""
     if returns.empty or returns.dropna().empty:
         return np.nan
 
-    excess = returns - (risk_free_rate / 252)
+    excess = returns - (RISK_FREE_RATE / ANNUAL_TRADING_DAYS)
     std_excess = excess.std(ddof=0)
 
     # Guard against zero or near-zero volatility
     if std_excess < 1e-12:
         return np.nan
 
-    return np.sqrt(252) * excess.mean() / std_excess
+    return np.sqrt(ANNUAL_TRADING_DAYS) * excess.mean() / std_excess
 
 
-def sortino_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
+def sortino_ratio(returns: pd.Series) -> float:
     """Calculate the annualized Sortino ratio."""
     if returns.empty or returns.dropna().empty:
         return np.nan
 
-    excess = returns - (risk_free_rate / 252)
+    excess = returns - (RISK_FREE_RATE / ANNUAL_TRADING_DAYS)
     downside = excess[excess < 0]  # use excess returns for downside risk
     downside_std = downside.std(ddof=0)
 
@@ -187,7 +206,7 @@ def sortino_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
     if pd.isna(downside_std) or downside_std < 1e-12:
         return np.nan
 
-    return np.sqrt(252) * excess.mean() / downside_std
+    return np.sqrt(ANNUAL_TRADING_DAYS) * excess.mean() / downside_std
 
 
 def calmar_ratio(returns: pd.Series) -> float:
@@ -198,7 +217,7 @@ def calmar_ratio(returns: pd.Series) -> float:
     mdd = max_drawdown(cumulative)
     if len(returns) == 0:
         return np.nan
-    annual_return = (1 + returns).prod() ** (252 / len(returns)) - 1
+    annual_return = (1 + returns).prod() ** (ANNUAL_TRADING_DAYS / len(returns)) - 1
     return annual_return / abs(mdd) if mdd != 0 else np.nan
 
 def max_drawdown(cumulative_returns: pd.Series) -> float:
@@ -302,61 +321,64 @@ def calculate_portfolio(selected_tickers, df_full_data, portfolio_size):
 
 # Price forecast (Monte Carlo simulations)
 
-def project_price_range(data, period_months=1, n_sims=10000):
+def project_price_range(data):
     """
     Project the price range (min and max) 
-    based on Monte Carlo simulations.
+    based on Monte Carlo simulations using the global CONFIDENCE_LEVEL.
     
     Parameters
     ----------
     data : pd.DataFrame
         DataFrame containing columns:
         ['Ticker', 'Close', 'Avg Return', 'Annualized Vol']
-    period_months : int
-        Time horizon in months (default=1)
-    n_sims : int
-        Number of Monte Carlo simulations(default=10000)
         
     Returns
     -------
     forecast_df : pd.DataFrame
         DataFrame with columns:
-        ['Ticker', 'PrecioActual', 'ForecastMin', 'ForecastMax']
+        ['Ticker', 'forecastLow', 'forecastHigh', 'periodMonths']
     """
     results = []
+    
+    # Convert period to years
+    t = FORECAST_HORIZON / 12
 
-    t = period_months / 12  # converted to years
-
-
+    # Calculate percentiles based on global configuration
+    # Example: If CONFIDENCE_LEVEL is 0.95 (95%):
+    # lower_p = 5.0 (5th percentile)
+    # upper_p = 95.0 (95th percentile)
+    lower_p = (1 - CONFIDENCE_LEVEL) * 100
+    upper_p = CONFIDENCE_LEVEL * 100
 
     for _, row in data.iterrows():
+        # check if required columns exist to avoid key errors
+        if 'close' not in row or 'avgReturn' not in row or 'annualizedVol' not in row:
+            continue
+
         S0 = row['close']
-        mu = row['avgReturn']/100  # Convert percentage to decimal
-        sigma = row['annualizedVol']/100
+        mu = row['avgReturn'] / 100  # Convert percentage to decimal
+        sigma = row['annualizedVol'] / 100
 
         # Simulate end price using Geometric Brownian Motion
-        Z = np.random.normal(0, 1, n_sims)
+        Z = np.random.normal(0, 1, N_SIMS)
         ST = S0 * np.exp((mu - 0.5 * sigma**2) * t + sigma * np.sqrt(t) * Z)
 
-        forecast_min = np.percentile(ST, 5)
-        forecast_max = np.percentile(ST, 95)
+        # Use dynamic percentiles
+        forecast_min = np.percentile(ST, lower_p)
+        forecast_max = np.percentile(ST, upper_p)
 
         results.append({
-            'Ticker': row['Ticker'],
+            'Ticker': row.get('Ticker', 'Unknown'), 
             'forecastLow': forecast_min,
             'forecastHigh': forecast_max,
-            'periodMonths': period_months
+            'periodMonths': FORECAST_HORIZON
         })
 
-    forecast_df = pd.DataFrame(results)
-    return forecast_df
+    return pd.DataFrame(results) if results else pd.DataFrame()
 
 # Indicators
 
-ANNUAL_TRADING_DAYS = 252 
-annualized_risk_free_rate = 0.02 
-
-def ema(df: pd.DataFrame, n: int) -> pd.DataFrame:
+def ema(df: pd.DataFrame) -> pd.DataFrame:
     """
     Calculates the Exponential Moving Average (EMA).
     """
@@ -364,26 +386,26 @@ def ema(df: pd.DataFrame, n: int) -> pd.DataFrame:
     df = df.sort_values(['Ticker', 'Date'])
 
     # Group by Ticker and apply EMA
-    ema_column_name = f'EMA_{n}'
+    ema_column_name = f'EMA_{EMA_PERIOD}'
     df[ema_column_name] = df.groupby('Ticker')['close'].transform(
-        lambda x: x.ewm(span=n, adjust=False).mean()
+        lambda x: x.ewm(span=EMA_PERIOD, adjust=False).mean()
     )
     return df
 
-def distance_from_ema(df: pd.DataFrame, n: int) -> pd.DataFrame:
+def distance_from_ema(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Calculates the percentage distance between Close price and EMA(n).
+    Calculates the percentage distance between Close price and EMA(EMA_PERIOD).
     Formula: ((Close - EMA) / EMA) * 100
     """
     # Ensure sorting
     df = df.sort_values(['Ticker', 'Date'])
 
-    # Calculate EMA locally (we don't need to store the raw EMA column permanently)
+    # Calculate EMA locally
     ema_series = df.groupby('Ticker')['close'].transform(
-        lambda x: x.ewm(span=n, adjust=False).mean()
+        lambda x: x.ewm(span=EMA_PERIOD, adjust=False).mean()
     )
     
-    col_name = f'dist_EMA_{n}'
+    col_name = f'dist_EMA_{EMA_PERIOD}'
     
     # Calculate percentage distance
     df[col_name] = ((df['close'] - ema_series) / ema_series) * 100
@@ -412,7 +434,7 @@ def calculate_annualized_metrics(df: pd.DataFrame) -> pd.DataFrame:
         annualized_return = (1 + total_return) ** annualization_factor - 1
         
         # C. Sharpe Ratio
-        sharpe_ratio = (annualized_return - annualized_risk_free_rate) / annualized_vol if annualized_vol != 0 else np.nan
+        sharpe_ratio = (annualized_return - RISK_FREE_RATE) / annualized_vol if annualized_vol != 0 else np.nan
 
         return pd.Series({
             'avgReturn': annualized_return * 100,

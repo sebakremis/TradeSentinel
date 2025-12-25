@@ -90,8 +90,8 @@ def calculate_all_indicators(df_daily) -> pd.DataFrame:
     # 1. Calculate Daily Return
     df_daily['dailyReturn'] = df_daily.groupby('Ticker')['close'].pct_change(fill_method=None)
   
-    # 2. Calculate Distance to EMA 20
-    df_daily = distance_from_ema(df_daily, 20)
+    # 2. Calculate Distance to EMA
+    df_daily = distance_from_ema(df_daily)
     
     # 3. Calculate Annualized Metrics
     annual_metrics_df = calculate_annualized_metrics(df_daily[['Ticker', 'Date', 'close', 'dailyReturn']].copy())
