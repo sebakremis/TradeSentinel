@@ -1,5 +1,5 @@
 """
-dashboard_display.py
+src/dashboard_display.py
 
 This module centralizes reusable rendering functions for dashboard sections that
 are shared across multiple pages of the TradeSentinel project. Functions in this

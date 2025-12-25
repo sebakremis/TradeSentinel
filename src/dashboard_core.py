@@ -1,13 +1,40 @@
-# src/dashboard_manager.py
+"""
+src/dashboard_core.py
+
+This module unifies the responsibilities previously handled by `dashboard_manager.py`
+and `tickers_manager.py` into a single, cohesive core for dashboard orchestration.
+
+Key responsibilities:
+    - Central coordination of dashboard logic, ensuring consistent behavior across
+      multiple views and pages.
+    - Management of ticker-related operations (loading, updating, validating, and
+      formatting market symbols) as part of the dashboard workflow.
+    - Integration of data pipelines with display components, acting as the bridge
+      between analytics modules (e.g., portfolio calculations, indicators, forecasts)
+      and the user interface layer.
+    - Providing reusable functions and abstractions that simplify dashboard
+      development, reduce duplication, and enforce a clear separation of concerns.
+
+Design notes:
+    - Functions in this module are intended to be **core orchestration utilities**,
+      not page-specific rendering logic (which remains in `dashboard_display.py` or
+      individual page modules).
+    - By consolidating managers into a single module, the project gains improved
+      modularity, easier maintenance, and a clearer entry point for dashboard-related
+      functionality.
+    - Naming conventions should reflect orchestration responsibilities, e.g.,
+      `init_dashboard()`, `update_tickers()`, `sync_data_sources()`.
+
+In short, `dashboard_core.py` serves as the backbone of the TradeSentinel dashboard,
+linking ticker management with dashboard state and ensuring a unified, maintainable
+workflow.
+"""
 import streamlit as st
 import pandas as pd
 import duckdb
 from pathlib import Path
 import yfinance as yf
-from src.config import followed_tickers_file, DATA_DIR
-
-from src.log_utils import warn
-from src.config import DATA_DIR, stocks_folder
+from src.config import followed_tickers_file, DATA_DIR, stocks_folder
 from src.analytics import calculate_annualized_metrics, distance_from_ema
 
 # Dashboard manager
@@ -17,7 +44,7 @@ def get_stock_data(tickers: list, interval: str, period: str = None, start: str 
     Fetches stock data directly from database into dashboard.
     """
     if not tickers:
-        warn("No tickers provided for fetching.")
+        print("No tickers provided for fetching.")
         return pd.DataFrame()
     
     if not start:

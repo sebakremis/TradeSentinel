@@ -1,4 +1,38 @@
-# src/analytics.py
+"""
+src/analytics.py
+
+This module consolidates the functionality previously distributed across
+`portfolio_calculations.py`, `indicators.py`, `price_forecast.py`, and `metrics.py`
+into a unified analytics layer for TradeSentinel.
+
+Key responsibilities:
+    - Portfolio calculations:
+        Provides functions for risk/return analysis, asset allocation metrics,
+        and benchmark comparisons.
+    - Technical indicators:
+        Implements reusable indicator functions (e.g., moving averages, RSI,
+        Bollinger Bands) for market analysis.
+    - Price forecasting:
+        Contains models and utilities for projecting asset prices and trends,
+        including statistical and machine learning approaches.
+    - Performance metrics:
+        Computes evaluation metrics such as Sharpe ratio, volatility, drawdown,
+        and other measures of portfolio and model performance.
+
+Design notes:
+    - Functions in this module follow a **functional, reusable design** so they
+      can be imported across dashboards, pipelines, and notebooks.
+    - By merging separate calculation modules into one, the project gains
+      consistency, reduces duplication, and provides a single entry point for
+      analytics-related functionality.
+    - Naming conventions should reflect analytical scope, e.g.,
+      `calculate_sharpe_ratio()`, `forecast_prices()`, `compute_rsi()`.
+
+In short, `analytics.py` serves as the analytical backbone of TradeSentinel,
+bringing together portfolio analysis, indicators, forecasting, and metrics into
+a cohesive, maintainable module.
+"""
+
 import pandas as pd
 import numpy as np
 import streamlit as st

@@ -1,4 +1,38 @@
-# src/etl.py
+"""
+src/etl.py
+
+This module implements the Extract-Transform-Load (ETL) processes that serve as
+the foundation for TradeSentinel's data pipeline. It is responsible for acquiring,
+cleaning, and structuring market and portfolio data so that downstream analytics
+and dashboards can operate on consistent, reliable inputs.
+
+Key responsibilities:
+    - Extraction:
+        Handles data ingestion from multiple sources (e.g., APIs, CSV files,
+        databases), including ticker lists, historical prices, and portfolio data.
+    - Transformation:
+        Cleans, normalizes, and enriches raw data (e.g., adjusting for splits,
+        formatting tickers, handling missing values, aligning time series).
+        Applies business rules to ensure compatibility with analytics and
+        forecasting modules.
+    - Loading:
+        Stores processed data into internal structures or persistent storage
+        (e.g., pandas DataFrames, local cache, or database tables) for use by
+        `analytics.py`, `dashboard_core.py`, and other modules.
+
+Design notes:
+    - Functions in this module should be modular and reusable, following clear
+      naming conventions such as `extract_{source}()`, `transform_{operation}()`,
+      and `load_{target}()`.
+    - By centralizing ETL logic, the project ensures reproducibility, reduces
+      duplication, and provides a single entry point for data preparation.
+    - This module acts as the bridge between external data sources and internal
+      analytics, enforcing consistency across the entire TradeSentinel workflow.
+
+In short, `etl.py` is the backbone of TradeSentinel's data pipeline, ensuring that
+all analytics and dashboards operate on clean, well-structured, and reliable data.
+"""
+
 import pandas as pd
 import streamlit as st
 import yfinance as yf
