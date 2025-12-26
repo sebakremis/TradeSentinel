@@ -50,7 +50,7 @@ Allows the creation, management, and detailed analysis of custom investment port
 
 <div align="center">
 
-  <h3>Market View</h3>
+  <h3>Market View Page (main)</h3>
 
   <p><i>Dynamic filters and plot chart</i></p>
   <img src="docs/images/main_page_dynamic_filters.png" alt="Market View - Dynamic filters" width="90%">
@@ -67,15 +67,32 @@ Allows the creation, management, and detailed analysis of custom investment port
 
   <hr>
 
-  <h3>Analysis</h3>
+  <h3>Backtest Page</h3>
 
-  <p><i>Backtest Page</i></p>
+  <p><i>Portfolio Summary</i></p>
   <img src="docs/images/backtest_page.png" alt="Backtest Page" width="90%">
 
   <br><br>
+  
+  <p><i>Allocation by Sector</i></p>
+  <img src="docs/images/backtest_allocation_by_sector.png" alt="Backtest - Allocation by Sector" width="90%">
 
-  <p><i>Portfolio Page</i></p>
-  <img src="docs/images/portfolio_page.png" alt="Portfolio Page" width="90%">
+  <br><br>
+
+  <p><i>Advanced Metrics</i></p>
+  <img src="docs/images/backtest_advanced_metrics.png" alt="Backtest - Advanced Metrics" width="90%">
+
+  <br><br>
+
+  <p><i>PnL Over Time</i></p>
+  <img src="docs/images/backtest_pnl_over_time.png" alt="Backtest - PnL Over Time" width="90%">
+
+  <br><br>
+
+  <h3>Portfolios Page</h3>
+
+  <p><i>Portfolio Summary</i></p>
+  <img src="docs/images/portfolio_page.png" alt="Portfolio Summary" width="90%">
 
 </div>
 
