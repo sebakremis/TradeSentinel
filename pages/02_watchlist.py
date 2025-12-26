@@ -2,24 +2,24 @@ import streamlit as st
 st.set_page_config(page_title="📊 TradeSentinel", layout="wide")
 import pandas as pd
 import numpy as np
-import altair as alt
-import datetime 
 from src.dashboard_core import (
-    calculate_all_indicators, get_stock_data, dynamic_filtering,
-    load_tickers, add_ticker, confirm_unfollow_dialog, TickerValidationError
+    dynamic_filtering, load_tickers, confirm_unfollow_dialog,
+    load_and_process_data
 )
-from src.analytics import calculate_portfolio, project_price_range
+from src.analytics import calculate_portfolio
 from src.dashboard_display import ( 
-    highlight_change, display_credits, display_guides_section, display_info_section,
+    display_credits, display_guides_section, display_info_section,
     display_period_selection, display_risk_return_plot
-    )
-from src.config import EMA_PERIOD
+)
+from src.config import EMA_PERIOD, followed_tickers_file
 
 # ----------------------------------------------------------------------
 # --- Data Helper Functions ---
 # ----------------------------------------------------------------------
+
+# Define columns for this dashboard
 dist_EMA_column_name = f'dist_EMA_{EMA_PERIOD}'
-DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'close', dist_EMA_column_name, 'forecastLow', 'forecastHigh', 'avgReturn', 'annualizedVol', 'sharpeRatio']
+DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'beta', 'alpha', 'close', dist_EMA_column_name, 'forecastLow', 'forecastHigh', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -44,70 +44,11 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     df = df[DISPLAY_COLUMNS]
 
     # Apply rounding
-    for col in ['close', dist_EMA_column_name, 'startPrice', 'forecastLow', 'forecastHigh', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
+    for col in ['close', dist_EMA_column_name, 'beta', 'alpha', 'startPrice', 'forecastLow', 'forecastHigh', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
         if col in df.columns:
             df[col] = df[col].round(2)
             
     return df
-
-@st.cache_data
-def _cached_forecast(df_snapshot: pd.DataFrame) -> pd.DataFrame:
-    return project_price_range(
-        df_snapshot[['Ticker', 'close', 'avgReturn', 'annualizedVol']].drop_duplicates(subset=['Ticker'])
-    )
-
-def _load_and_process_data(fetch_kwargs: dict) -> (pd.DataFrame, pd.DataFrame, list): 
-    
-    tickers_df = load_tickers()
-    followed_tickers = tickers_df['Ticker'].tolist() if not tickers_df.empty else []
-
-    # load prices and metadata for followed tickers
-    df_daily = get_stock_data(
-        followed_tickers,
-        interval="1d",
-        **fetch_kwargs
-    )
-
-    if df_daily.empty:
-        return pd.DataFrame(), pd.DataFrame(), followed_tickers
-
-    df_daily = calculate_all_indicators(df_daily)
-
-    final_df_unformatted = df_daily.groupby('Ticker').tail(1).copy()
-
-    # Forecast prices
-    forecast_df = _cached_forecast(final_df_unformatted)
-    final_df_unformatted = final_df_unformatted.merge(
-        forecast_df[['Ticker', 'forecastLow', 'forecastHigh']],
-        on='Ticker',
-        how='left'
-    )
-
-    start_prices = df_daily.groupby('Ticker')['close'].first().reset_index()
-    start_prices.rename(columns={'close': 'startPrice'}, inplace=True)
-    final_df_unformatted = final_df_unformatted.merge(start_prices, on='Ticker', how='left')
-
-    if 'dividends' in df_daily.columns:
-        total_dividends = df_daily.groupby('Ticker')['dividends'].sum().reset_index()
-        total_dividends.rename(columns={'dividends': 'divPayout'}, inplace=True)
-        final_df_unformatted = final_df_unformatted.merge(total_dividends, on='Ticker', how='left')
-        final_df_unformatted['divPayout'] = final_df_unformatted['divPayout'].fillna(0)
-    else:
-        final_df_unformatted['divPayout'] = 0
-    if 'sector' in tickers_df.columns and not final_df_unformatted.empty:
-        final_df_unformatted = final_df_unformatted.merge(
-            tickers_df[['Ticker', 'sector']],
-            on='Ticker',
-            how='left'
-        )
-        if 'sector_x' in final_df_unformatted.columns:
-            final_df_unformatted['sector'] = final_df_unformatted['sector_y']
-            final_df_unformatted.drop(columns=['sector_x', 'sector_y'], inplace=True)
-
-    final_df = _format_final_df(final_df_unformatted)
-
-    return final_df, df_daily, followed_tickers 
-
 
 # ----------------------------------------------------------------------
 # --- UI Rendering Functions ---
@@ -120,7 +61,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         return
 
     # sort data
-    sorted_df = final_df.sort_values(by=dist_EMA_column_name, ascending=True)
+    sorted_df = final_df.sort_values(by='alpha', ascending=False)
 
     # Apply dynamic filtering
     PAGE_KEY = "watchlist" # Unique ID for the main page
@@ -153,6 +94,8 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "Ticker": st.column_config.TextColumn("Ticker", width="small"),
             "shortName": st.column_config.TextColumn("Short Name", width="medium"),
             "sector": st.column_config.TextColumn("sector"),
+            "beta": st.column_config.NumberColumn("beta", help="Calculated beta for the lookback period", format="%.2f", width="small"),
+            "alpha": st.column_config.NumberColumn("alpha", help="Calculated alpha for the lookback period", format="%.2f", width="small"),
             "close": st.column_config.NumberColumn("price", help="Last Close price of the lookback period", format="$%.2f", width="small"),
             dist_EMA_column_name: st.column_config.NumberColumn(f"dist EMA {EMA_PERIOD}", help="Distance to the Exponential Moving Average (%)", format="%.2f%%", width="small"),        
             "forecastLow": st.column_config.NumberColumn("forecastLow", format="$%.2f", width="small"),
@@ -197,19 +140,47 @@ def main():
     st.title("📊 Watchlist")
 
     # User Input for Data Period
-    fetch_args = display_period_selection()
+    current_fetch_kwargs = display_period_selection()
+
+    # Check if reloading is needed
+    should_reload = (
+    'df_daily' not in st.session_state or 
+    st.session_state.get('last_fetch_kwargs') != current_fetch_kwargs
+    )
       
-    # Load and process all data required for the main display
-    # Pass the period/date dictionary argument
-    final_df, df_daily, followed_tickers = _load_and_process_data(fetch_kwargs=fetch_args)
-  
-    if not final_df.empty:
-        # Render the display sections if data is present
-        
-        _render_summary_table_and_portfolio(final_df, df_daily) # Pass df_daily to the summary table function
+    # Retrieve Data (or Load if missing)
+    if should_reload:
+        # Load the FULL universe 
+        with st.spinner('Loading Data...'):
+            final_df_unformatted, df_daily, all_tickers = load_and_process_data(current_fetch_kwargs)
+
+            #Format final_df
+            final_df = _format_final_df(final_df_unformatted)
+            
+            # save to session state
+            st.session_state['final_df'] = final_df
+            st.session_state['df_daily'] = df_daily
+            st.session_state['all_tickers'] = all_tickers
+            st.session_state['last_fetch_kwargs'] = current_fetch_kwargs
+            
+    else:
+        final_df = st.session_state['final_df']
+        df_daily = st.session_state['df_daily']
+    
+    # Load the DF for the followed tickers
+    followed_tickers_df = load_tickers(followed_tickers_file)
+    followed_tickers = followed_tickers_df['Ticker'].tolist() if not followed_tickers_df.empty else []
+
+    # Filter rows for tickers in watchlist
+    watchlist_daily = df_daily[df_daily['Ticker'].isin(followed_tickers)].copy()
+    watchlist_snapshot = final_df[final_df['Ticker'].isin(followed_tickers)].copy()
+ 
+    if not watchlist_snapshot.empty:
+        # Render the display sections if data is present        
+        _render_summary_table_and_portfolio(watchlist_snapshot, watchlist_daily) # Pass watchlist_daily to the summary table function
     
     # Info section in sidebar
-    display_info_section(df_daily)
+    display_info_section(watchlist_daily)
 
     # Guides section in sidebar
     display_guides_section()

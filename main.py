@@ -2,22 +2,19 @@ import streamlit as st
 st.set_page_config(page_title="📊 TradeSentinel", layout="wide")
 import pandas as pd
 import numpy as np
-import altair as alt
-import datetime 
-from src.dashboard_core import (
-    calculate_all_indicators, get_stock_data, dynamic_filtering,
-    load_tickers, confirm_follow_dialog, TickerValidationError
-)
+from src.dashboard_core import dynamic_filtering, confirm_follow_dialog, load_and_process_data
 from src.dashboard_display import (
     display_credits, display_guides_section, display_info_section, 
     display_period_selection, display_risk_return_plot
     )
-from src.config import DATA_DIR, all_tickers_file, EMA_PERIOD
+from src.config import EMA_PERIOD
 from src.etl import update_from_dashboard
 
 # ----------------------------------------------------------------------
 # --- Data Helper Functions ---
 # ----------------------------------------------------------------------
+
+# Define columns for this dashboard
 dist_EMA_column_name = f'dist_EMA_{EMA_PERIOD}'
 DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'marketCap', 'beta', 'alpha', 'close', dist_EMA_column_name, 'enterpriseToEbitda', 'priceToBook', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
@@ -49,33 +46,6 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
             df[col] = df[col].round(2)           
     return df
 
-def _load_and_process_data(fetch_kwargs: dict) -> (pd.DataFrame, pd.DataFrame, list): 
-    # Load the DF for all tickers
-    tickers_df = load_tickers(all_tickers_file)
-    all_tickers = tickers_df['Ticker'].tolist() if not tickers_df.empty else []
-    
-    # load prices and metadata for all tickers
-    df_daily = get_stock_data(
-        all_tickers,
-        interval="1d",
-        **fetch_kwargs
-    )
-
-    if df_daily.empty:
-        return pd.DataFrame(), pd.DataFrame(), all_tickers
-
-    df_daily = calculate_all_indicators(df_daily)
-
-    final_df_unformatted = df_daily.groupby('Ticker').tail(1).copy()
-
-    start_prices = df_daily.groupby('Ticker')['close'].first().reset_index()
-    start_prices.rename(columns={'close': 'startPrice'}, inplace=True)
-    final_df_unformatted = final_df_unformatted.merge(start_prices, on='Ticker', how='left')
-
-    final_df = _format_final_df(final_df_unformatted)
-
-    return final_df, df_daily, all_tickers 
-
 # ----------------------------------------------------------------------
 # --- UI Rendering Functions ---
 # ----------------------------------------------------------------------
@@ -87,7 +57,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         return
 
     # sort data
-    sorted_df = final_df.sort_values(by='avgReturn', ascending=False)
+    sorted_df = final_df.sort_values(by='alpha', ascending=False)
 
     # Apply dynamic filtering
     PAGE_KEY = "main" # Unique ID for the main page
@@ -152,11 +122,32 @@ def main():
     st.markdown("---")
 
     # User Input for Data Period
-    fetch_args = display_period_selection()
+    current_fetch_kwargs = display_period_selection()
+
+    # Check if reloading is needed
+    should_reload = (
+    'df_daily' not in st.session_state or 
+    st.session_state.get('last_fetch_kwargs') != current_fetch_kwargs
+    )
    
-    # Load and process all data required for the main display
-    # Pass the custom period/date argument
-    final_df, df_daily, all_tickers = _load_and_process_data(fetch_kwargs=fetch_args)
+    # Load data
+    if should_reload:
+        with st.spinner('Loading Universe Data...'):
+            final_df_unformatted, df_daily, all_tickers = load_and_process_data(current_fetch_kwargs)
+
+            #Format final_df
+            final_df = _format_final_df(final_df_unformatted)
+            
+            # Store in Session State
+            st.session_state['final_df'] = final_df
+            st.session_state['df_daily'] = df_daily
+            st.session_state['all_tickers'] = all_tickers
+            st.session_state['last_fetch_kwargs'] = current_fetch_kwargs
+    else:
+        # Retrieve from Session State
+        final_df = st.session_state['final_df']
+        df_daily = st.session_state['df_daily']
+        all_tickers = st.session_state['all_tickers']
   
     if not final_df.empty:
         # Render the summary table if data is present

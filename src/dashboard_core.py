@@ -34,10 +34,65 @@ import pandas as pd
 import duckdb
 from pathlib import Path
 import yfinance as yf
-from src.config import followed_tickers_file, DATA_DIR, stocks_folder, BENCHMARK_INDEX
-from src.analytics import calculate_annualized_metrics, distance_from_ema
+from src.config import followed_tickers_file, DATA_DIR, stocks_folder, BENCHMARK_INDEX, all_tickers_file
+from src.analytics import calculate_annualized_metrics, distance_from_ema, project_price_range
 
 # Dashboard manager
+
+@st.cache_data(ttl=3600)  # Cache data for 1 hour
+def load_and_process_data(fetch_kwargs):
+    """
+    Loads universe, ensures Benchmark is included, calculates all indicators.
+    """
+    # 1. Load Universe
+    tickers_df = load_tickers(all_tickers_file)
+    all_tickers = tickers_df['Ticker'].tolist() if not tickers_df.empty else []
+    
+    # CRITICAL: Ensure Benchmark is in the fetch list
+    # We need this for Alpha/Beta calculations later
+    if BENCHMARK_INDEX not in all_tickers:
+        all_tickers.append(BENCHMARK_INDEX)
+
+    # 2. Fetch Prices
+    df_daily = get_stock_data(
+        all_tickers,
+        interval="1d",
+        **fetch_kwargs
+    )
+
+    if df_daily.empty:
+        return pd.DataFrame(), pd.DataFrame(), all_tickers
+
+    # 3. Sort & Prepare
+    df_daily = df_daily.sort_values(['Ticker', 'Date'])
+    df_daily['dailyReturn'] = df_daily.groupby('Ticker')['close'].pct_change(fill_method=None)
+
+    # 4. Extract Benchmark Series
+    if BENCHMARK_INDEX in df_daily['Ticker'].values:
+        bench_data = df_daily[df_daily['Ticker'] == BENCHMARK_INDEX].copy()
+        bench_series = bench_data.set_index('Date')['dailyReturn']
+    else:
+        bench_series = None
+
+    # 5. Calculate Indicators (Alpha/Beta computed here using bench_series)
+    df_daily = calculate_all_indicators(df_daily, bench_series)
+
+    # 6. Create Snapshot (Final DF)
+    final_df_unformatted = df_daily.groupby('Ticker').tail(1).copy()
+    start_prices = df_daily.groupby('Ticker')['close'].first().reset_index()
+    start_prices.rename(columns={'close': 'startPrice'}, inplace=True)
+    final_df_unformatted = final_df_unformatted.merge(start_prices, on='Ticker', how='left')
+
+    # Forecast prices (Monte Carlo)
+    forecast_df = project_price_range(final_df_unformatted[['Ticker', 'close', 'avgReturn', 'annualizedVol']].drop_duplicates(subset=['Ticker']))
+    final_df_unformatted = final_df_unformatted.merge(
+        forecast_df[['Ticker', 'forecastLow', 'forecastHigh']],
+        on='Ticker',
+        how='left'
+    )
+
+    return final_df_unformatted, df_daily, all_tickers
+
 
 def get_stock_data(tickers: list, interval: str, period: str = None, start: str = None, end: str = None) -> pd.DataFrame:
     """
@@ -88,31 +143,17 @@ def get_stock_data(tickers: list, interval: str, period: str = None, start: str 
     df = duckdb.query(query).to_df()
     return df
 
-def calculate_all_indicators(df_daily) -> pd.DataFrame:
-    # Ensure the DataFrame is sorted
-    df_daily = df_daily.sort_values(['Ticker', 'Date'])
-
-    # 1. Calculate Daily Return
-    # (relies on the sort above to calculate change from Previous Day -> Current Day)
-    df_daily['dailyReturn'] = df_daily.groupby('Ticker')['close'].pct_change(fill_method=None)
-
-    # 2. Extract Benchmark Returns for Risk Metrics
-    if BENCHMARK_INDEX in df_daily['Ticker'].values:
-        bench_data = df_daily[df_daily['Ticker'] == BENCHMARK_INDEX].copy()
-        bench_series = bench_data.set_index('Date')['dailyReturn']
-    else:
-        bench_series = None 
-
-    # 3. Calculate Distance to EMA
+def calculate_all_indicators(df_daily, bench_series) -> pd.DataFrame: 
+    # Calculate Distance to EMA
     df_daily = distance_from_ema(df_daily)
 
-    # 4. Calculate Annualized Metrics (Pass the benchmark series)
+    # Calculate Annualized Metrics (Pass the benchmark series)
     annual_metrics_df = calculate_annualized_metrics(
         df_daily[['Ticker', 'Date', 'close', 'dailyReturn']].copy(),
         benchmark_rets=bench_series
     )
 
-    # 5. Merge metrics back
+    # Merge metrics back
     df_daily = pd.merge(
         df_daily, 
         annual_metrics_df[['Ticker', 'avgReturn', 'annualizedVol', 'sharpeRatio', 'beta', 'alpha']],
