@@ -38,7 +38,7 @@ import numpy as np
 import streamlit as st
 from src.config import (
     RISK_FREE_RATE, ANNUAL_TRADING_DAYS, CONFIDENCE_LEVEL, 
-    FORECAST_HORIZON, N_SIMS, EMA_PERIOD
+    FORECAST_HORIZON, N_SIMS, EMA_PERIOD, BENCHMARK_INDEX
 )
 
 # --- Portfolio Calculations ---
@@ -177,13 +177,20 @@ def calculate_cvar(returns: pd.Series, confidence_level: float = CONFIDENCE_LEVE
         
     return cvar_values.mean()
 
+def daily_risk_free():
+    """
+    Helper function that returns the daily risk free return
+    """
+    return RISK_FREE_RATE / ANNUAL_TRADING_DAYS
 
 def sharpe_ratio(returns: pd.Series) -> float:
-    """Calculate the annualized Sharpe ratio."""
+    """
+    Calculate the annualized Sharpe ratio.
+    """
     if returns.empty or returns.dropna().empty:
         return np.nan
 
-    excess = returns - (RISK_FREE_RATE / ANNUAL_TRADING_DAYS)
+    excess = returns - daily_risk_free()
     std_excess = excess.std(ddof=0)
 
     # Guard against zero or near-zero volatility
@@ -194,11 +201,13 @@ def sharpe_ratio(returns: pd.Series) -> float:
 
 
 def sortino_ratio(returns: pd.Series) -> float:
-    """Calculate the annualized Sortino ratio."""
+    """
+    Calculate the annualized Sortino ratio.
+    """
     if returns.empty or returns.dropna().empty:
         return np.nan
 
-    excess = returns - (RISK_FREE_RATE / ANNUAL_TRADING_DAYS)
+    excess = returns - daily_risk_free()
     downside = excess[excess < 0]  # use excess returns for downside risk
     downside_std = downside.std(ddof=0)
 
@@ -210,7 +219,9 @@ def sortino_ratio(returns: pd.Series) -> float:
 
 
 def calmar_ratio(returns: pd.Series) -> float:
-    """Calculate the Calmar ratio: annualized return divided by max drawdown."""
+    """
+    Calculate the Calmar ratio: annualized return divided by max drawdown.
+    """
     if returns.empty or returns.dropna().empty:
         return np.nan
     cumulative = (1 + returns).cumprod()
@@ -412,44 +423,122 @@ def distance_from_ema(df: pd.DataFrame) -> pd.DataFrame:
     
     return df
 
-def calculate_annualized_metrics(df: pd.DataFrame) -> pd.DataFrame:
+
+# --- New metrics logic ---
+def calculate_beta(stock_returns: pd.Series, benchmark_returns: pd.Series) -> float:
+    """Helper function that calculates Beta given two aligned return series."""
+    if stock_returns.empty or benchmark_returns.empty or len(stock_returns) < 2:
+        return np.nan
+
+    # Covariance matrix: [[Var(Stock), Cov(S,B)], [Cov(S,B), Var(Bench)]]
+    cov_matrix = np.cov(stock_returns, benchmark_returns)
+    covariance = cov_matrix[0, 1]
+    benchmark_variance = cov_matrix[1, 1]
+    
+    return covariance / benchmark_variance if benchmark_variance != 0 else np.nan
+
+def calculate_alpha(stock_returns: pd.Series, benchmark_returns: pd.Series, beta: float) -> float:
+    """Helper function that calculates Annualized Alpha given returns and a pre-calculated Beta."""
+    if pd.isna(beta) or stock_returns.empty:
+        return np.nan
+    
+    rf_daily = daily_risk_free()
+    
+    # Calculate excess returns
+    excess_stock = stock_returns.mean() - rf_daily
+    excess_bench = benchmark_returns.mean() - rf_daily
+    
+    # Jensen's Alpha formula
+    alpha_daily = excess_stock - (beta * excess_bench)
+    
+    return alpha_daily * ANNUAL_TRADING_DAYS
+
+# Main metrics function
+def calculate_annualized_metrics(df: pd.DataFrame, benchmark_rets: pd.Series = None) -> pd.DataFrame:
     """
-    Calculates annualized average return, volatility, and Sharpe Ratio.
+    Calculates annualized metrics (Return, Vol, Sharpe) and Risk metrics (Beta, Alpha).
+    
+    Args:
+        df (pd.DataFrame): Data containing 'Ticker', 'Date', 'dailyReturn'.
+        benchmark_rets (pd.Series, optional): Series of benchmark daily returns with DatetimeIndex. 
+                                              If None, attempts to extract BENCHMARK_INDEX from df.
     """
     
+    # 1. Attempt to resolve Benchmark Returns if not provided
+    if benchmark_rets is None:
+        if 'Ticker' in df.columns and BENCHMARK_INDEX in df['Ticker'].values:
+            # Extract benchmark, ensure Date index for alignment
+            bench_df = df[df['Ticker'] == BENCHMARK_INDEX].copy()
+            # Ensure we have a proper datetime index or column to set as index
+            if 'Date' in bench_df.columns:
+                bench_df = bench_df.set_index('Date')
+            benchmark_rets = bench_df['dailyReturn']
+
+    # 2. Define the aggregation logic
     def aggregate_metrics(group):
-        returns = group['dailyReturn'].dropna()
+        # Drop NaNs to ensure clean calculation
+        clean_group = group.dropna(subset=['dailyReturn'])
+        returns = clean_group['dailyReturn']
         N = len(returns)
         
-        if N < 5: 
-            return pd.Series({'avgReturn': np.nan, 'annualizedVol': np.nan, 'sharpeRatio': np.nan})
+        # Initialize default NaN results
+        metrics = {
+            'avgReturn': np.nan, 
+            'annualizedVol': np.nan, 
+            'sharpeRatio': np.nan,
+            'beta': np.nan,
+            'alpha': np.nan
+        }
 
-        # A. Annualized Volatility
+        if N < 5: 
+            return pd.Series(metrics)
+
+        # --- A. Standard Metrics ---
         daily_vol = returns.std()
         annualized_vol = daily_vol * np.sqrt(ANNUAL_TRADING_DAYS)
         
-        # B. Annualized Return
         total_return = (1 + returns).prod() - 1 
         annualization_factor = ANNUAL_TRADING_DAYS / N 
         annualized_return = (1 + total_return) ** annualization_factor - 1
         
-        # C. Sharpe Ratio
-        sharpe_ratio = (annualized_return - RISK_FREE_RATE) / annualized_vol if annualized_vol != 0 else np.nan
+        sharpe = (annualized_return - RISK_FREE_RATE) / annualized_vol if annualized_vol != 0 else np.nan
 
-        return pd.Series({
-            'avgReturn': annualized_return * 100,
-            'annualizedVol': annualized_vol * 100,
-            'sharpeRatio': sharpe_ratio
-        })
+        metrics['avgReturn'] = annualized_return * 100
+        metrics['annualizedVol'] = annualized_vol * 100
+        metrics['sharpeRatio'] = sharpe
 
+        # --- B. Risk Metrics (Beta/Alpha) ---
+        # We need the benchmark returns to exist and overlap with this stock's dates
+        if benchmark_rets is not None and not benchmark_rets.empty:
+            # Align stock returns with benchmark returns on Date
+            # Assume group has 'Date' column; set it as index for alignment
+            stock_series = clean_group.set_index('Date')['dailyReturn']
+            
+            # Intersection of dates
+            aligned_df = pd.concat([stock_series, benchmark_rets], axis=1, join='inner').dropna()
+            
+            if len(aligned_df) > 10: # Minimum overlapping days required for valid Beta
+                stock_aligned = aligned_df.iloc[:, 0]
+                bench_aligned = aligned_df.iloc[:, 1]
+                
+                beta_val = calculate_beta(stock_aligned, bench_aligned)
+                alpha_val = calculate_alpha(stock_aligned, bench_aligned, beta_val)
+                
+                metrics['beta'] = beta_val
+                metrics['alpha'] = alpha_val
+
+        return pd.Series(metrics)
+
+    # 3. Ensure dailyReturn exists
     if 'dailyReturn' not in df.columns:
         df['dailyReturn'] = df.groupby('Ticker')['close'].pct_change()
 
+    # 4. Apply aggregation
+    # include_groups=False is required for pandas >= 2.2.0 compatibility
     annual_metrics_df = df.groupby('Ticker').apply(aggregate_metrics, include_groups=False).reset_index()
 
-    # Get latest date for merge
+    # 5. Merge with latest dates (to keep metadata valid)
     latest_dates = df.groupby('Ticker').tail(1)[['Ticker', 'Date']].reset_index(drop=True)
-    
     final_metrics_df = pd.merge(latest_dates, annual_metrics_df, on='Ticker')
     
     return final_metrics_df

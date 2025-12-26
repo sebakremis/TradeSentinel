@@ -25,7 +25,7 @@ import altair as alt
 import plotly.express as px
 import plotly.graph_objects as go
 import datetime as dt
-from src.config import RISK_FREE_RATE, EMA_PERIOD
+from src.config import RISK_FREE_RATE, EMA_PERIOD, BENCHMARK_INDEX
 from src.analytics import (
     calculate_var, calculate_cvar, sharpe_ratio, sortino_ratio,
     calmar_ratio, max_drawdown, correlation_matrix, win_loss_stats
@@ -447,7 +447,7 @@ def display_info_section(df_daily: pd.DataFrame):
         st.write(f"**Last Price Date:** {last_date.strftime('%Y-%m-%d') if last_date else 'N/A'}")
         st.write(f"**Annualized Risk Free rate:** {RISK_FREE_RATE*100:.2f}% (assumed risk-free rate for Sharpe Ratio calculation)")
         st.write(f"**EMA period:** {EMA_PERIOD}")
-
+        st.write(f"**Benckmark ticker:** {BENCHMARK_INDEX}")
 
 def display_guides_section():
     """

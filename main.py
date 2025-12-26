@@ -19,7 +19,7 @@ from src.etl import update_from_dashboard
 # --- Data Helper Functions ---
 # ----------------------------------------------------------------------
 dist_EMA_column_name = f'dist_EMA_{EMA_PERIOD}'
-DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'marketCap', 'beta', 'close', dist_EMA_column_name, 'enterpriseToEbitda', 'priceToBook', 'avgReturn', 'annualizedVol', 'sharpeRatio']
+DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'marketCap', 'beta', 'alpha', 'close', dist_EMA_column_name, 'enterpriseToEbitda', 'priceToBook', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -121,7 +121,8 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "shortName": st.column_config.TextColumn("Short Name", width="medium"),
             "sector": st.column_config.TextColumn("sector"),
             "marketCap": st.column_config.NumberColumn("marketCap", format="$%.1f B", width="small"),
-            "beta": st.column_config.NumberColumn("beta", format="%.2f", width="small"),
+            "beta": st.column_config.NumberColumn("beta", help="Calculated beta for the lookback period", format="%.2f", width="small"),
+            "alpha": st.column_config.NumberColumn("alpha", help="Calculated alpha for the lookback period", format="%.2f", width="small"),
             "close": st.column_config.NumberColumn("price", help="Last Close price of the lookback period", format="$%.2f", width="small"),
             dist_EMA_column_name: st.column_config.NumberColumn(f"dist EMA {EMA_PERIOD}", help="Distance to the Exponential Moving Average (%)", format="%.2f%%", width="small"),
             "priceToBook": st.column_config.NumberColumn("priceToBook", help="Price to Book ratio", format="%.2f", width="small"),

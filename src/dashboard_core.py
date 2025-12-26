@@ -34,7 +34,7 @@ import pandas as pd
 import duckdb
 from pathlib import Path
 import yfinance as yf
-from src.config import followed_tickers_file, DATA_DIR, stocks_folder
+from src.config import followed_tickers_file, DATA_DIR, stocks_folder, BENCHMARK_INDEX
 from src.analytics import calculate_annualized_metrics, distance_from_ema
 
 # Dashboard manager
@@ -72,7 +72,12 @@ def get_stock_data(tickers: list, interval: str, period: str = None, start: str 
             WHERE Ticker IS NOT NULL AND Ticker != ''
         )
         SELECT p.*,
-        m.* EXCLUDE(Ticker)
+        m.shortName,
+        m.sector,
+        m.marketCap,
+        m.priceToBook,
+        m.enterpriseToEbitda,
+        m.lastUpdated
         FROM raw_prices AS p
         LEFT JOIN clean_metadata AS m
         ON p.Ticker = m.Ticker
@@ -88,18 +93,29 @@ def calculate_all_indicators(df_daily) -> pd.DataFrame:
     df_daily = df_daily.sort_values(['Ticker', 'Date'])
 
     # 1. Calculate Daily Return
+    # (relies on the sort above to calculate change from Previous Day -> Current Day)
     df_daily['dailyReturn'] = df_daily.groupby('Ticker')['close'].pct_change(fill_method=None)
-  
-    # 2. Calculate Distance to EMA
+
+    # 2. Extract Benchmark Returns for Risk Metrics
+    if BENCHMARK_INDEX in df_daily['Ticker'].values:
+        bench_data = df_daily[df_daily['Ticker'] == BENCHMARK_INDEX].copy()
+        bench_series = bench_data.set_index('Date')['dailyReturn']
+    else:
+        bench_series = None 
+
+    # 3. Calculate Distance to EMA
     df_daily = distance_from_ema(df_daily)
-    
-    # 3. Calculate Annualized Metrics
-    annual_metrics_df = calculate_annualized_metrics(df_daily[['Ticker', 'Date', 'close', 'dailyReturn']].copy())
-    
-    # 4. Merge metrics back
+
+    # 4. Calculate Annualized Metrics (Pass the benchmark series)
+    annual_metrics_df = calculate_annualized_metrics(
+        df_daily[['Ticker', 'Date', 'close', 'dailyReturn']].copy(),
+        benchmark_rets=bench_series
+    )
+
+    # 5. Merge metrics back
     df_daily = pd.merge(
         df_daily, 
-        annual_metrics_df[['Ticker', 'avgReturn', 'annualizedVol', 'sharpeRatio']],
+        annual_metrics_df[['Ticker', 'avgReturn', 'annualizedVol', 'sharpeRatio', 'beta', 'alpha']],
         on='Ticker',
         how='left'
     )  

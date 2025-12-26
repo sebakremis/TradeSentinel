@@ -13,6 +13,7 @@ The application is structured into four pages, designed to support a logical inv
 The entry point of the application acts as a Market Screener.
 
 * Scope: Analyzes the broad market based on the universe of tickers defined in all_tickers.csv.
+> **Note:** The benchmark ticker must be included in all_tickers.csv, otherwise the alpha and beta columns will return Nan. If you wish to use a benchmark index different than `SPY`, replace the BENCHMARK_INDEX value in the config.py file.
 
 * Functionality: view fundamental data, filter by sector or metrics, and identify potential opportunities.
 
