@@ -46,6 +46,40 @@ Allows the creation, management, and detailed analysis of custom investment port
 
 * Usage: Can be used as the final step in the workflow, to track the performance of specific portfolios over time.
 
+## 📂 Project Structure
+
+The **TradeSentinel** repository is organized as follows:
+
+```text
+TRADESENTINEL/
+├── .devcontainer/           # Configuration for VS Code Development Containers
+├── data/                    # Local storage for datasets and configuration files
+│   ├── stocks/              # Sub-directory for specific stock data
+│   ├── all_tickers.csv      # Dataset of available tickers
+│   ├── etfs.csv             # Dataset of Exchange Traded Funds
+│   ├── followed_tickers.csv # User-specific watched tickers
+│   └── portfolios.json      # JSON structure defining user portfolios
+├── docs/                    # Documentation resources
+├── pages/                   # Dashboard pages (Multi-page application structure)
+│   ├── 02_watchlist.py      # Logic for the Watchlist view
+│   ├── 03_backtest.py       # Logic for the Backtesting engine view
+│   └── 04_portfolios.py     # Logic for Portfolio management view
+├── src/                     # Core application source code
+│   ├── __init__.py          # Package initialization
+│   ├── analytics.py         # Financial calculations and analysis algorithms
+│   ├── config.py            # Global configuration and environment settings
+│   ├── dashboard_core.py    # Core functionality and state management for the dashboard
+│   ├── dashboard_display.py # UI component rendering and display logic
+│   └── etl.py               # Extract, Transform, Load (ETL) pipelines for data ingestion
+├── tests/                   # Unit and integration tests
+├── .gitignore               # Git ignore rules
+├── LICENSE                  # Project license
+├── main.py                  # Application entry point (Home/Index page)
+├── pytest.ini               # Configuration file for running tests via pytest
+├── README.md                # Project overview and instructions
+└── requirements.txt         # Python dependencies and library versions
+```
+
 ## 📂 Data Configuration
 The application is driven by two key CSV files located in the /data/ directory, allowing for easy customization of the analysis universe:
 
