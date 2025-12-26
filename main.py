@@ -90,7 +90,15 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
     sorted_df = final_df.sort_values(by='avgReturn', ascending=False)
 
     # Apply dynamic filtering
-    sorted_df = dynamic_filtering(sorted_df, DISPLAY_COLUMNS)
+    PAGE_KEY = "main" # Unique ID for the main page
+
+    # Initialize THIS page's counter
+    if f'{PAGE_KEY}_filter_count' not in st.session_state:
+        st.session_state[f'{PAGE_KEY}_filter_count'] = 1
+
+    # Loop using THIS page's counter
+    for i in range(st.session_state[f'{PAGE_KEY}_filter_count']):
+        sorted_df = dynamic_filtering(sorted_df, DISPLAY_COLUMNS, i, key_prefix=PAGE_KEY)
 
     # --- Risk-Return Plot ---
     display_risk_return_plot(sorted_df)

@@ -106,20 +106,21 @@ def calculate_all_indicators(df_daily) -> pd.DataFrame:
     
     return df_daily
 
-def dynamic_filtering(sorted_df: pd.DataFrame, DISPLAY_COLUMNS: list) -> pd.DataFrame:
+def dynamic_filtering(sorted_df: pd.DataFrame, DISPLAY_COLUMNS: list, index: int, key_prefix: str) -> pd.DataFrame:
     """
-    Applies dynamic filtering to the DataFrame.
+    Applies dynamic filtering with a unique namespace (key_prefix) to avoid conflicts across pages.
     """
-    # Added EMA_50 to excluded columns for filters if you don't want it in the dropdown, 
-    # remove it from this list if you DO want to filter by EMA.
-    excluded_columns = ['Ticker', 'close', 'startPrice', 'divPayout', 'forecastLow', 'forecastHigh', '52WeekHigh', '52WeekLow']
+    excluded_columns = ['Ticker', 'shortName', 'close', 'startPrice', 'divPayout', 'forecastLow', 'forecastHigh', '52WeekHigh', '52WeekLow']
     filter_options = [col for col in DISPLAY_COLUMNS if col not in excluded_columns]
     
-    with st.expander("🔎 Filter Data", expanded=False):
+    # Define the specific session state key for the counter
+    count_key = f"{key_prefix}_filter_count"
+    
+    with st.expander(f"🔎 Filter Data #{index + 1}", expanded=True): 
         f_col1, f_col2, f_col3 = st.columns([1, 1, 2])
         
         with f_col1:
-            filter_column = st.selectbox("Filter by:", options=filter_options)
+            filter_column = st.selectbox("Filter by:", options=filter_options, key=f"{key_prefix}_col_{index}")
 
         if filter_column in sorted_df.columns:
             is_numeric = pd.api.types.is_numeric_dtype(sorted_df[filter_column])
@@ -127,35 +128,58 @@ def dynamic_filtering(sorted_df: pd.DataFrame, DISPLAY_COLUMNS: list) -> pd.Data
             if is_numeric:
                 min_val = float(sorted_df[filter_column].min())
                 max_val = float(sorted_df[filter_column].max())
-                
                 if pd.isna(min_val): min_val = 0.0
                 if pd.isna(max_val): max_val = 1.0
                 
                 with f_col2:
-                    filter_condition = st.selectbox("Condition", ["Range", "Greater than", "Less than"])
+                    filter_condition = st.selectbox("Condition", ["Range", "Greater than", "Less than"], key=f"{key_prefix}_cond_{index}")
                 
                 with f_col3:
                     if filter_condition == "Range":
-                        val_range = st.slider(f"Range {filter_column}", min_val, max_val, (min_val, max_val))
+                        val_range = st.slider(f"Range {filter_column}", min_val, max_val, (min_val, max_val), key=f"{key_prefix}_slider_{index}")
                         sorted_df = sorted_df[(sorted_df[filter_column] >= val_range[0]) & (sorted_df[filter_column] <= val_range[1])]
                     elif filter_condition == "Greater than":
-                        val = st.number_input(f"Value for {filter_column}", value=min_val)
+                        val = st.number_input(f"Value for {filter_column}", value=min_val, key=f"{key_prefix}_num_gt_{index}")
                         sorted_df = sorted_df[sorted_df[filter_column] >= val]
                     elif filter_condition == "Less than":
-                        val = st.number_input(f"Value for {filter_column}", value=max_val)
+                        val = st.number_input(f"Value for {filter_column}", value=max_val, key=f"{key_prefix}_num_lt_{index}")
                         sorted_df = sorted_df[sorted_df[filter_column] <= val]
-
-            else: # Text Filtering
+            else:
                 unique_values = sorted_df[filter_column].dropna().unique().tolist()
                 if len(unique_values) < 20:
                     with f_col3:
-                        selected_items = st.multiselect(f"Select {filter_column}", options=unique_values, default=unique_values)
+                        selected_items = st.multiselect(f"Select {filter_column}", options=unique_values, default=unique_values, key=f"{key_prefix}_multi_{index}")
                         sorted_df = sorted_df[sorted_df[filter_column].isin(selected_items)]
                 else:
                     with f_col3:
-                        search_text = st.text_input(f"Search {filter_column}", "")
+                        search_text = st.text_input(f"Search {filter_column}", "", key=f"{key_prefix}_text_{index}")
                         if search_text:
                             sorted_df = sorted_df[sorted_df[filter_column].astype(str).str.contains(search_text, case=False, na=False)]
+    
+    # --- Button Logic ---
+    # Use the namespaced count key
+    is_last_filter = (index == st.session_state[count_key] - 1)
+    
+    if is_last_filter:
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Add another filter", key=f"{key_prefix}_btn_add_{index}"):
+                st.session_state[count_key] += 1
+                st.rerun()
+        with col2:
+            if st.button("Remove filters", key=f"{key_prefix}_btn_rem_{index}"):
+                st.session_state[count_key] = 1
+                
+                # Only clear keys that start with THIS specific prefix
+                keys_to_clear = [
+                    k for k in st.session_state.keys()
+                    if k.startswith(f"{key_prefix}_") and k != count_key 
+                ]
+                for k in keys_to_clear:
+                    del st.session_state[k]
+                
+                st.rerun()
+            
     return sorted_df
 
 
