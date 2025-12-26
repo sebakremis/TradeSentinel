@@ -525,7 +525,7 @@ def calculate_annualized_metrics(df: pd.DataFrame, benchmark_rets: pd.Series = N
                 alpha_val = calculate_alpha(stock_aligned, bench_aligned, beta_val)
                 
                 metrics['beta'] = beta_val
-                metrics['alpha'] = alpha_val
+                metrics['alpha'] = alpha_val * 100
 
         return pd.Series(metrics)
 

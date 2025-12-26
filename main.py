@@ -92,7 +92,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "sector": st.column_config.TextColumn("sector"),
             "marketCap": st.column_config.NumberColumn("marketCap", format="$%.1f B", width="small"),
             "beta": st.column_config.NumberColumn("beta", help="Calculated beta for the lookback period", format="%.2f", width="small"),
-            "alpha": st.column_config.NumberColumn("alpha", help="Calculated alpha for the lookback period", format="%.2f", width="small"),
+            "alpha": st.column_config.NumberColumn("alpha", help="Calculated annualized alpha for the lookback period", format="%.2f%%", width="small"),
             "close": st.column_config.NumberColumn("price", help="Last Close price of the lookback period", format="$%.2f", width="small"),
             dist_EMA_column_name: st.column_config.NumberColumn(f"dist EMA {EMA_PERIOD}", help="Distance to the Exponential Moving Average (%)", format="%.2f%%", width="small"),
             "priceToBook": st.column_config.NumberColumn("priceToBook", help="Price to Book ratio", format="%.2f", width="small"),
