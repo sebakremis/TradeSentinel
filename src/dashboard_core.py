@@ -165,7 +165,7 @@ def calculate_all_indicators(df_daily, bench_series) -> pd.DataFrame:
 
 def dynamic_filtering(sorted_df: pd.DataFrame, DISPLAY_COLUMNS: list, index: int, key_prefix: str) -> pd.DataFrame:
     excluded_columns = ['Ticker', 'shortName', 'close', 'startPrice', 'divPayout', 'forecastLow', 'forecastHigh', '52WeekHigh', '52WeekLow']
-    
+    initial_df = sorted_df
     # 1. Add a placeholder to the options
     raw_options = [col for col in DISPLAY_COLUMNS if col not in excluded_columns]
     filter_options = ["--- Select Column ---"] + raw_options
@@ -216,37 +216,21 @@ def dynamic_filtering(sorted_df: pd.DataFrame, DISPLAY_COLUMNS: list, index: int
                                 sorted_df = sorted_df[sorted_df[filter_column].astype(str).str.contains(search_text, case=False, na=False)]
 
     # --- Button Visibility Logic ---
-    is_last_filter = (index == st.session_state[count_key] - 1)
-    
-    if is_last_filter:
+    if sorted_df.shape != initial_df.shape:
         col1, col2 = st.columns(2)
-        
-        # Condition 1: Only show "Add" if the user has actually selected a column in the CURRENT filter
-        # (We don't want them adding Filter #2 if Filter #1 is still empty)
-        show_add_button = (filter_column != "--- Select Column ---")
-        
-        # Condition 2: Only show "Remove" if we have more than 1 filter
-        # (If we have 1 filter, "Removing" it is the same as just resetting the dropdown)
-        show_remove_button = (st.session_state[count_key] > 1)
-
         with col1:
-            if show_add_button:
-                if st.button("Add another filter", key=f"{key_prefix}_btn_add_{index}"):
-                    st.session_state[count_key] += 1
-                    st.rerun()
-        
+            if st.button("Add another filter", key=f"{key_prefix}_btn_add_{index}"):
+                st.session_state[count_key] += 1
+                st.rerun()
         with col2:
-            if show_remove_button:
-                if st.button("Remove filters", key=f"{key_prefix}_btn_rem_{index}"):
-                    st.session_state[count_key] = 1
-                    # Clear session state keys
-                    keys_to_clear = [k for k in st.session_state.keys() if k.startswith(f"{key_prefix}_") and k != count_key]
-                    for k in keys_to_clear:
-                        del st.session_state[k]
-                    st.rerun()
-            
+            if st.button("Remove filters", key=f"{key_prefix}_btn_rem_{index}"):
+                st.session_state[count_key] = 1
+                # Clear session state keys
+                keys_to_clear = [k for k in st.session_state.keys() if k.startswith(f"{key_prefix}_") and k != count_key]
+                for k in keys_to_clear:
+                    del st.session_state[k]
+                st.rerun()
     return sorted_df
-
 
 # Tickers manager
 
