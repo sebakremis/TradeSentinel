@@ -62,11 +62,6 @@ Allows the creation, management, and detailed analysis of custom investment port
 
   <br><br>
 
-  <p><i>Sidebar</i></p>
-  <img src="docs/images/main_page_sidebar.png" alt="Market View - Sidebar" width="250">
-
-  <hr>
-
   <h3>Backtest Page</h3>
 
   <p><i>Portfolio Summary</i></p>
