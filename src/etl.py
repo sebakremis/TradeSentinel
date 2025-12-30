@@ -32,18 +32,46 @@ Design notes:
 In short, `etl.py` is the backbone of TradeSentinel's data pipeline, ensuring that
 all analytics and dashboards operate on clean, well-structured, and reliable data.
 """
-
 import pandas as pd
+import json
 import streamlit as st
 import yfinance as yf
-from .config import DATA_DIR, stocks_folder, all_tickers_file, metadata_file
+from .config import (
+    DATA_DIR, stocks_folder, all_tickers_file, 
+    metadata_file, UPDATE_LOG_FILE
+    )
 from .dashboard_core import load_tickers
 
 # Define the path to the all tickers CSV file
 filepath = all_tickers_file
 filename = filepath.name
-# Define the log file path
-log_file = stocks_folder/'update_log.txt'
+
+# --- Helper functions for Log ---
+def load_update_log() -> dict:
+    """Loads the update log JSON."""
+    if UPDATE_LOG_FILE.exists():
+        try:
+            with open(UPDATE_LOG_FILE, 'r') as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            return {}
+    return {}
+
+def save_ticker_update(ticker: str, last_date: str, last_price: float):
+    """Updates the JSON log with the latest info for a specific ticker."""
+    log_data = load_update_log()
+    
+    log_data[ticker] = {
+        'last_date': last_date,
+        'last_price': round(float(last_price), 2),
+        'updated_at': pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
+    }
+    
+    # Create folder if it doesn't exist
+    stocks_folder.mkdir(parents=True, exist_ok=True)
+    
+    with open(UPDATE_LOG_FILE, 'w') as f:
+        json.dump(log_data, f, indent=4)
    
 def fetch_prices(ticker: str, period: str = None, start: str = None, interval: str = '1d') -> pd.DataFrame:
     """
@@ -130,52 +158,62 @@ def log_updates():
 
 def update_stock_prices(tickers_df: pd.DataFrame):
     """
-    Updates the stock prices database with the latest information for all followed tickers.
-    Creates the parket file for the ticker if it does not exist.
+    Updates the stock prices database and logs the last price/date to JSON.
     """
     # Track if any updates were made
-    last_update = None
+    # last_update = None
     
     for _, row in tickers_df.iterrows():
         ticker = row['Ticker']
         stock_prices_file = stocks_folder/f"prices/{ticker}.parquet"
+
+        final_df = pd.DataFrame() # Holder for the final dataset state
         
         # --- Fetch price data and update parquet file ---
         if stock_prices_file.exists():
             existing_data = pd.read_parquet(stock_prices_file)
             existing_data.index = pd.to_datetime(existing_data.index)
+
             if not existing_data.empty:
                 # Determine the last date in existing data
                 last_date = existing_data.index.max().date()
                 new_start_date = pd.Timestamp(last_date) + pd.Timedelta(days=1)
+
                 # Check if new_start_date is in the future
                 if new_start_date >= pd.Timestamp.today().normalize():
                     print(f"No new data for {ticker}.")
-                    continue            
-                new_data = fetch_prices(ticker, start=new_start_date.strftime('%Y-%m-%d'))
-                if not new_data.empty:
-                    updated_data = pd.concat([existing_data, new_data])
-                    updated_data = updated_data[~updated_data.index.duplicated(keep='last')]
-                    updated_data.to_parquet(stock_prices_file)
-                    print(f"Updated data for {ticker} saved to {stock_prices_file}")
-                    last_update = pd.Timestamp.now().date()
+                    final_df = existing_data # We still need this for logging
+                else:        
+                    new_data = fetch_prices(ticker, start=new_start_date.strftime('%Y-%m-%d'))
+                    if not new_data.empty:
+                        updated_data = pd.concat([existing_data, new_data])
+                        updated_data = updated_data[~updated_data.index.duplicated(keep='last')]
+                        updated_data.to_parquet(stock_prices_file)
+                        print(f"Updated data for {ticker} saved.")
+                        final_df = updated_data
+                    else:
+                        final_df = existing_data
             else:
-                # If existing data is empty, fetch all available data
+                # File exists but empty (edge case)
                 updated_data = fetch_prices(ticker, period='5y')
                 updated_data.to_parquet(stock_prices_file)
-                print(f"Updated data for {ticker} saved to {stock_prices_file}")
-                last_update = pd.Timestamp.now().date()        
-
+                final_df = updated_data
         else:
             # If file does not exist, fetch all available data
             updated_data = fetch_prices(ticker, period='5y')
             updated_data.to_parquet(stock_prices_file)
-            print(f"Updated data for {ticker} saved to {stock_prices_file}")
-            last_update = pd.Timestamp.now().date()
+            print(f"Created data for {ticker}.")
+            final_df = updated_data 
 
-    # Log the update time
-    if last_update:
-        log_updates()
+        # --- Log to JSON ---
+        if not final_df.empty:
+            try:
+                last_close = final_df['close'].iloc[-1]
+                last_date_str = final_df.index.max().strftime('%Y-%m-%d')
+                save_ticker_update(ticker, last_date_str, last_close)
+            except Exception as e:
+                print(f"Error logging update for {ticker}: {e}")
+
 
 def update_stock_metadata(tickers_df: pd.DataFrame):
     """
@@ -226,15 +264,28 @@ def update_from_dashboard():
     """
     Wrapper function to update stock database from the dashboard.
     """
-    try:
-        with open(log_file, 'r') as f:
-            last_update = f.readlines()[-1].strip() # get last line
-            st.write(f"Last update:- {last_update}")
-    except FileNotFoundError:
-        st.write("- No updates logged yet.")
+    # Load JSON log to display status
+    log_data = load_update_log()
+
+    if log_data:
+        # Find the most recent 'updated_at' timestamp across all tickers
+        timestamps = [d['updated_at'] for d in log_data.values() if 'updated_at' in d]
+        if timestamps:
+            last_run = max(timestamps)
+            st.write(f"**Last Database Update:** {last_run}")
+        else:
+            st.write("Database initialized, waiting for updates.")
+            
+        # Expandable view of details
+        with st.expander("View Ticker Details"):
+            st.json(log_data)
+    else:
+        st.write("ℹ️ No update log found.")
+
     if st.button("Update All Tickers Data"):
         with st.spinner("Updating data... This may take a while."):           
             update_stock_database()
+        print("Database updated from dashboard successfully.")
         st.rerun()
 
 if __name__ == "__main__":

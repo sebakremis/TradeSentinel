@@ -9,6 +9,7 @@ all_tickers_file = DATA_DIR / 'all_tickers.csv'
 stocks_folder = DATA_DIR / 'stocks'
 metadata_file = stocks_folder / 'metadata.csv'
 PORTFOLIO_FILE = DATA_DIR / 'portfolios.json'
+UPDATE_LOG_FILE = stocks_folder / 'updates.json'
 
 # Portfolio defaults
 RISK_FREE_RATE = 0.0415 # 10-Year U.S. Treasury Note
