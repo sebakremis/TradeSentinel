@@ -36,15 +36,12 @@ import pandas as pd
 import json
 import streamlit as st
 import yfinance as yf
+from pathlib import Path
 from .config import (
     DATA_DIR, stocks_folder, all_tickers_file, 
     metadata_file, UPDATE_LOG_FILE
     )
 from .dashboard_core import load_tickers
-
-# Define the path to the all tickers CSV file
-filepath = all_tickers_file
-filename = filepath.name
 
 # --- Helper functions for Log ---
 def load_update_log() -> dict:
@@ -72,7 +69,9 @@ def save_ticker_update(ticker: str, last_date: str, last_price: float):
     
     with open(UPDATE_LOG_FILE, 'w') as f:
         json.dump(log_data, f, indent=4)
-   
+
+# --- Data fetching functions ---
+
 def fetch_prices(ticker: str, period: str = None, start: str = None, interval: str = '1d') -> pd.DataFrame:
     """
     Fetch historical data for a given ticker using yfinance.
@@ -143,18 +142,7 @@ def fetch_metadata(ticker: str) -> dict:
         print(f"Error extracting metadata for ticker {ticker}: {e}")
         return {}
 
-
-def log_updates():
-    """
-    Logs the last time the stock prices were updated.
-    Creates both the log file and the parent folder if they do not exist.
-    """
-    
-    stocks_folder.mkdir(parents=True, exist_ok=True)
-
-    with open(log_file, 'a') as f:
-        f.write(pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S') + '\n')
-    print(f"Update logged in {log_file}")
+# --- Database updates ---
 
 def update_stock_prices(tickers_df: pd.DataFrame):
     """
@@ -250,12 +238,12 @@ def update_stock_metadata(tickers_df: pd.DataFrame):
             metadata_df.to_csv(metadata_file, index=False)
         print(f"Metadata updated and saved to {metadata_file}")
 
-
-def update_stock_database():    
+def update_stock_database(file_path: Path = all_tickers_file):    
     """
     Updates both stock prices and metadata databases.
+    defaults to 'all_tickers_file' if no argument is provided.
     """
-    tickers_df = load_tickers(filepath)   
+    tickers_df = load_tickers(file_path)   
     stocks_folder.mkdir(parents=True, exist_ok=True)
     update_stock_prices(tickers_df)
     update_stock_metadata(tickers_df)
