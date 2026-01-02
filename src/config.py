@@ -15,7 +15,7 @@ UPDATE_LOG_FILE = stocks_folder / 'updates.json'
 RISK_FREE_RATE = 0.0415 # 10-Year U.S. Treasury Note
 BENCHMARK_INDEX = "SPY"
 ANNUAL_TRADING_DAYS = 252
-DEFAULT_LOOKBACK_PERIOD = "6mo"
+DEFAULT_LOOKBACK_PERIOD = "1mo"
 FIXED_INTERVAL = "1d"
 
 # Indicators

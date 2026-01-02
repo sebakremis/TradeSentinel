@@ -495,81 +495,38 @@ def display_guides_section():
         )
 
         st.markdown("---")
-        st.subheader("How to use the app:")
+        st.subheader("Example Use Case: Value + Momentum")
 
-        st.markdown("Main dashboard:")
+        st.markdown("**1. Market Screening (Main Page)**")
         st.markdown("""
-        1. **Select Period:** Choose a timeframe (e.g., '1y' or 'Custom') to define the analysis window.
-        2. **Filter Data:** Use the 🔎 **Filter Data** expander to narrow stocks by Sector, Market Cap, or Performance metrics.
-        3. **Analyze Risk/Return:** Use the 📈 **Scatter Plot** to visually identify 'Top Left' winners (High Return, Low Risk).
-        4. **Select & Follow:** Tick the boxes next to interesting stocks in the table.
-        5. **Add to Watchlist:** Click the button below the table to add selected tickers to your tracking database.
+        1. **Select Period:** `1mo` to identify stocks with recent short-term momentum.
+        2. **Filter #1:** `priceToBook` **Greater than** `0`.  
+           *(Removes distressed companies with negative equity).*
+        3. **Filter #2:** Add filter for `alpha` **Greater than** `10`.  
+           *(Isolates stocks outperforming the benchmark).*
+        4. **Select Candidates:** Sort table by `enToEbitda` (ascending) to find undervalued companies:
+            * Select top rows with `enToEbitda` < `15`.
+            * For rows with `None` (missing data), select if `priceToBook` < `2`.
+            * ✅ Select `SPY` for reference.
+        5. **Add to Watchlist:** Click the button below the table.
         """)
+        
         st.markdown("---")
-        st.markdown("Watchlist:")
+        st.markdown("**2. Selection (Watchlist Page)**")
         st.markdown("""
-        1. **Filter:** Use the 'Filter Data' section to isolate stocks by Sector or Metrics.
-        2. **Select:** Tick the boxes next to stocks you want to analyze as a group.
-        3. **Backtest:** Click **'Backtest Portfolio'** to simulate how an equally-weighted $100k investment in the selected stocks would have performed.
-        4. **Clean Up:** Use **'Unfollow selected tickers'** to remove stocks from your database.
+        6. **Select Period:** Switch to `2y` to view medium-term consistency.
+        7. **Filter by Risk:** Sort by `sharpeRatio` (descending).
+        8. **Refine:** Unfollow `SPY` and any ticker with a **lower Sharpe Ratio** than `SPY`.
+        9. **Backtest:** Select the remaining "Winners" and click **Backtest Portfolio**.
         """)
+        
         st.markdown("---")
-        st.markdown("Backtest:")
-        st.markdown("**1. Define Portfolio (Sidebar)**")
+        st.markdown("**3. Validation (Backtest Page)**")
         st.markdown("""
-        * **Ticker:** The stock symbol (e.g., AAPL, TSLA).
-        * **Quantity:** The number of shares held (must be a whole number).
-        * *Note: You can edit the table directly.*
+        10. **Select Period:** `5y` for long-term stress testing.
+        11. **Analyze:** Check if the portfolio survives the `Max Drawdown` of major market crashes compared to the index.
         """)
         
-        st.markdown("**2. Select Period**")
-        st.markdown("Choose a preset lookback (e.g., '1y') or define a specific **Custom Date** range to see how the portfolio performed during specific market events (e.g., the 2020 crash).")
-
-        st.markdown("---")
-        st.subheader("Understanding the Metrics")
-        
-        st.markdown("**PnL (Profit & Loss)**")
-        st.info("The difference between the value of the portfolio at the **Start Date** vs. the **End Date**.")
-        
-        st.markdown("**Sector Allocation**")
-        st.info("Breakdown of your total exposure by industry. Helps identify if you are over-concentrated in one sector (e.g., Tech).")
-        
-        st.markdown("**Advanced Metrics**")
-        st.info("""
-        * **Volatility:** How violently the portfolio value fluctuates.
-        * **Max Drawdown:** The largest percentage drop the portfolio experienced during the selected period.
-        """)
-        st.markdown("---")
-        st.markdown("### Portfolios")
-        st.markdown("**1. Manage Portfolios (Sidebar)**")
-        st.markdown("""
-        * **View Existing:** Select a saved portfolio to analyze its performance.
-        * **Create:** Start a new portfolio from scratch.
-        * **Edit/Delete:** Modify holdings or remove portfolios entirely using the buttons in the sidebar.
-        """)
-        
-        st.markdown("**2. Input Data (Editor)**")
-        st.markdown("""
-        When creating or editing, ensure you provide accurate details:
-        * **Purchase Date:** The chart tracks value starting from this specific date for each asset.
-        * **Unit Cost ($):** The price you paid per share. Used to calculate your *Cost Basis* and *Total Return*.
-        """)
-
-        st.markdown("---")
-        st.subheader("Understanding the Metrics")
-        
-        st.markdown("**Real-World Tracking**")
-        st.info("Unlike the Backtest page (which assumes you bought everything on day 1), this page respects your **Purchase Dates**. The chart shows your portfolio value growing as you add assets over time.")
-        
-        st.markdown("**PnL (Unrealized)**")
-        st.info("""
-        * **Total Invested Cost:** The actual cash spent (Quantity x Unit Cost).
-        * **Unrealized PnL:** How much profit/loss you would have if you sold everything today (Current Value - Total Cost).
-        """)
-        
-        st.markdown("**Sector Allocation**")
-        st.info("Automatically groups your holdings by sector (e.g., Technology, Healthcare) based on database metadata to visualize diversification.")
-
 def display_credits():
     """Displays the credits section."""
     st.markdown("---")

@@ -68,8 +68,8 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
     for i in range(st.session_state[f'{PAGE_KEY}_filter_count']):
         sorted_df = dynamic_filtering(sorted_df, DISPLAY_COLUMNS, i, key_prefix=PAGE_KEY)
 
-    # --- Risk-Return Plot ---
-    display_risk_return_plot(sorted_df)
+    # --- Risk-Return Plot (disabled in main page for cleanier UI) ---
+    # display_risk_return_plot(sorted_df)
 
     # Show active row count 
     if len(sorted_df) != len(final_df):
