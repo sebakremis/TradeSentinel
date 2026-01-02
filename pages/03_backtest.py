@@ -8,9 +8,10 @@ from src.dashboard_display import (
     display_per_ticker_pnl, display_portfolio_summary,
     display_pnl_over_time, display_sector_allocation,
     display_advanced_metrics, display_export_table, display_credits,
-    display_guides_section
+    display_guides_section, display_period_selection, display_guides_section,
+    display_info_section
 )
-
+from src.config import DEFAULT_LOOKBACK_PERIOD, FIXED_INTERVAL
 
 def setup_sidebar_controls():
     """Sets up the sidebar controls for portfolio definition and parameters, including validation."""
@@ -54,79 +55,8 @@ def setup_sidebar_controls():
         key="portfolio_editor"
     )
 
-    # --- Fixed Parameters and Period Selection ---
-    FIXED_INTERVAL = "1d"
-    AVAILABLE_PERIODS = ["3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
-
-    # Get the period from the main dashboard's session state (initial/default)
-    initial_period_arg = '2y'
-    
-    # Determine which value should be selected by default in the selectbox
-    if '|' in initial_period_arg:
-        default_select_value = "Custom Date"
-    elif initial_period_arg in AVAILABLE_PERIODS:
-        default_select_value = initial_period_arg
-    else:
-        default_select_value = "1y" # Final fallback
-
-    # st.sidebar.subheader("Lookback Period")
-    
-    # Selectbox allows overriding the period passed from the main dashboard
-    selected_override = st.sidebar.selectbox(
-        "Lookback period", 
-        options=AVAILABLE_PERIODS, 
-        index=AVAILABLE_PERIODS.index(default_select_value),
-        key='portfolio_period_override_select'
-    )
-
-    period_input = selected_override # Start with the selected value
-    
-    # Handle Custom Date Selection
-    if selected_override == "Custom Date":
-        today = pd.Timestamp.now().normalize().date()
-        
-        # Initialize default dates for the custom picker based on initial_period_arg
-        default_end_date = today
-        default_start_date = today - pd.DateOffset(years=1)
-        
-        if '|' in initial_period_arg:
-            try:
-                # Try to use the date range passed from main.py as the default
-                default_start_str, default_end_str = initial_period_arg.split('|')
-                default_start_date = pd.to_datetime(default_start_str).date()
-                default_end_date = pd.to_datetime(default_end_str).date()
-            except Exception:
-                # If parsing fails, stick to 1-year default
-                pass
-
-        custom_start_date = st.sidebar.date_input(
-            "Start Date", 
-            value=default_start_date,
-            max_value=default_end_date,
-            key='custom_start_date_sim'
-        )
-        
-        custom_end_date = st.sidebar.date_input(
-            "End Date", 
-            value=default_end_date,
-            min_value=custom_start_date, 
-            max_value=today,
-            key='custom_end_date_sim'
-        )
-
-        # Set the period_input to the custom date string format
-        period_input = f"{custom_start_date}|{custom_end_date}"
-
-    # Display the final period argument being used
-    if '|' in period_input:
-        start_date, end_date = period_input.split('|')
-        display_period = f"Custom: {start_date} to {end_date}"
-    else:
-        display_period = period_input
-
-    
-    st.sidebar.markdown(f"**Fixed Interval:** `{FIXED_INTERVAL}`")
-    interval_input = FIXED_INTERVAL
+    # Period selection
+    current_fetch_kwargs = display_period_selection()
        
     # VALIDATION & REFRESH LOGIC
     if st.sidebar.button("Refresh Data", type="primary"):
@@ -166,16 +96,15 @@ def setup_sidebar_controls():
         
         st.session_state.active_tickers = tickers_input
         st.session_state.active_quantities = dict(zip(tickers_input, quantities_clean))
-        st.session_state.active_period = period_input
+
+        # Save the fetch kwargs
+        st.session_state.active_fetch_kwargs = current_fetch_kwargs
         st.session_state.active_interval = FIXED_INTERVAL
         
         # Save portfolio for persistence (as list of lists/tuples for simplicity)
         st.session_state['portfolio'] = clean_df[['Ticker', 'Quantity']].values.tolist()
         
         st.rerun()
-    
-    # Guides on sidebar
-    display_guides_section()
 
 # --- Main App Execution ---
 
@@ -193,20 +122,13 @@ def main():
     # Retrieve parameters
     tickers = st.session_state.active_tickers
     quantities = st.session_state.active_quantities
-    period_arg = st.session_state.active_period
-    interval = st.session_state.active_interval
+    fetch_kwargs = st.session_state.get('active_fetch_kwargs', {'period': DEFAULT_LOOKBACK_PERIOD})
 
-    # Configure fetch arguments
-    fetch_kwargs = {'interval': interval}
-    display_period_label = period_arg
-
-    if '|' in period_arg:
-        start_date, end_date = period_arg.split('|')
-        fetch_kwargs['start'] = start_date
-        fetch_kwargs['end'] = end_date
-        display_period_label = f"Custom: {start_date} to {end_date}"
+    # Label for the spinner
+    if fetch_kwargs.get('period'):
+        display_period_label = fetch_kwargs['period']
     else:
-        fetch_kwargs['period'] = period_arg
+        display_period_label = f"Custom: {fetch_kwargs.get('start')} to {fetch_kwargs.get('end')}"
 
     # Load Data
     with st.spinner(f"Loading data for {len(tickers)} tickers ({display_period_label})..."):
@@ -257,6 +179,10 @@ def main():
     st.markdown("---")
 
     display_export_table(combined_df)
+
+    # Guides section in sidebar
+    display_info_section(prices_df.reset_index())
+    display_guides_section()
 
     # Credits and Navigation
     display_credits()

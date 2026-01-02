@@ -179,10 +179,8 @@ def main():
         # Render the display sections if data is present        
         _render_summary_table_and_portfolio(watchlist_snapshot, watchlist_daily) # Pass watchlist_daily to the summary table function
     
-    # Info section in sidebar
+    # Info section and guides in sidebar
     display_info_section(watchlist_daily)
-
-    # Guides section in sidebar
     display_guides_section()
         
     # Credits & Navigation

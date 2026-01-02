@@ -25,7 +25,10 @@ import altair as alt
 import plotly.express as px
 import plotly.graph_objects as go
 import datetime as dt
-from src.config import RISK_FREE_RATE, EMA_PERIOD, BENCHMARK_INDEX
+from src.config import (
+    RISK_FREE_RATE, EMA_PERIOD, BENCHMARK_INDEX,
+    DEFAULT_LOOKBACK_PERIOD, FIXED_INTERVAL
+)
 from src.analytics import (
     calculate_var, calculate_cvar, sharpe_ratio, sortino_ratio,
     calmar_ratio, max_drawdown, correlation_matrix, win_loss_stats
@@ -358,45 +361,70 @@ def highlight_change(value):
         return ''
 
 def display_period_selection()-> dict:
-    """Displays the period selection UI and returns the selected period argument."""
-    # Define selectable periods
+    """
+    Displays the period selection UI, syncs it with session_state.
+    Returns the fetch arguments (kwargs).
+    """
+    # Define default and selectable periods
+    
     AVAILABLE_PERIODS = ["3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
+    
+    # Initialize global default if not present
+    if 'active_period' not in st.session_state:
+        st.session_state['active_period'] = DEFAULT_LOOKBACK_PERIOD
+    
+    # Determine index for selectbox based on current session state
+    current_selection = st.session_state['active_period']
+    if current_selection not in AVAILABLE_PERIODS:
+        current_selection = DEFAULT_LOOKBACK_PERIOD
+
+    default_index = AVAILABLE_PERIODS.index(current_selection)
 
     with st.sidebar:
         st.header("📅 Configuration")
         
-        # Period Selection
+        # Widget: Writes to a temporary key
         selected_period = st.selectbox(
             "Lookback Period", 
             options=AVAILABLE_PERIODS, 
-            index=AVAILABLE_PERIODS.index("6mo"), # Default period
-            key='data_period_select'
+            index=default_index, 
+            key='_period_select_widget' # Internal key for the widget
         )
+
+        # Sync Widget -> Session State
+        if selected_period != st.session_state['active_period']:
+            st.session_state['active_period'] = selected_period
+
         # Initialize the dictionary to hold fetch arguments
         fetch_kwargs = {}
         
         if selected_period == "Custom Date":
             today = pd.Timestamp.now().normalize()
-            default_start_date = today - pd.DateOffset(years=2)
+            default_start = today - pd.DateOffset(years=1)
             
             col1, col2 = st.columns(2)
             with col1:
                 # Custom Start Date Selection
                 start_date = st.date_input(
-                    "Select **Start Date**", 
-                    value=default_start_date,
+                    "Start Date", 
+                    value=st.session_state.get('custom_start', default_start),
                     max_value=today,
-                    key='custom_start'
+                    key='custom_start_widget'
                 )        
             with col2:
                 # Custom End Date Selection (Default to Today)
                 end_date = st.date_input(
-                    "Select **End Date**", 
-                    value=today,
+                    "End Date", 
+                    value=st.session_state.get('custom_end', today),
                     min_value=start_date, # End date cannot be before start date
                     max_value=today,
-                    key='custom_end'
+                    key='custom_end_widget'
                 )
+
+            # Save custom dates to Session State
+            st.session_state['custom_start'] = start_date
+            st.session_state['custom_end'] = end_date
+
             # Logic for Custom Date
             fetch_kwargs['start'] = str(start_date)
             fetch_kwargs['end'] = str(end_date)
@@ -448,6 +476,7 @@ def display_info_section(df_daily: pd.DataFrame):
         st.write(f"**Annualized Risk Free rate:** {RISK_FREE_RATE*100:.2f}% (assumed risk-free rate for Sharpe Ratio calculation)")
         st.write(f"**EMA period:** {EMA_PERIOD}")
         st.write(f"**Benckmark ticker:** {BENCHMARK_INDEX}")
+        st.write(f"**Fixed Interval:** {FIXED_INTERVAL}")
 
 def display_guides_section():
     """

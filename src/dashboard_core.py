@@ -34,7 +34,10 @@ import pandas as pd
 import duckdb
 from pathlib import Path
 import yfinance as yf
-from src.config import followed_tickers_file, DATA_DIR, stocks_folder, BENCHMARK_INDEX, all_tickers_file
+from src.config import (
+    followed_tickers_file, DATA_DIR, stocks_folder, 
+    BENCHMARK_INDEX, all_tickers_file, FIXED_INTERVAL
+)
 from src.analytics import calculate_annualized_metrics, distance_from_ema, project_price_range
 
 # Dashboard manager
@@ -56,7 +59,6 @@ def load_and_process_data(fetch_kwargs):
     # 2. Fetch Prices
     df_daily = get_stock_data(
         all_tickers,
-        interval="1d",
         **fetch_kwargs
     )
 
@@ -94,7 +96,7 @@ def load_and_process_data(fetch_kwargs):
     return final_df_unformatted, df_daily, all_tickers
 
 
-def get_stock_data(tickers: list, interval: str, period: str = None, start: str = None, end: str = None) -> pd.DataFrame:
+def get_stock_data(tickers: list, interval: str = FIXED_INTERVAL, period: str = None, start: str = None, end: str = None) -> pd.DataFrame:
     """
     Fetches stock data directly from database into dashboard.
     """

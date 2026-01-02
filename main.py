@@ -7,7 +7,6 @@ from src.dashboard_display import (
     display_credits, display_guides_section, display_info_section, 
     display_period_selection, display_risk_return_plot
     )
-from src.config import EMA_PERIOD
 from src.etl import update_from_dashboard
 
 # ----------------------------------------------------------------------
@@ -15,8 +14,7 @@ from src.etl import update_from_dashboard
 # ----------------------------------------------------------------------
 
 # Define columns for this dashboard
-dist_EMA_column_name = f'dist_EMA_{EMA_PERIOD}'
-DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'marketCap', 'beta', 'alpha', 'close', dist_EMA_column_name, 'enterpriseToEbitda', 'priceToBook', 'avgReturn', 'annualizedVol', 'sharpeRatio']
+DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'marketCap', 'beta', 'alpha', 'close', 'enterpriseToEbitda', 'priceToBook', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -41,7 +39,7 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     df = df[DISPLAY_COLUMNS]
 
     # Apply rounding
-    for col in ['close', dist_EMA_column_name, 'startPrice', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
+    for col in ['close', 'startPrice', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
         if col in df.columns:
             df[col] = df[col].round(2)           
     return df
@@ -94,7 +92,6 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "beta": st.column_config.NumberColumn("beta", help="Calculated beta for the lookback period", format="%.2f", width="small"),
             "alpha": st.column_config.NumberColumn("alpha", help="Calculated annualized alpha for the lookback period", format="%.2f%%", width="small"),
             "close": st.column_config.NumberColumn("price", help="Last Close price of the lookback period", format="$%.2f", width="small"),
-            dist_EMA_column_name: st.column_config.NumberColumn(f"dist EMA {EMA_PERIOD}", help="Distance to the Exponential Moving Average (%)", format="%.2f%%", width="small"),
             "priceToBook": st.column_config.NumberColumn("priceToBook", help="Price to Book ratio", format="%.2f", width="small"),
             "enterpriseToEbitda": st.column_config.NumberColumn("enToEbitda", help="Enterprise value to EBITDA ratio", format="%.2f", width="small"),                     
             "avgReturn": st.column_config.NumberColumn("AAR%", help="Annualized Average return", format="%.2f%%", width="small"),
@@ -160,10 +157,8 @@ def main():
     st.subheader("Update Database")
     update_from_dashboard()  
 
-    # Info section in sidebar
+    # Info section and Guides sidebar
     display_info_section(df_daily)
-
-    # Guides section in sidebar
     display_guides_section()
 
     # Credits
