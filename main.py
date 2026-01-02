@@ -123,7 +123,8 @@ def main():
 
     # Check if reloading is needed
     should_reload = (
-    'df_daily' not in st.session_state or 
+    'df_daily' not in st.session_state or
+    'final_df_unformatted' not in st.session_state or 
     st.session_state.get('last_fetch_kwargs') != current_fetch_kwargs
     )
    
@@ -131,20 +132,19 @@ def main():
     if should_reload:
         with st.spinner('Loading Universe Data...'):
             final_df_unformatted, df_daily, all_tickers = load_and_process_data(current_fetch_kwargs)
-
-            #Format final_df
-            final_df = _format_final_df(final_df_unformatted)
             
             # Store in Session State
-            st.session_state['final_df'] = final_df
+            st.session_state['final_df_unformatted'] = final_df_unformatted
             st.session_state['df_daily'] = df_daily
             st.session_state['all_tickers'] = all_tickers
             st.session_state['last_fetch_kwargs'] = current_fetch_kwargs
     else:
         # Retrieve from Session State
-        final_df = st.session_state['final_df']
+        final_df_unformatted = st.session_state['final_df_unformatted']
         df_daily = st.session_state['df_daily']
         all_tickers = st.session_state['all_tickers']
+    
+    final_df = _format_final_df(final_df_unformatted)
   
     if not final_df.empty:
         # Render the summary table if data is present

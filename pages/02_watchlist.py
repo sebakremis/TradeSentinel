@@ -144,7 +144,8 @@ def main():
 
     # Check if reloading is needed
     should_reload = (
-    'df_daily' not in st.session_state or 
+    'df_daily' not in st.session_state or
+    'final_df_unformatted' not in st.session_state or 
     st.session_state.get('last_fetch_kwargs') != current_fetch_kwargs
     )
       
@@ -153,19 +154,20 @@ def main():
         # Load the FULL universe 
         with st.spinner('Loading Data...'):
             final_df_unformatted, df_daily, all_tickers = load_and_process_data(current_fetch_kwargs)
-
-            #Format final_df
-            final_df = _format_final_df(final_df_unformatted)
             
             # save to session state
-            st.session_state['final_df'] = final_df
+            st.session_state['final_df_unformatted'] = final_df_unformatted
             st.session_state['df_daily'] = df_daily
             st.session_state['all_tickers'] = all_tickers
             st.session_state['last_fetch_kwargs'] = current_fetch_kwargs
             
     else:
-        final_df = st.session_state['final_df']
+        # Retrieve raw data
+        final_df_unformatted = st.session_state['final_df_unformatted']
         df_daily = st.session_state['df_daily']
+    
+    # Apply formatting locally
+    final_df = _format_final_df(final_df_unformatted)
     
     # Load the DF for the followed tickers
     followed_tickers_df = load_tickers(followed_tickers_file)
