@@ -367,7 +367,7 @@ def display_period_selection()-> dict:
     """
     # Define default and selectable periods
     
-    AVAILABLE_PERIODS = ["3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
+    AVAILABLE_PERIODS = ["1mo", "3mo", "6mo", "ytd", "1y", "2y", "5y", "Custom Date"]
     
     # Initialize global default if not present
     if 'active_period' not in st.session_state:

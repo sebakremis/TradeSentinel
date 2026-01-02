@@ -14,7 +14,7 @@ from src.etl import update_from_dashboard
 # ----------------------------------------------------------------------
 
 # Define columns for this dashboard
-DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'marketCap', 'beta', 'alpha', 'close', 'enterpriseToEbitda', 'priceToBook', 'avgReturn', 'annualizedVol', 'sharpeRatio']
+DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'marketCap', 'beta', 'alpha', 'close', 'enterpriseToEbitda', 'priceToBook', 'totalReturn', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -39,7 +39,7 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     df = df[DISPLAY_COLUMNS]
 
     # Apply rounding
-    for col in ['close', 'startPrice', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
+    for col in ['close', 'startPrice', 'divPayout', 'avgReturn', 'annualizedVol', 'sharpeRatio', 'totalReturn']:
         if col in df.columns:
             df[col] = df[col].round(2)           
     return df
@@ -55,7 +55,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
         return
 
     # sort data
-    sorted_df = final_df.sort_values(by='alpha', ascending=False)
+    sorted_df = final_df.sort_values(by='Ticker', ascending=True)
 
     # Apply dynamic filtering
     PAGE_KEY = "main" # Unique ID for the main page
@@ -94,6 +94,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "close": st.column_config.NumberColumn("price", help="Last Close price of the lookback period", format="$%.2f", width="small"),
             "priceToBook": st.column_config.NumberColumn("priceToBook", help="Price to Book ratio", format="%.2f", width="small"),
             "enterpriseToEbitda": st.column_config.NumberColumn("enToEbitda", help="Enterprise value to EBITDA ratio", format="%.2f", width="small"),                     
+            "totalReturn": st.column_config.NumberColumn("totalReturn", help="Total Return", format="%.2f%%", width="small"),
             "avgReturn": st.column_config.NumberColumn("AAR%", help="Annualized Average return", format="%.2f%%", width="small"),
             "annualizedVol": st.column_config.NumberColumn("Vol%", help="Annualized Average volatility", format="%.2f%%", width="small"),
             "sharpeRatio": st.column_config.NumberColumn("sharpe", format="%.2f%%", width="small")

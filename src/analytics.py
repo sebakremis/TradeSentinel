@@ -483,6 +483,7 @@ def calculate_annualized_metrics(df: pd.DataFrame, benchmark_rets: pd.Series = N
         
         # Initialize default NaN results
         metrics = {
+            'totalReturn': np.nan,
             'avgReturn': np.nan, 
             'annualizedVol': np.nan, 
             'sharpeRatio': np.nan,
@@ -490,7 +491,7 @@ def calculate_annualized_metrics(df: pd.DataFrame, benchmark_rets: pd.Series = N
             'alpha': np.nan
         }
 
-        if N < 5: 
+        if N < 6: 
             return pd.Series(metrics)
 
         # --- A. Standard Metrics ---
@@ -503,6 +504,7 @@ def calculate_annualized_metrics(df: pd.DataFrame, benchmark_rets: pd.Series = N
         
         sharpe = (annualized_return - RISK_FREE_RATE) / annualized_vol if annualized_vol != 0 else np.nan
 
+        metrics['totalReturn'] = total_return * 100
         metrics['avgReturn'] = annualized_return * 100
         metrics['annualizedVol'] = annualized_vol * 100
         metrics['sharpeRatio'] = sharpe

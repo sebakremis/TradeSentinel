@@ -158,7 +158,7 @@ def calculate_all_indicators(df_daily, bench_series) -> pd.DataFrame:
     # Merge metrics back
     df_daily = pd.merge(
         df_daily, 
-        annual_metrics_df[['Ticker', 'avgReturn', 'annualizedVol', 'sharpeRatio', 'beta', 'alpha']],
+        annual_metrics_df[['Ticker', 'totalReturn', 'avgReturn', 'annualizedVol', 'sharpeRatio', 'beta', 'alpha']],
         on='Ticker',
         how='left'
     )  
