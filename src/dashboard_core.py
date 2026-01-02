@@ -168,6 +168,7 @@ def calculate_all_indicators(df_daily, bench_series) -> pd.DataFrame:
 def dynamic_filtering(sorted_df: pd.DataFrame, DISPLAY_COLUMNS: list, index: int, key_prefix: str) -> pd.DataFrame:
     excluded_columns = ['Ticker', 'shortName', 'close', 'startPrice', 'divPayout', 'forecastLow', 'forecastHigh', '52WeekHigh', '52WeekLow']
     initial_df = sorted_df
+
     # 1. Add a placeholder to the options
     raw_options = [col for col in DISPLAY_COLUMNS if col not in excluded_columns]
     filter_options = ["--- Select Column ---"] + raw_options
@@ -218,33 +219,35 @@ def dynamic_filtering(sorted_df: pd.DataFrame, DISPLAY_COLUMNS: list, index: int
                                 sorted_df = sorted_df[sorted_df[filter_column].astype(str).str.contains(search_text, case=False, na=False)]
 
     # --- Button Visibility Logic ---
-    if sorted_df.shape != initial_df.shape:
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Add another filter", key=f"{key_prefix}_btn_add_{index}"):
-                st.session_state[count_key] += 1
-                st.rerun()
-        with col2:
-            if st.button("Remove filters", key=f"{key_prefix}_btn_rem_{index}"):
-                st.session_state[count_key] = 1
-                # Clear session state keys
-                keys_to_clear = [k for k in st.session_state.keys() if k.startswith(f"{key_prefix}_") and k != count_key]
-                for k in keys_to_clear:
-                    del st.session_state[k]
-                st.rerun()
+
+    # Check if the current index corresponds to the last filter in the stack
+    if index + 1 == st.session_state[count_key]:
+        # Show buttons if the current filter is active or if there are multiple filters
+
+        if sorted_df.shape != initial_df.shape or st.session_state[count_key] > 1:
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Add another filter", key=f"{key_prefix}_btn_add_{index}"):
+                    st.session_state[count_key] += 1
+                    st.rerun()
+            with col2:
+                if st.button("Remove filters", key=f"{key_prefix}_btn_rem_{index}"):
+                    st.session_state[count_key] = 1
+                    # Clear session state keys
+                    keys_to_clear = [k for k in st.session_state.keys() if k.startswith(f"{key_prefix}_") and k != count_key]
+                    for k in keys_to_clear:
+                        del st.session_state[k]
+                    st.rerun()
     return sorted_df
 
-# Tickers manager
-
-# Path to the followed tickers CSV file
-filepath = followed_tickers_file
+# --- Tickers management ---
 
 # Define a custom exception for better error handling
 class TickerValidationError(Exception):
     """Custom exception for invalid or missing ticker data."""
     pass
 
-def load_tickers(tickers_path: Path = filepath) -> pd.DataFrame:
+def load_tickers(tickers_path: Path = followed_tickers_file) -> pd.DataFrame:
     """
     Loads tickers from a single CSV file.
     Loads followed tickers by default.
@@ -268,24 +271,24 @@ def load_tickers(tickers_path: Path = filepath) -> pd.DataFrame:
         
     return tickers_df
 
-def save_followed_tickers(tickers: pd.DataFrame) -> None:
+def save_followed_tickers(tickers: pd.DataFrame, tickers_path: Path = followed_tickers_file) -> None:
     """
     Save tickers to CSV.
     """
     try:
-        filepath.parent.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
-        tickers.to_csv(filepath, index=False)
+        tickers_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
+        tickers.to_csv(tickers_path, index=False)
     except Exception as e:
         st.error(f"❌ Error saving tickers: {e}")
         return
 
-def get_followed_tickers():
+def get_followed_tickers(tickers_path: Path = followed_tickers_file):
     """
     Reads the CSV file for Followed Tickers.
     Returns the DataFrame.
     """
     try:
-        followed_tickers_df = pd.read_csv(filepath)
+        followed_tickers_df = pd.read_csv(tickers_path)
     except FileNotFoundError:
         followed_tickers_df = pd.DataFrame(columns=['Ticker'])
 

@@ -400,7 +400,7 @@ def display_period_selection()-> dict:
         
         if selected_period == "Custom Date":
             today = pd.Timestamp.now().normalize()
-            default_start = today - pd.DateOffset(years=1)
+            default_start = today - pd.DateOffset(months=1)
             
             col1, col2 = st.columns(2)
             with col1:
