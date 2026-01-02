@@ -294,6 +294,40 @@ def get_followed_tickers(tickers_path: Path = followed_tickers_file):
 
     return followed_tickers_df
 
+def batch_add_tickers(tickers: list, validate: bool = True) -> None:
+    """
+    Adds multiple tickers efficiently. 
+    Skips validation if validate=False (useful when adding from internal DB).
+    """
+    tickers_df = get_followed_tickers()
+    existing_tickers = set(tickers_df['Ticker'].values)
+    new_tickers_list = []
+
+    for ticker in tickers:
+        # Skip if already followed
+        if ticker in existing_tickers:
+            continue
+        
+        # Validation Logic (Slow, use only for external input)
+        if validate:
+            try:
+                yf_ticker = yf.Ticker(ticker)
+                # Quickest check if ticker exists on YF
+                if not yf_ticker.info:
+                    print(f"Skipping invalid ticker: {ticker}")
+                    continue
+            except Exception:
+                continue
+
+        new_tickers_list.append(ticker)
+    
+    # Save only once
+    if new_tickers_list:
+        new_rows = pd.DataFrame({'Ticker': new_tickers_list})
+        expanded_df = pd.concat([tickers_df, new_rows], ignore_index=True)
+        save_followed_tickers(expanded_df)
+
+
 def add_ticker(ticker: str) -> None:
     """Add a ticker after fetching and validating its sector."""
     # Get the DataFrame from session state
@@ -351,28 +385,26 @@ def confirm_unfollow_dialog(tickers_to_remove:list):
             st.rerun()  # Refresh the app to reflect changes
 
 @st.dialog("Adding tickers to watchlist")
-def confirm_follow_dialog(tickers_to_add:list):
+def confirm_follow_dialog(tickers_to_add: list):
     """
     Displays a confirmation dialog before adding tickers to follow.
+    Uses batch_add_tickers with validate=False for instant performance.
     """
     st.write(f"Adding tickers: **{', '.join(tickers_to_add)}**")
     col1, col2, col3 = st.columns(3)
+    
+    # Since tickers come from our valid internal DB, we skip the slow yfinance validation
+    
     with col1:
         if st.button("Confirm & switch to watchlist page"):
-            for ticker in tickers_to_add:
-                try:
-                    add_ticker(ticker)
-                except TickerValidationError as e:
-                    st.error(f"❌ {e}")
+            batch_add_tickers(tickers_to_add, validate=False)
             st.switch_page("pages/02_watchlist.py")
+            
     with col2:
         if st.button("Confirm & stay on main page"):
-            for ticker in tickers_to_add:
-                try:
-                    add_ticker(ticker)
-                except TickerValidationError as e:
-                    st.error(f"❌ {e}")
+            batch_add_tickers(tickers_to_add, validate=False)
             st.rerun()  # Refresh the app to reflect changes
+            
     with col3:
         if st.button("Cancel"):
             st.rerun()
