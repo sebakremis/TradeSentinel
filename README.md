@@ -58,7 +58,7 @@ Allows the creation, management, and detailed analysis of custom investment port
   <br><br>
   <h3>Watchlist Page</h3>
 
-  <p><i>Dynamic filters and plot chart</i></p>
+  <p><i>Dynamic filters and risk-return plot with interactive tooltips</i></p>
   <img src="docs/images/watchlist_page.png" alt="Watchlist - Dynamic filters and plot chart" width="90%">
 
   <br><br>
