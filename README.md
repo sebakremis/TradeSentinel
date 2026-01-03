@@ -52,13 +52,14 @@ Allows the creation, management, and detailed analysis of custom investment port
 
   <h3>Market View Page (main)</h3>
 
-  <p><i>Dynamic filters and plot chart</i></p>
-  <img src="docs/images/main_page_dynamic_filters.png" alt="Market View - Dynamic filters" width="90%">
+  <p><i>Tickers Universe</i></p>
+  <img src="docs/images/main_page_table_and_update_database_button.png" alt="Market View - Table" width="90%">
 
   <br><br>
+  <h3>Watchlist Page</h3>
 
-  <p><i>Table and button to update database</i></p>
-  <img src="docs/images/main_page_table_and_update_database_button.png" alt="Market View - Table" width="90%">
+  <p><i>Dynamic filters and plot chart</i></p>
+  <img src="docs/images/watchlist_page.png" alt="Watchlist - Dynamic filters and plot chart" width="90%">
 
   <br><br>
 
