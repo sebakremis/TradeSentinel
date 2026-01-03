@@ -53,7 +53,7 @@ Allows the creation, management, and detailed analysis of custom investment port
   <h3>Market View Page (main)</h3>
 
   <p><i>Tickers Universe</i></p>
-  <img src="docs/images/main_page_table_and_update_database_button.png" alt="Market View - Table" width="90%">
+  <img src="docs/images/main_page.png" alt="Market View - Tickers Universe" width="90%">
 
   <br><br>
   <h3>Watchlist Page</h3>

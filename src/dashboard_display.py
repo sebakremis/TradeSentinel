@@ -470,15 +470,15 @@ def display_info_section(df_daily: pd.DataFrame):
         first_date, last_date = None, None
 
     with st.sidebar.expander("ℹ️ Info", expanded=True):
-        st.write("* Trading Interval:")
+        st.write("* Trading Period:")
         st.write(f"**Fixed Interval:** {FIXED_INTERVAL}")
         st.write(f"**Trading Days:** {num_days}")        
         st.write(f"**First Price Date:** {first_date.strftime('%Y-%m-%d') if first_date else 'N/A'}")
         st.write(f"**Last Price Date:** {last_date.strftime('%Y-%m-%d') if last_date else 'N/A'}")
         st.write("* Parameters:")
-        st.write(f"**Annualized Risk Free rate:** {RISK_FREE_RATE*100:.2f}%")       
+        st.write(f"**Annualized Risk Free Rate:** {RISK_FREE_RATE*100:.2f}%")       
         st.write(f"**Benckmark ticker:** {BENCHMARK_INDEX}")
-        st.write(f"**Forecast Horizon (Monte Carlo):** {FORECAST_HORIZON} months")        
+        st.write(f"**Forecast Horizon:** {FORECAST_HORIZON} months")        
 
 def display_guides_section():
     """
