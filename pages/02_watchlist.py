@@ -11,15 +11,14 @@ from src.dashboard_display import (
     display_credits, display_guides_section, display_info_section,
     display_period_selection, display_risk_return_plot
 )
-from src.config import EMA_PERIOD, followed_tickers_file
+from src.config import followed_tickers_file
 
 # ----------------------------------------------------------------------
 # --- Data Helper Functions ---
 # ----------------------------------------------------------------------
 
 # Define columns for this dashboard
-dist_EMA_column_name = f'dist_EMA_{EMA_PERIOD}'
-DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'beta', 'alpha', 'close', dist_EMA_column_name, 'forecastLow', 'forecastHigh', 'totalReturn', 'avgReturn', 'annualizedVol', 'sharpeRatio']
+DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'beta', 'alpha', 'close', 'forecastLow', 'forecastHigh', 'totalReturn', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -44,7 +43,7 @@ def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     df = df[DISPLAY_COLUMNS]
 
     # Apply rounding
-    for col in ['close', dist_EMA_column_name, 'beta', 'alpha', 'startPrice', 'forecastLow', 'forecastHigh', 'divPayout', 'totalReturn', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
+    for col in ['close', 'beta', 'alpha', 'startPrice', 'forecastLow', 'forecastHigh', 'divPayout', 'totalReturn', 'avgReturn', 'annualizedVol', 'sharpeRatio']:
         if col in df.columns:
             df[col] = df[col].round(2)
             
@@ -96,8 +95,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "sector": st.column_config.TextColumn("sector"),
             "beta": st.column_config.NumberColumn("beta", help="Calculated beta for the lookback period", format="%.2f", width="small"),
             "alpha": st.column_config.NumberColumn("alpha", help="Calculated annualized alpha for the lookback period", format="%.2f%%", width="small"),
-            "close": st.column_config.NumberColumn("price", help="Last Close price of the lookback period", format="$%.2f", width="small"),
-            dist_EMA_column_name: st.column_config.NumberColumn(f"dist EMA {EMA_PERIOD}", help="Distance to the Exponential Moving Average (%)", format="%.2f%%", width="small"),        
+            "close": st.column_config.NumberColumn("price", help="Last Close price of the lookback period", format="$%.2f", width="small"),      
             "forecastLow": st.column_config.NumberColumn("forecastLow", format="$%.2f", width="small"),
             "forecastHigh": st.column_config.NumberColumn("forecastHigh", format="$%.2f",width="small"),
             "totalReturn": st.column_config.NumberColumn("totalReturn", help="Total Return", format="%.2f%%", width="small"),                       

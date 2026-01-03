@@ -23,5 +23,5 @@ EMA_PERIOD = 20
 CONFIDENCE_LEVEL = 0.95 # used for calculating VAR and for the Monte Carlo Simulation
 
 # Forecasting (Monte Carlo)
-FORECAST_HORIZON = 1 # 1 month
+FORECAST_HORIZON = 3 # 3 months
 N_SIMS = 10000 # number of simulations

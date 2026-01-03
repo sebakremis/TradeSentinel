@@ -146,8 +146,8 @@ def get_stock_data(tickers: list, interval: str = FIXED_INTERVAL, period: str = 
     return df
 
 def calculate_all_indicators(df_daily, bench_series) -> pd.DataFrame: 
-    # Calculate Distance to EMA
-    df_daily = distance_from_ema(df_daily)
+    # Calculate Distance to EMA (disabled)
+    # df_daily = distance_from_ema(df_daily)
 
     # Calculate Annualized Metrics (Pass the benchmark series)
     annual_metrics_df = calculate_annualized_metrics(

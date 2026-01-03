@@ -336,6 +336,7 @@ def project_price_range(data):
     """
     Project the price range (min and max) 
     based on Monte Carlo simulations using the global CONFIDENCE_LEVEL.
+    Uses RISK_FREE_RATE for drift to avoid unrealistic momentum bias
     
     Parameters
     ----------
@@ -367,7 +368,8 @@ def project_price_range(data):
             continue
 
         S0 = row['close']
-        mu = row['avgReturn'] / 100  # Convert percentage to decimal
+        mu = RISK_FREE_RATE
+        # mu = row['avgReturn'] / 100  # Convert percentage to decimal, replaced by Risk Free Rate
         sigma = row['annualizedVol'] / 100
 
         # Simulate end price using Geometric Brownian Motion
