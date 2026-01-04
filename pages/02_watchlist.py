@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from src.dashboard_core import (
     dynamic_filtering, load_tickers, confirm_unfollow_dialog,
-    load_and_process_data
+    reload_data
 )
 from src.analytics import calculate_portfolio
 from src.dashboard_display import ( 
@@ -141,29 +141,8 @@ def main():
     # User Input for Data Period
     current_fetch_kwargs = display_period_selection()
 
-    # Check if reloading is needed
-    should_reload = (
-    'df_daily' not in st.session_state or
-    'final_df_unformatted' not in st.session_state or 
-    st.session_state.get('last_fetch_kwargs') != current_fetch_kwargs
-    )
-      
-    # Retrieve Data (or Load if missing)
-    if should_reload:
-        # Load the FULL universe 
-        with st.spinner('Loading Data...'):
-            final_df_unformatted, df_daily, all_tickers = load_and_process_data(current_fetch_kwargs)
-            
-            # save to session state
-            st.session_state['final_df_unformatted'] = final_df_unformatted
-            st.session_state['df_daily'] = df_daily
-            st.session_state['all_tickers'] = all_tickers
-            st.session_state['last_fetch_kwargs'] = current_fetch_kwargs
-            
-    else:
-        # Retrieve raw data
-        final_df_unformatted = st.session_state['final_df_unformatted']
-        df_daily = st.session_state['df_daily']
+    # Load / Reload data (if needed)
+    final_df_unformatted, df_daily, _ = reload_data(current_fetch_kwargs)   
     
     # Apply formatting locally
     final_df = _format_final_df(final_df_unformatted)

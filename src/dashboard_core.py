@@ -95,6 +95,34 @@ def load_and_process_data(fetch_kwargs):
 
     return final_df_unformatted, df_daily, all_tickers
 
+def reload_data(current_fetch_kwargs):
+    """
+    Reloads data if fetch parameters have changed or data is missing.
+    """
+    # Check if reloading is needed
+    should_reload = (
+    'df_daily' not in st.session_state or
+    'final_df_unformatted' not in st.session_state or 
+    st.session_state.get('last_fetch_kwargs') != current_fetch_kwargs
+    )
+   
+    # Load data
+    if should_reload:
+        with st.spinner('Loading Universe Data...'):
+            final_df_unformatted, df_daily, all_tickers = load_and_process_data(current_fetch_kwargs)
+            
+            # Store in Session State
+            st.session_state['final_df_unformatted'] = final_df_unformatted
+            st.session_state['df_daily'] = df_daily
+            st.session_state['all_tickers'] = all_tickers
+            st.session_state['last_fetch_kwargs'] = current_fetch_kwargs
+    else:
+        # Retrieve from Session State
+        final_df_unformatted = st.session_state['final_df_unformatted']
+        df_daily = st.session_state['df_daily']
+        all_tickers = st.session_state['all_tickers']
+    
+    return final_df_unformatted, df_daily, all_tickers
 
 def get_stock_data(tickers: list, interval: str = FIXED_INTERVAL, period: str = None, start: str = None, end: str = None) -> pd.DataFrame:
     """

@@ -2,7 +2,9 @@ import streamlit as st
 st.set_page_config(page_title="📊 TradeSentinel", layout="wide")
 import pandas as pd
 import numpy as np
-from src.dashboard_core import dynamic_filtering, confirm_follow_dialog, load_and_process_data
+from src.dashboard_core import (
+    dynamic_filtering, confirm_follow_dialog, reload_data
+    )
 from src.dashboard_display import (
     display_credits, display_guides_section, display_info_section, 
     display_period_selection, display_risk_return_plot
@@ -122,29 +124,10 @@ def main():
     # User Input for Data Period
     current_fetch_kwargs = display_period_selection()
 
-    # Check if reloading is needed
-    should_reload = (
-    'df_daily' not in st.session_state or
-    'final_df_unformatted' not in st.session_state or 
-    st.session_state.get('last_fetch_kwargs') != current_fetch_kwargs
-    )
-   
-    # Load data
-    if should_reload:
-        with st.spinner('Loading Universe Data...'):
-            final_df_unformatted, df_daily, all_tickers = load_and_process_data(current_fetch_kwargs)
-            
-            # Store in Session State
-            st.session_state['final_df_unformatted'] = final_df_unformatted
-            st.session_state['df_daily'] = df_daily
-            st.session_state['all_tickers'] = all_tickers
-            st.session_state['last_fetch_kwargs'] = current_fetch_kwargs
-    else:
-        # Retrieve from Session State
-        final_df_unformatted = st.session_state['final_df_unformatted']
-        df_daily = st.session_state['df_daily']
-        all_tickers = st.session_state['all_tickers']
+    # Load / Reload data (if needed)
+    final_df_unformatted, df_daily, _ = reload_data(current_fetch_kwargs)
     
+    # Apply formatting locally
     final_df = _format_final_df(final_df_unformatted)
   
     if not final_df.empty:
