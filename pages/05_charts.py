@@ -61,13 +61,12 @@ def select_tickers(all_tickers: list, followed_tickers: list):
 
 def main():
     st.title("📊 Charts")
-    st.write("Under construction...")
     st.markdown("---")    
 
     # User Input for Data Period
     current_fetch_kwargs = display_period_selection()
 
-    # Load data
+    # Load / Reload data (if needed)
     _ , df_daily_unformatted, all_tickers = reload_data(current_fetch_kwargs)
 
     # Apply formatting locally
@@ -89,26 +88,52 @@ def main():
         st.stop()
 
     # Chart Display
-    st.header(f" {current_ticker}")
     ticker_data = df_daily[df_daily['Ticker'] == current_ticker].copy()   
     if not ticker_data.empty:
-        st.write(f"Chart for {ticker_data['shortName'].iloc[0]}")
         # Sort by Date just in case
         ticker_data = ticker_data.sort_values("Date")
 
-        fig = go.Figure(data=[go.Candlestick(
-            x=ticker_data['Date'],
-            open=ticker_data['open'],
-            high=ticker_data['high'],
-            low=ticker_data['low'],
-            close=ticker_data['close']
-        )])
+        # Chart type selection
+        chart_type = st.radio(
+            "Chart Type", 
+            ["Candlestick", "OHLC", "Line"], 
+            horizontal=True
+        )
+
+        if chart_type == "Candlestick":
+            trace = go.Candlestick(
+                x=ticker_data['Date'],
+                open=ticker_data['open'],
+                high=ticker_data['high'],
+                low=ticker_data['low'],
+                close=ticker_data['close'],
+                name=current_ticker
+            )
+        elif chart_type == "OHLC":
+            trace = go.Ohlc(
+                x=ticker_data['Date'],
+                open=ticker_data['open'],
+                high=ticker_data['high'],
+                low=ticker_data['low'],
+                close=ticker_data['close'],
+                name=current_ticker
+            )
+        else: # Line Chart
+            trace = go.Scatter(
+                x=ticker_data['Date'],
+                y=ticker_data['close'],
+                mode='lines',
+                name=current_ticker,
+                line=dict(width=2) # Makes line slightly thicker
+            )
+        
+        fig = go.Figure(data=[trace])
         
         fig.update_layout(
-            xaxis_title='Date',
+            title = f"{current_ticker} ({ticker_data['shortName'].iloc[0]})",
             yaxis_title='Price ($)',
-            height=600,
-            xaxis_rangeslider_visible=False # Optional: cleaner look without bottom slider
+            height=800,
+            xaxis_rangeslider_visible=False
         )
         
         st.plotly_chart(fig, width='stretch')
