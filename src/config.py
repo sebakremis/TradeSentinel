@@ -18,8 +18,7 @@ ANNUAL_TRADING_DAYS = 252
 DEFAULT_LOOKBACK_PERIOD = "1y"
 FIXED_INTERVAL = "1d"
 
-# Indicators
-EMA_PERIOD = 20
+# Metrics
 CONFIDENCE_LEVEL = 0.95 # used for calculating VAR and for the Monte Carlo Simulation
 
 # Forecasting (Monte Carlo)

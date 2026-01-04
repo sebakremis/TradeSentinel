@@ -38,7 +38,7 @@ import numpy as np
 import streamlit as st
 from src.config import (
     RISK_FREE_RATE, ANNUAL_TRADING_DAYS, CONFIDENCE_LEVEL, 
-    FORECAST_HORIZON, N_SIMS, EMA_PERIOD, BENCHMARK_INDEX
+    FORECAST_HORIZON, N_SIMS, BENCHMARK_INDEX
 )
 
 # --- Portfolio Calculations ---
@@ -389,44 +389,9 @@ def project_price_range(data):
 
     return pd.DataFrame(results) if results else pd.DataFrame()
 
-# Indicators
-
-def ema(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Calculates the Exponential Moving Average (EMA).
-    """
-    # Ensure sorting
-    df = df.sort_values(['Ticker', 'Date'])
-
-    # Group by Ticker and apply EMA
-    ema_column_name = f'EMA_{EMA_PERIOD}'
-    df[ema_column_name] = df.groupby('Ticker')['close'].transform(
-        lambda x: x.ewm(span=EMA_PERIOD, adjust=False).mean()
-    )
-    return df
-
-def distance_from_ema(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Calculates the percentage distance between Close price and EMA(EMA_PERIOD).
-    Formula: ((Close - EMA) / EMA) * 100
-    """
-    # Ensure sorting
-    df = df.sort_values(['Ticker', 'Date'])
-
-    # Calculate EMA locally
-    ema_series = df.groupby('Ticker')['close'].transform(
-        lambda x: x.ewm(span=EMA_PERIOD, adjust=False).mean()
-    )
-    
-    col_name = f'dist_EMA_{EMA_PERIOD}'
-    
-    # Calculate percentage distance
-    df[col_name] = ((df['close'] - ema_series) / ema_series) * 100
-    
-    return df
-
 
 # --- New metrics logic ---
+
 def calculate_beta(stock_returns: pd.Series, benchmark_returns: pd.Series) -> float:
     """Helper function that calculates Beta given two aligned return series."""
     if stock_returns.empty or benchmark_returns.empty or len(stock_returns) < 2:

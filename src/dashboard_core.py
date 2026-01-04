@@ -38,7 +38,7 @@ from src.config import (
     followed_tickers_file, DATA_DIR, stocks_folder, 
     BENCHMARK_INDEX, all_tickers_file, FIXED_INTERVAL
 )
-from src.analytics import calculate_annualized_metrics, distance_from_ema, project_price_range
+from src.analytics import calculate_annualized_metrics, project_price_range
 
 # Dashboard manager
 
@@ -76,8 +76,8 @@ def load_and_process_data(fetch_kwargs):
     else:
         bench_series = None
 
-    # 5. Calculate Indicators (Alpha/Beta computed here using bench_series)
-    df_daily = calculate_all_indicators(df_daily, bench_series)
+    # 5. Calculate Metrics (Alpha/Beta computed here using bench_series)
+    df_daily = calculate_all_metrics(df_daily, bench_series)
 
     # 6. Create Snapshot (Final DF)
     final_df_unformatted = df_daily.groupby('Ticker').tail(1).copy()
@@ -173,9 +173,7 @@ def get_stock_data(tickers: list, interval: str = FIXED_INTERVAL, period: str = 
     df = duckdb.query(query).to_df()
     return df
 
-def calculate_all_indicators(df_daily, bench_series) -> pd.DataFrame: 
-    # Calculate Distance to EMA (disabled)
-    # df_daily = distance_from_ema(df_daily)
+def calculate_all_metrics(df_daily, bench_series) -> pd.DataFrame: 
 
     # Calculate Annualized Metrics (Pass the benchmark series)
     annual_metrics_df = calculate_annualized_metrics(
