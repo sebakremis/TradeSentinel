@@ -96,7 +96,7 @@ def main():
         # Chart type selection
         chart_type = st.radio(
             "Chart Type", 
-            ["Candlestick", "OHLC", "Line"], 
+            ["Line", "Candlestick", "OHLC" ], 
             horizontal=True
         )
 
