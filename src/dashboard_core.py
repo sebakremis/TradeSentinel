@@ -38,7 +38,9 @@ from src.config import (
     followed_tickers_file, DATA_DIR, stocks_folder, 
     BENCHMARK_INDEX, all_tickers_file, FIXED_INTERVAL
 )
-from src.analytics import calculate_annualized_metrics, project_price_range
+from src.analytics import (
+    calculate_annualized_metrics, project_price_range, relative_range_position
+)
 
 # Dashboard manager
 
@@ -173,7 +175,10 @@ def get_stock_data(tickers: list, interval: str = FIXED_INTERVAL, period: str = 
     df = duckdb.query(query).to_df()
     return df
 
-def calculate_all_metrics(df_daily, bench_series) -> pd.DataFrame: 
+def calculate_all_metrics(df_daily, bench_series) -> pd.DataFrame:
+
+    # Calculate Indicators : Relative Range Position
+    df_daily = relative_range_position(df_daily) 
 
     # Calculate Annualized Metrics (Pass the benchmark series)
     annual_metrics_df = calculate_annualized_metrics(

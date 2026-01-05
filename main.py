@@ -16,7 +16,7 @@ from src.etl import update_from_dashboard
 # ----------------------------------------------------------------------
 
 # Define columns for this dashboard
-DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'marketCap', 'beta', 'alpha', 'close', 'enterpriseToEbitda', 'priceToBook', 'totalReturn', 'avgReturn', 'annualizedVol', 'sharpeRatio']
+DISPLAY_COLUMNS = ['Ticker', 'shortName', 'sector', 'marketCap', 'beta', 'alpha', 'close', 'rangePosition', 'enterpriseToEbitda', 'priceToBook', 'totalReturn', 'avgReturn', 'annualizedVol', 'sharpeRatio']
 
 def _format_final_df(final_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -94,6 +94,7 @@ def _render_summary_table_and_portfolio(final_df: pd.DataFrame, df_daily: pd.Dat
             "beta": st.column_config.NumberColumn("beta", help="Calculated beta for the lookback period", format="%.2f", width="small"),
             "alpha": st.column_config.NumberColumn("alpha", help="Calculated annualized alpha for the lookback period", format="%.2f%%", width="small"),
             "close": st.column_config.NumberColumn("price", help="Last Close price of the lookback period", format="$%.2f", width="small"),
+            "rangePosition": st.column_config.NumberColumn("rangePosition", help="Relative Range Position for the lookback period", format="%.2f", width="small"),
             "priceToBook": st.column_config.NumberColumn("priceToBook", help="Price to Book ratio", format="%.2f", width="small"),
             "enterpriseToEbitda": st.column_config.NumberColumn("enToEbitda", help="Enterprise value to EBITDA ratio", format="%.2f", width="small"),                     
             "totalReturn": st.column_config.NumberColumn("totalReturn", help="Total Return", format="%.2f%%", width="small"),

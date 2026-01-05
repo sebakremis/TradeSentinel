@@ -511,3 +511,28 @@ def calculate_annualized_metrics(df: pd.DataFrame, benchmark_rets: pd.Series = N
     final_metrics_df = pd.merge(latest_dates, annual_metrics_df, on='Ticker')
     
     return final_metrics_df
+
+# --- Indicators ---
+
+def relative_range_position(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculates relative position for the lookback period:
+    (Close - Period Low) / (Period High - Period Low)
+    """
+    df = df.sort_values(['Ticker', 'Date'])
+    
+    # Calculate the Global High/Low per Ticker 
+    period_high = df.groupby('Ticker')['high'].transform('max')
+    period_low = df.groupby('Ticker')['low'].transform('min')
+    
+    # Calculate the position
+    # Handle ZeroDivision if High == Low (price didn't move)
+    range_diff = period_high - period_low
+    
+    df['rangePosition'] = np.where(
+        range_diff == 0, 
+        50.0, # Default value (middle) if range is flat
+        (df['close'] - period_low) / range_diff
+    ).round(4) * 100  # Convert to percentage 
+    
+    return df
