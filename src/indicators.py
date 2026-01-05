@@ -1,3 +1,8 @@
+"""
+src/indicators.py
+Module for complimentary stock indicators.
+"""
+
 import pandas as pd
 from src.etl import load_update_log
 from src.config import stocks_folder

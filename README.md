@@ -2,7 +2,7 @@
 ## 📌 Overview
 `TradeSentinel` is a Python-powered stock analysis tool designed to bridge the gap between broad market screening and portfolio simulation. It functions as a modular workspace where users can filter market opportunities, track specific assets, and backtest portfolio strategies.
 
-This project was created as part of my practice for the Master in Data Science, Big Data & Business Analytics at Universidad Complutense de Madrid. It arises from a personal need to build a customized stock screener capable of analyzing stocks and ETFs data with tailored criteria and local database management.
+This project was created as part of my practice for the Master in Data Science, Big Data & Business Analytics at Universidad Complutense de Madrid. It arises from a personal need to build a customized stock screener capable of analyzing stocks and ETFs data from a local database.
 
 ---
 ## 🏗️ App Architecture & Workflow
@@ -111,6 +111,7 @@ TRADESENTINEL/
 │   ├── 02_watchlist.py      # Logic for the Watchlist view
 │   ├── 03_backtest.py       # Logic for the Backtesting engine view
 │   └── 04_portfolios.py     # Logic for Portfolio management view
+│   └── 05_charts.py         # Plots basic price charts (line, candlestick, OHLC)
 ├── src/                     # Core application source code
 │   ├── __init__.py          # Package initialization
 │   ├── analytics.py         # Financial calculations and analysis algorithms
